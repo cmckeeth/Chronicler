@@ -22,7 +22,7 @@ PATCH=$(echo "$LAST_VER" | cut -d. -f3)
 NEW_PATCH=$((PATCH + 1))
 NEW_VER="$MAJOR.$MINOR.$NEW_PATCH"
 
-echo "Bumping $CURRENT_VER → $NEW_VER"
+echo "Bumping $LAST_VER → $NEW_VER"
 sed -i "s|<ApplicationDisplayVersion>.*</ApplicationDisplayVersion>|<ApplicationDisplayVersion>$NEW_VER</ApplicationDisplayVersion>|" "$APP_CSPROJ"
 sed -i "s|<ApplicationVersion>.*</ApplicationVersion>|<ApplicationVersion>$((PATCH + 1))</ApplicationVersion>|" "$APP_CSPROJ"
 
