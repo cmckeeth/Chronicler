@@ -22,6 +22,15 @@ sed -i "s|<ApplicationVersion>.*</ApplicationVersion>|<ApplicationVersion>$((PAT
 echo "Installing MAUI Android workload..."
 dotnet workload install maui-android
 
+# ── Install Android SDK dependencies ─────────────────────────────────────────
+
+echo "Installing Android SDK dependencies..."
+dotnet build "$APP_CSPROJ" \
+    -t:InstallAndroidDependencies \
+    -f net10.0-android \
+    -p:AndroidSdkDirectory=/home/corbin/Android/Sdk \
+    -p:AcceptAndroidSDKLicenses=true
+
 # ── Build MAUI Android APK ────────────────────────────────────────────────────
 
 echo "Building Android APK..."
