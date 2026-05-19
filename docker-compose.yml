@@ -20,7 +20,7 @@ services:
     ports:
       - "5160:5160"
     volumes:
-      - ./Library:/app/Library        # audiobook files
+      - /mnt/media/4tb-media/AudioBooks:/app/Library        # audiobook files
       - ./updates:/app/updates        # APK builds for OTA updates
       - ./logs:/app/logs              # application logs
       - chronicler-data:/data         # SQLite database
