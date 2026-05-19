@@ -29,6 +29,8 @@
         <ApplicationVersion>1</ApplicationVersion>
 
         <SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
+        <AndroidSdkDirectory>/home/corbin/Android/Sdk</AndroidSdkDirectory>
+        <TargetSdkVersion>35</TargetSdkVersion>
     </PropertyGroup>
 
     <ItemGroup>
