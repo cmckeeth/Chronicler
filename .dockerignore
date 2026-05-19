@@ -4,8 +4,6 @@
 **/*.apk
 **/*.aab
 src/Chronicler.Maui
-src/Chronicler.Web
-src/Chronicler.Shared
 Library
 updates
 .github

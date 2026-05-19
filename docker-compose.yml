@@ -1,4 +1,15 @@
 services:
+  chronicler-web:
+    build:
+      context: .
+      dockerfile: src/Chronicler.Web/Dockerfile
+    environment:
+      - CHRONICLER_API_URL=http://192.168.1.71:5160
+      - Urls=http://+:5161
+    ports:
+      - "5161:5161"
+    restart: always
+
   chronicler-api:
     build:
       context: .
