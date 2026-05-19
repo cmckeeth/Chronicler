@@ -16,6 +16,12 @@
     {
         <div class="loading">Consulting the archive...</div>
     }
+    else if (_error is not null)
+    {
+        <div class="empty-state">
+            <p>The pneumatic tubes have failed: @_error</p>
+        </div>
+    }
     else if (_books.Count == 0)
     {
         <div class="empty-state">
@@ -37,6 +43,7 @@
 @code {
     private List<BookDto> _books = [];
     private string _search = "";
+    private string? _error;
     private bool _loading = true;
     private bool _scanning;
     private System.Timers.Timer? _debounce;
@@ -46,7 +53,15 @@
     private async Task LoadBooks(string? search = null)
     {
         _loading = true;
-        _books = await Api.GetBooksAsync(search);
+        _error = null;
+        try
+        {
+            _books = await Api.GetBooksAsync(search);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
         _loading = false;
     }
 
