@@ -3,27 +3,27 @@
 
 /* ── Variables ────────────────────────────────────────────────────────────── */
 :root {
-    --bg:           #0a0602;
-    --bg2:          #110a04;
-    --leather:      #1a0f05;
-    --surface:      #1e1208;
-    --surface2:     #261808;
-    --surface3:     #2e1e0a;
-    --border:       #3d2510;
-    --border-brass: #7a5010;
-    --brass:        #c8860a;
-    --brass-light:  #e8a820;
-    --brass-pale:   #f0c84a;
-    --copper:       #b5601a;
-    --copper-light: #d07830;
-    --rust:         #8b3510;
-    --verdigris:    #4a7c6a;
-    --parchment:    #e8d5a8;
-    --parchment-mid:#c4a870;
-    --parchment-dim:#8a6840;
-    --ink:          #2a1808;
-    --glow-brass:   0 0 16px #c8860a70, 0 0 32px #c8860a30;
-    --glow-copper:  0 0 12px #b5601a60;
+    --bg:           #120a02;
+    --bg2:          #1a1005;
+    --leather:      #221408;
+    --surface:      #2a1a0a;
+    --surface2:     #341f0c;
+    --surface3:     #3e260e;
+    --border:       #5a3418;
+    --border-brass: #9a6820;
+    --brass:        #d4920c;
+    --brass-light:  #f0b830;
+    --brass-pale:   #ffd84a;
+    --copper:       #c06820;
+    --copper-light: #e08838;
+    --rust:         #a03010;
+    --verdigris:    #5a9c7a;
+    --parchment:    #f5e8c8;
+    --parchment-mid:#d4b880;
+    --parchment-dim:#b89458;
+    --ink:          #1a0c02;
+    --glow-brass:   0 0 16px #d4920c80, 0 0 32px #d4920c30;
+    --glow-copper:  0 0 12px #c0682070;
     --shadow-deep:  0 8px 32px rgba(0,0,0,.8), 0 2px 8px rgba(0,0,0,.6);
     --radius:       2px;
     --font-display: 'Cinzel Decorative', 'Palatino Linotype', serif;
