@@ -4,12 +4,21 @@ set -euo pipefail
 APP_CSPROJ="src/Chronicler.Maui/Chronicler.Maui.csproj"
 API_UPDATES_DIR="updates"
 
-# ── Version bump ──────────────────────────────────────────────────────────────
+# ── Version bump (based on last built APK, not csproj) ───────────────────────
 
-CURRENT_VER=$(grep '<ApplicationDisplayVersion>' "$APP_CSPROJ" | sed 's/.*>\(.*\)<.*/\1/' | head -n1)
-MAJOR=$(echo "$CURRENT_VER" | cut -d. -f1)
-MINOR=$(echo "$CURRENT_VER" | cut -d. -f2)
-PATCH=$(echo "$CURRENT_VER" | cut -d. -f3)
+# Read highest version from updates/ dir so git pull doesn't reset it
+LAST_VER=$(ls "$API_UPDATES_DIR"/Chronicler-v*.apk 2>/dev/null \
+    | sed 's/.*Chronicler-v\(.*\)\.apk/\1/' \
+    | sort -t. -k1,1n -k2,2n -k3,3n \
+    | tail -n1)
+
+if [[ -z "$LAST_VER" ]]; then
+    LAST_VER=$(grep '<ApplicationDisplayVersion>' "$APP_CSPROJ" | sed 's/.*>\(.*\)<.*/\1/' | head -n1)
+fi
+
+MAJOR=$(echo "$LAST_VER" | cut -d. -f1)
+MINOR=$(echo "$LAST_VER" | cut -d. -f2)
+PATCH=$(echo "$LAST_VER" | cut -d. -f3)
 NEW_PATCH=$((PATCH + 1))
 NEW_VER="$MAJOR.$MINOR.$NEW_PATCH"
 
