@@ -1,0 +1,77 @@
+@inject ApiClient Api
+
+<div class="library-browser">
+    <div class="library-header">
+        <h1>Library</h1>
+        <div class="library-toolbar">
+            <input type="search" placeholder="Search books, authors..." class="search-input"
+                   value="@_search" @oninput="OnSearch" />
+            <button class="btn-secondary" @onclick="ScanLibrary" disabled="@_scanning">
+                @(_scanning ? "Scanning..." : "Scan Library")
+            </button>
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="loading">Loading library...</div>
+    }
+    else if (_books.Count == 0)
+    {
+        <div class="empty-state">
+            <p>No books found. Drop audio files in the Library folder and click Scan.</p>
+        </div>
+    }
+    else
+    {
+        <div class="book-grid">
+            @foreach (var book in _books)
+            {
+                <BookCard Book="book" CoverUrl="@Api.GetCoverUrl(book.Id)" />
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<BookDto> _books = [];
+    private string _search = "";
+    private bool _loading = true;
+    private bool _scanning;
+    private System.Timers.Timer? _debounce;
+
+    protected override async Task OnInitializedAsync() => await LoadBooks();
+
+    private async Task LoadBooks(string? search = null)
+    {
+        _loading = true;
+        _books = await Api.GetBooksAsync(search);
+        _loading = false;
+    }
+
+    private void OnSearch(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? "";
+        _debounce?.Dispose();
+        _debounce = new System.Timers.Timer(300);
+        _debounce.Elapsed += async (_, _) =>
+        {
+            _debounce?.Dispose();
+            await InvokeAsync(async () =>
+            {
+                await LoadBooks(_search);
+                StateHasChanged();
+            });
+        };
+        _debounce.AutoReset = false;
+        _debounce.Start();
+    }
+
+    private async Task ScanLibrary()
+    {
+        _scanning = true;
+        var added = await Api.ScanLibraryAsync();
+        _scanning = false;
+        if (added > 0) await LoadBooks(_search);
+    }
+}

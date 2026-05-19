@@ -1,0 +1,57 @@
+@page "/login"
+@rendermode InteractiveServer
+@inject ApiClient Api
+@inject AuthState Auth
+@inject NavigationManager Nav
+
+<div class="auth-page">
+    <div class="auth-card">
+        <h1>Chronicler</h1>
+        <p class="auth-subtitle">Your audiobook library</p>
+
+        <div class="auth-tabs">
+            <button class="@(_mode == "login" ? "tab active" : "tab")" @onclick='() => _mode = "login"'>Sign In</button>
+            <button class="@(_mode == "register" ? "tab active" : "tab")" @onclick='() => _mode = "register"'>Register</button>
+        </div>
+
+        <div class="auth-form">
+            <input type="email" placeholder="Email" @bind="_email" class="form-input" />
+            <input type="password" placeholder="Password" @bind="_password" class="form-input" />
+
+            @if (_error is not null)
+            {
+                <p class="auth-error">@_error</p>
+            }
+
+            <button class="btn-primary" @onclick="Submit">
+                @(_mode == "login" ? "Sign In" : "Create Account")
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _mode = "login";
+    private string _email = "";
+    private string _password = "";
+    private string? _error;
+
+    private async Task Submit()
+    {
+        _error = null;
+        var token = _mode == "login"
+            ? await Api.LoginAsync(_email, _password)
+            : await Api.RegisterAsync(_email, _password);
+
+        if (token is null)
+        {
+            _error = _mode == "login"
+                ? "Invalid email or password."
+                : "Registration failed. Try a different email.";
+            return;
+        }
+
+        Auth.SetToken(token);
+        Nav.NavigateTo("/");
+    }
+}

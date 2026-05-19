@@ -1,0 +1,80 @@
+## ── .NET ─────────────────────────────────────────────────────────────────────
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+*.swp
+*.orig
+
+## Publish / release artifacts
+publish/
+**/bin/Release/
+**/bin/Debug/
+
+## EF Migrations (keep migrations, exclude bundle)
+efbundle
+
+## ── Data ─────────────────────────────────────────────────────────────────────
+*.db
+*.db-shm
+*.db-wal
+
+## ── Secrets ──────────────────────────────────────────────────────────────────
+.env
+appsettings.Production.json
+appsettings.Local.json
+*.pfx
+*.p12
+*.keystore
+
+## ── Library content ──────────────────────────────────────────────────────────
+# Drop audio files here at runtime — never commit media files
+Library/
+
+## ── APK builds ───────────────────────────────────────────────────────────────
+src/Chronicler.Api/updates/*.apk
+updates/*.apk
+
+## ── Vendored frontend libs ───────────────────────────────────────────────────
+# Restored automatically by dotnet restore / build
+src/Chronicler.Web/wwwroot/lib/
+src/Chronicler.Maui/wwwroot/css/bootstrap/
+
+## ── MAUI / Android / iOS ─────────────────────────────────────────────────────
+*.apk
+*.aab
+*.ipa
+*.dSYM
+*.dSYM.zip
+# Android keystore (use secrets management)
+*.keystore
+*.jks
+# Xcode derived data
+**/DerivedData/
+xcuserdata/
+
+## ── dotnet local tools ───────────────────────────────────────────────────────
+# Ignore installed tool binaries, keep the manifest
+.config/
+
+## ── Docker ───────────────────────────────────────────────────────────────────
+# Keep docker-compose.yml, ignore override files with secrets
+docker-compose.override.yml
+
+## ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+desktop.ini
+
+## ── Editors ──────────────────────────────────────────────────────────────────
+*.swp
+*~
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json

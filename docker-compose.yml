@@ -1,0 +1,18 @@
+services:
+  chronicler-api:
+    build:
+      context: .
+      dockerfile: src/Chronicler.Api/Dockerfile
+    environment:
+      - JWT_KEY=${JWT_KEY}
+      - CHRONICLER_DB_PATH=/data/chronicler.db
+    ports:
+      - "5160:5160"
+    volumes:
+      - ./Library:/app/Library        # audiobook files
+      - ./updates:/app/updates        # APK builds for OTA updates
+      - chronicler-data:/data         # SQLite database
+    restart: always
+
+volumes:
+  chronicler-data:

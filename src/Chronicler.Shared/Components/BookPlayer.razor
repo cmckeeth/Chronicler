@@ -1,0 +1,113 @@
+@inject ApiClient Api
+@inject NavigationManager Nav
+
+@if (_book is null)
+{
+    <div class="loading">Loading...</div>
+}
+else
+{
+    <div class="book-player-page">
+        <button class="btn-back" @onclick='() => Nav.NavigateTo("/")'>← Library</button>
+
+        <div class="book-header">
+            @if (_book.HasCover)
+            {
+                <img class="book-cover-large" src="@Api.GetCoverUrl(_book.Id)" alt="@_book.Title" />
+            }
+            <div class="book-info">
+                <h1>@_book.Title</h1>
+                <h2>@_book.Author</h2>
+                @if (_book.Narrator is not null)
+                {
+                    <p class="narrator">Narrated by @_book.Narrator</p>
+                }
+            </div>
+        </div>
+
+        <AudioPlayer Src="@_audioUrl"
+                     BookTitle="@_book.Title"
+                     StartPosition="@_startPosition"
+                     OnProgressChanged="SaveProgress"
+                     OnBookmarkRequested="AddBookmark" />
+
+        @if (_bookmarks.Count > 0)
+        {
+            <div class="bookmarks">
+                <h3>Bookmarks</h3>
+                @foreach (var bm in _bookmarks)
+                {
+                    <div class="bookmark-item">
+                        <span>@FormatTime(bm.PositionSeconds) — @(bm.Label ?? "Bookmark")</span>
+                        <button class="btn-icon" @onclick="() => DeleteBookmark(bm.Id)">✕</button>
+                    </div>
+                }
+            </div>
+        }
+
+        @if (_showBookmarkInput)
+        {
+            <div class="bookmark-input">
+                <input @bind="_bookmarkLabel" placeholder="Bookmark label (optional)" />
+                <button class="btn-primary" @onclick="ConfirmBookmark">Save</button>
+                <button @onclick="() => _showBookmarkInput = false">Cancel</button>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public int BookId { get; set; }
+
+    private BookDto? _book;
+    private string _audioUrl = "";
+    private double _startPosition;
+    private List<BookmarkDto> _bookmarks = [];
+    private bool _showBookmarkInput;
+    private string _bookmarkLabel = "";
+    private double _currentPosition;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _book = await Api.GetBookAsync(BookId);
+        if (_book is null) return;
+
+        _audioUrl = Api.GetAudioUrl(BookId);
+        _startPosition = await Api.GetProgressAsync(BookId);
+        _bookmarks = await Api.GetBookmarksAsync(BookId);
+    }
+
+    private async Task SaveProgress(double position)
+    {
+        _currentPosition = position;
+        await Api.SaveProgressAsync(BookId, position);
+    }
+
+    private void AddBookmark()
+    {
+        _showBookmarkInput = true;
+        _bookmarkLabel = "";
+    }
+
+    private async Task ConfirmBookmark()
+    {
+        var bm = await Api.AddBookmarkAsync(BookId, _currentPosition,
+            string.IsNullOrWhiteSpace(_bookmarkLabel) ? null : _bookmarkLabel);
+        if (bm is not null) _bookmarks.Add(bm);
+        _showBookmarkInput = false;
+    }
+
+    private async Task DeleteBookmark(int id)
+    {
+        await Api.DeleteBookmarkAsync(id);
+        _bookmarks.RemoveAll(b => b.Id == id);
+    }
+
+    private static string FormatTime(double seconds)
+    {
+        var ts = TimeSpan.FromSeconds(seconds);
+        return ts.Hours > 0
+            ? $"{ts.Hours}:{ts.Minutes:D2}:{ts.Seconds:D2}"
+            : $"{ts.Minutes}:{ts.Seconds:D2}";
+    }
+}

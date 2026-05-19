@@ -1,0 +1,126 @@
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="audio-player">
+    <div class="player-info">
+        <span class="player-title">@BookTitle</span>
+        @if (Duration > 0)
+        {
+            <span class="player-time">@FormatTime(CurrentPosition) / @FormatTime(Duration)</span>
+        }
+    </div>
+
+    <div class="player-controls">
+        <button class="btn-icon" @onclick="SkipBack" title="Back 30s">⏮ 30s</button>
+        <button class="btn-icon btn-play" @onclick="TogglePlay">
+            @(_playing ? "⏸" : "▶")
+        </button>
+        <button class="btn-icon" @onclick="SkipForward" title="Forward 30s">30s ⏭</button>
+
+        <select class="speed-select" @onchange="OnSpeedChange" value="@_speed">
+            <option value="0.75">0.75×</option>
+            <option value="1">1×</option>
+            <option value="1.25">1.25×</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2×</option>
+        </select>
+
+        <button class="btn-icon" @onclick="AddBookmark" title="Add bookmark">🔖</button>
+    </div>
+
+    @if (Duration > 0)
+    {
+        <div class="player-progress">
+            <input type="range" min="0" max="@((int)Duration)" value="@((int)CurrentPosition)"
+                   @onchange="OnSeek" class="progress-bar" />
+        </div>
+    }
+</div>
+
+<audio id="chronicler-audio" @ref="_audioRef" preload="metadata"
+       @onplay="OnPlay" @onpause="OnPause" @ontimeupdate="OnTimeUpdate"
+       @onloadedmetadata="OnMetadataLoaded">
+    <source src="@Src" />
+</audio>
+
+@code {
+    [Parameter, EditorRequired] public string Src { get; set; } = "";
+    [Parameter, EditorRequired] public string BookTitle { get; set; } = "";
+    [Parameter] public double StartPosition { get; set; }
+    [Parameter] public EventCallback<double> OnProgressChanged { get; set; }
+    [Parameter] public EventCallback OnBookmarkRequested { get; set; }
+
+    private ElementReference _audioRef;
+    private bool _playing;
+    private double _speed = 1.0;
+    private DateTime _lastSave = DateTime.MinValue;
+
+    public double CurrentPosition { get; private set; }
+    public double Duration { get; private set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && StartPosition > 0)
+            await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, StartPosition);
+    }
+
+    private async Task TogglePlay()
+    {
+        if (_playing)
+            await JS.InvokeVoidAsync("chroniclerAudio.pause", _audioRef);
+        else
+            await JS.InvokeVoidAsync("chroniclerAudio.play", _audioRef);
+    }
+
+    private async Task SkipBack() =>
+        await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, Math.Max(0, CurrentPosition - 30));
+
+    private async Task SkipForward() =>
+        await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, Math.Min(Duration, CurrentPosition + 30));
+
+    private async Task OnSeek(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), out var pos))
+            await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, pos);
+    }
+
+    private async Task OnSpeedChange(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), out var speed))
+        {
+            _speed = speed;
+            await JS.InvokeVoidAsync("chroniclerAudio.setRate", _audioRef, speed);
+        }
+    }
+
+    private void OnPlay() => _playing = true;
+    private void OnPause() => _playing = false;
+    private void OnMetadataLoaded(EventArgs e) { }
+
+    private async Task OnTimeUpdate(EventArgs e)
+    {
+        CurrentPosition = await JS.InvokeAsync<double>("chroniclerAudio.currentTime", _audioRef);
+
+        if ((DateTime.UtcNow - _lastSave).TotalSeconds >= 10)
+        {
+            _lastSave = DateTime.UtcNow;
+            await OnProgressChanged.InvokeAsync(CurrentPosition);
+        }
+    }
+
+    private async Task AddBookmark() => await OnBookmarkRequested.InvokeAsync();
+
+    private static string FormatTime(double seconds)
+    {
+        var ts = TimeSpan.FromSeconds(seconds);
+        return ts.Hours > 0
+            ? $"{ts.Hours}:{ts.Minutes:D2}:{ts.Seconds:D2}"
+            : $"{ts.Minutes}:{ts.Seconds:D2}";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_playing)
+            await JS.InvokeVoidAsync("chroniclerAudio.pause", _audioRef);
+    }
+}

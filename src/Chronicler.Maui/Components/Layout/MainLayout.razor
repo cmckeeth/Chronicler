@@ -1,0 +1,13 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Nav
+@inject AuthState Auth
+
+<div class="maui-layout">
+    @if (Auth.IsAuthenticated)
+    {
+        <UpdateBanner />
+    }
+    <main class="maui-content">
+        @Body
+    </main>
+</div>

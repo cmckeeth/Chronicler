@@ -1,0 +1,58 @@
+@inject ApiClient Api
+@implements IDisposable
+
+@if (_updateAvailable)
+{
+    <div class="update-banner" @onclick="DownloadUpdate">
+        <span>⚙ Update available — v@(_latestVersion)</span>
+        <span class="update-tap">Tap to download</span>
+    </div>
+}
+
+@code {
+    private bool _updateAvailable;
+    private string? _latestVersion;
+    private PeriodicTimer? _timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckUpdate();
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(60));
+        _ = PollAsync();
+    }
+
+    private async Task PollAsync()
+    {
+        while (_timer is not null && await _timer.WaitForNextTickAsync())
+        {
+            await CheckUpdate();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task CheckUpdate()
+    {
+        var latest = await Api.GetLatestVersionAsync();
+        if (latest is null || latest == "0.0.0") return;
+
+        var current = AppInfo.VersionString;
+        if (Version.TryParse(latest, out var latestVer) &&
+            Version.TryParse(current, out var currentVer) &&
+            latestVer > currentVer)
+        {
+            _updateAvailable = true;
+            _latestVersion = latest;
+        }
+    }
+
+    private async Task DownloadUpdate()
+    {
+        var url = _latestVersion is not null
+            ? $"{ApiConfig.BaseUrl}/api/update/apk/Chronicler-v{_latestVersion}.apk"
+            : ApiConfig.UpdateApkUrl;
+
+        await Launcher.OpenAsync(new Uri(url));
+    }
+
+    public void Dispose() => _timer?.Dispose();
+}

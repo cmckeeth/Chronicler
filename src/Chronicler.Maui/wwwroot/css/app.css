@@ -1,0 +1,64 @@
+/* Shared steampunk styles are in Chronicler.Shared wwwroot.
+   MAUI-specific layout overrides below. */
+
+.maui-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.maui-content {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.status-bar-safe-area {
+    height: env(safe-area-inset-top, 0px);
+    background: #0a0704;
+}
+
+.update-banner {
+    background: linear-gradient(90deg, #3d280f, #7a5010);
+    border-bottom: 1px solid #c8860a;
+    color: #e8d5a8;
+    padding: .5rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: .8rem;
+    font-family: 'Cinzel', Georgia, serif;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 0 0 12px #c8860a40;
+}
+
+.update-tap {
+    font-size: .7rem;
+    color: #c8860a;
+    font-style: italic;
+}
+
+/* Pull the library and player to fill available height on mobile */
+.library-browser, .book-player-page {
+    padding: 1rem;
+}
+
+#blazor-error-ui {
+    background: #8b3510;
+    color: #e8d5a8;
+    padding: .75rem 1rem;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: none;
+    font-style: italic;
+    font-size: .875rem;
+}
+
+#blazor-error-ui a {
+    color: #e8a820;
+    margin-left: .5rem;
+}

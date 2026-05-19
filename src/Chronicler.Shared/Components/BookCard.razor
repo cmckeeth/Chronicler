@@ -1,0 +1,29 @@
+@inject NavigationManager Nav
+
+<div class="book-card" @onclick="Navigate">
+    <div class="book-cover">
+        @if (Book.HasCover)
+        {
+            <img src="@CoverUrl" alt="@Book.Title cover" loading="lazy" />
+        }
+        else
+        {
+            <div class="book-cover-placeholder">📚</div>
+        }
+    </div>
+    <div class="book-meta">
+        <span class="book-title">@Book.Title</span>
+        <span class="book-author">@Book.Author</span>
+        @if (Book.Narrator is not null)
+        {
+            <span class="book-narrator">Narrated by @Book.Narrator</span>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public BookDto Book { get; set; } = null!;
+    [Parameter, EditorRequired] public string CoverUrl { get; set; } = "";
+
+    private void Navigate() => Nav.NavigateTo($"/book/{Book.Id}");
+}
