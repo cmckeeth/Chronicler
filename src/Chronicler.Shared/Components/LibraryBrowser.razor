@@ -2,24 +2,25 @@
 
 <div class="library-browser">
     <div class="library-header">
-        <h1>Library</h1>
+        <h1>The Archive</h1>
         <div class="library-toolbar">
-            <input type="search" placeholder="Search books, authors..." class="search-input"
+            <input type="search" placeholder="Query the archive..." class="search-input"
                    value="@_search" @oninput="OnSearch" />
             <button class="btn-secondary" @onclick="ScanLibrary" disabled="@_scanning">
-                @(_scanning ? "Scanning..." : "Scan Library")
+                @(_scanning ? "⚙ Cataloguing..." : "⚙ Catalogue")
             </button>
         </div>
     </div>
 
     @if (_loading)
     {
-        <div class="loading">Loading library...</div>
+        <div class="loading">Consulting the archive...</div>
     }
     else if (_books.Count == 0)
     {
         <div class="empty-state">
-            <p>No books found. Drop audio files in the Library folder and click Scan.</p>
+            <p>The archive lies empty, traveller.</p>
+            <p>Deposit volumes in the Library vault and engage the Catalogue mechanism.</p>
         </div>
     }
     else

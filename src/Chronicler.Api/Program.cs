@@ -110,12 +110,12 @@ app.MapPost("/api/auth/login", async (
     return Results.Ok(new { token = CreateToken(user, jwtKey) });
 });
 
-app.MapGet("/api/auth/me", [Authorize] (ClaimsPrincipal principal) =>
+app.MapGet("/api/auth/me", (ClaimsPrincipal principal) =>
     Results.Ok(new { email = principal.FindFirstValue(ClaimTypes.Email) }));
 
 // ── Books ─────────────────────────────────────────────────────────────────────
 
-app.MapGet("/api/books", [Authorize] async (string? q, AppDbContext db) =>
+app.MapGet("/api/books", async (string? q, AppDbContext db) =>
 {
     var query = db.Books.AsQueryable();
     if (!string.IsNullOrWhiteSpace(q))
@@ -133,7 +133,7 @@ app.MapGet("/api/books", [Authorize] async (string? q, AppDbContext db) =>
     return Results.Ok(books);
 });
 
-app.MapGet("/api/books/{id:int}", [Authorize] async (int id, AppDbContext db) =>
+app.MapGet("/api/books/{id:int}", async (int id, AppDbContext db) =>
 {
     var b = await db.Books.FindAsync(id);
     return b is null ? Results.NotFound() : Results.Ok(b);
@@ -152,7 +152,7 @@ app.MapGet("/api/books/{id:int}/cover", async (int id, AppDbContext db, IWebHost
     return Results.File(fullPath, mime);
 });
 
-app.MapGet("/api/books/{id:int}/audio", [Authorize] async (
+app.MapGet("/api/books/{id:int}/audio", async (
     int id, HttpContext ctx, AppDbContext db, IWebHostEnvironment env) =>
 {
     var book = await db.Books.FindAsync(id);
@@ -176,13 +176,13 @@ app.MapGet("/api/books/{id:int}/audio", [Authorize] async (
     return Results.File(fullPath, mime, enableRangeProcessing: true);
 });
 
-app.MapPost("/api/library/scan", [Authorize] async (LibraryScanner scanner) =>
+app.MapPost("/api/library/scan", async (LibraryScanner scanner) =>
 {
     var added = await scanner.ScanAsync();
     return Results.Ok(new { added });
 });
 
-app.MapPut("/api/books/{id:int}", [Authorize] async (int id, BookUpdateRequest req, AppDbContext db) =>
+app.MapPut("/api/books/{id:int}", async (int id, BookUpdateRequest req, AppDbContext db) =>
 {
     var book = await db.Books.FindAsync(id);
     if (book is null) return Results.NotFound();
@@ -198,7 +198,7 @@ app.MapPut("/api/books/{id:int}", [Authorize] async (int id, BookUpdateRequest r
 
 // ── Progress ──────────────────────────────────────────────────────────────────
 
-app.MapGet("/api/progress/{bookId:int}", [Authorize] async (
+app.MapGet("/api/progress/{bookId:int}", async (
     int bookId, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -208,7 +208,7 @@ app.MapGet("/api/progress/{bookId:int}", [Authorize] async (
     return Results.Ok(new { positionSeconds = progress?.PositionSeconds ?? 0 });
 });
 
-app.MapPut("/api/progress/{bookId:int}", [Authorize] async (
+app.MapPut("/api/progress/{bookId:int}", async (
     int bookId, ProgressRequest req, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -230,7 +230,7 @@ app.MapPut("/api/progress/{bookId:int}", [Authorize] async (
 
 // ── Bookmarks ─────────────────────────────────────────────────────────────────
 
-app.MapGet("/api/bookmarks/{bookId:int}", [Authorize] async (
+app.MapGet("/api/bookmarks/{bookId:int}", async (
     int bookId, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -243,7 +243,7 @@ app.MapGet("/api/bookmarks/{bookId:int}", [Authorize] async (
     return Results.Ok(bookmarks);
 });
 
-app.MapPost("/api/bookmarks/{bookId:int}", [Authorize] async (
+app.MapPost("/api/bookmarks/{bookId:int}", async (
     int bookId, BookmarkRequest req, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -262,7 +262,7 @@ app.MapPost("/api/bookmarks/{bookId:int}", [Authorize] async (
         bookmark.PositionSeconds, bookmark.Label, bookmark.CreatedAt));
 });
 
-app.MapDelete("/api/bookmarks/{id:int}", [Authorize] async (
+app.MapDelete("/api/bookmarks/{id:int}", async (
     int id, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier)!;

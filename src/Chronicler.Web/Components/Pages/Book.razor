@@ -1,16 +1,7 @@
 @page "/book/{BookId:int}"
 @rendermode InteractiveServer
-@inject AuthState Auth
-@inject NavigationManager Nav
 
-@if (!Auth.IsAuthenticated)
-{
-    Nav.NavigateTo("/login");
-}
-else
-{
-    <BookPlayer BookId="@BookId" />
-}
+<BookPlayer BookId="@BookId" />
 
 @code {
     [Parameter] public int BookId { get; set; }

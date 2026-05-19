@@ -1,13 +1,4 @@
 @page "/"
 @rendermode InteractiveServer
-@inject AuthState Auth
-@inject NavigationManager Nav
 
-@if (!Auth.IsAuthenticated)
-{
-    Nav.NavigateTo("/login");
-}
-else
-{
-    <LibraryBrowser />
-}
+<LibraryBrowser />

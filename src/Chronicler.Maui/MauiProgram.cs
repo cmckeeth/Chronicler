@@ -16,16 +16,8 @@ public static class MauiProgram
             });
 
         builder.Services.AddMauiBlazorWebView();
-        builder.Services.AddSingleton<AuthState>();
-        builder.Services.AddScoped<ApiClient>(sp =>
-        {
-            var auth = sp.GetRequiredService<AuthState>();
-            var http = new HttpClient { BaseAddress = new Uri(ApiConfig.BaseUrl.TrimEnd('/') + "/") };
-            if (auth.Token is not null)
-                http.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", auth.Token);
-            return new ApiClient(http);
-        });
+        builder.Services.AddScoped<ApiClient>(_ =>
+            new ApiClient(new HttpClient { BaseAddress = new Uri(ApiConfig.BaseUrl.TrimEnd('/') + "/") }));
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

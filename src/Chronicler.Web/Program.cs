@@ -10,16 +10,8 @@ var apiBase = builder.Configuration["ApiBaseUrl"]
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddSingleton<AuthState>();
-builder.Services.AddScoped<ApiClient>(sp =>
-{
-    var auth = sp.GetRequiredService<AuthState>();
-    var http = new HttpClient { BaseAddress = new Uri(apiBase.TrimEnd('/') + "/") };
-    if (auth.Token is not null)
-        http.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", auth.Token);
-    return new ApiClient(http);
-});
+builder.Services.AddScoped<ApiClient>(_ =>
+    new ApiClient(new HttpClient { BaseAddress = new Uri(apiBase.TrimEnd('/') + "/") }));
 
 var app = builder.Build();
 
