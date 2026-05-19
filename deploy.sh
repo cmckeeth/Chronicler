@@ -41,7 +41,11 @@ dotnet publish "$APP_CSPROJ" \
     -p:EmbedAssembliesIntoApk=true \
     -p:AndroidPackageFormat=apk
 
-APK_PATH=$(find . -name "*.apk" -not -name "*Signed*" -newer "$APP_CSPROJ" | head -n1)
+# Prefer the debug-signed APK; fall back to any APK if not found
+APK_PATH=$(find . -name "*-Signed.apk" -newer "$APP_CSPROJ" | head -n1)
+if [[ -z "$APK_PATH" ]]; then
+    APK_PATH=$(find . -name "*.apk" -newer "$APP_CSPROJ" | head -n1)
+fi
 
 if [[ -z "$APK_PATH" ]]; then
     echo "Error: APK not found after build"
