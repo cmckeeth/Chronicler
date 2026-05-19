@@ -2,7 +2,7 @@
 set -euo pipefail
 
 APP_CSPROJ="src/Chronicler.Maui/Chronicler.Maui.csproj"
-API_UPDATES_DIR="src/Chronicler.Api/updates"
+API_UPDATES_DIR="updates"
 
 # ── Version bump ──────────────────────────────────────────────────────────────
 
