@@ -26,7 +26,7 @@ dotnet workload install maui-android
 
 echo "Building Android APK..."
 dotnet publish "$APP_CSPROJ" \
-    -f net9.0-android \
+    -f net10.0-android \
     -c Release \
     -p:EmbedAssembliesIntoApk=true \
     -p:AndroidPackageFormat=apk
