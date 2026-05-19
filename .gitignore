@@ -57,7 +57,7 @@ xcuserdata/
 
 ## ── dotnet local tools ───────────────────────────────────────────────────────
 # Ignore installed tool binaries, keep the manifest
-.config/
+# .config/ is intentionally tracked (dotnet-tools.json)
 
 ## ── Docker ───────────────────────────────────────────────────────────────────
 # Keep docker-compose.yml, ignore override files with secrets
