@@ -28,6 +28,7 @@ echo "Installing Android SDK dependencies..."
 dotnet build "$APP_CSPROJ" \
     -t:InstallAndroidDependencies \
     -f net10.0-android \
+    -c Debug \
     -p:AndroidSdkDirectory=/home/corbin/Android/Sdk \
     -p:AcceptAndroidSDKLicenses=true
 
@@ -36,7 +37,7 @@ dotnet build "$APP_CSPROJ" \
 echo "Building Android APK..."
 dotnet publish "$APP_CSPROJ" \
     -f net10.0-android \
-    -c Release \
+    -c Debug \
     -p:EmbedAssembliesIntoApk=true \
     -p:AndroidPackageFormat=apk
 
