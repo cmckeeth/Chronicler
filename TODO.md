@@ -6,7 +6,7 @@
 
 ## Features
 - [ ] Upload UI for adding audiobooks via the web app (admin)
-- [ ] Persist auth token across app restarts (currently lost on reload)
+- [ ] Re-add auth when needed (currently removed — app is open access)
 - [ ] Book duration auto-detection on library scan (read audio file metadata)
 - [ ] Chapter support for M4B files
 
