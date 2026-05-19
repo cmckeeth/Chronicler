@@ -10,5 +10,8 @@
 - [ ] Book duration auto-detection on library scan (read audio file metadata)
 - [ ] Chapter support for M4B files
 
+## Build
+- [ ] Generate a release keystore and configure signing so APK can be built in Release mode
+
 ## Polish
 - [ ] Update ApiConfig.cs base URLs (Plex, PhotoPrism, Chronicler) when server IP changes
