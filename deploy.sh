@@ -17,6 +17,11 @@ echo "Bumping $CURRENT_VER → $NEW_VER"
 sed -i "s|<ApplicationDisplayVersion>.*</ApplicationDisplayVersion>|<ApplicationDisplayVersion>$NEW_VER</ApplicationDisplayVersion>|" "$APP_CSPROJ"
 sed -i "s|<ApplicationVersion>.*</ApplicationVersion>|<ApplicationVersion>$((PATCH + 1))</ApplicationVersion>|" "$APP_CSPROJ"
 
+# ── Ensure Android workload ───────────────────────────────────────────────────
+
+echo "Installing MAUI Android workload..."
+dotnet workload install maui-android
+
 # ── Build MAUI Android APK ────────────────────────────────────────────────────
 
 echo "Building Android APK..."
