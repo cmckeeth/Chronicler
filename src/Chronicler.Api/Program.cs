@@ -10,8 +10,24 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
+using Serilog.Events;
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File(
+        path: "logs/chronicler-.log",
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 7,
+        outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSerilog();
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -74,6 +90,10 @@ using (var scope = app.Services.CreateScope())
     if (added > 0) app.Logger.LogInformation("Library scan: added {Count} books", added);
 }
 
+app.UseSerilogRequestLogging(opt =>
+{
+    opt.MessageTemplate = "{RequestMethod} {RequestPath} → {StatusCode} ({Elapsed:0}ms)";
+});
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();

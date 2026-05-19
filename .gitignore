@@ -29,6 +29,9 @@ appsettings.Local.json
 *.p12
 *.keystore
 
+## ── Logs ──────────────────────────────────────────────────────────────────────
+logs/
+
 ## ── Library content ──────────────────────────────────────────────────────────
 # Drop audio files here at runtime — never commit media files
 Library/

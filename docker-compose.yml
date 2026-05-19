@@ -11,6 +11,7 @@ services:
     volumes:
       - ./Library:/app/Library        # audiobook files
       - ./updates:/app/updates        # APK builds for OTA updates
+      - ./logs:/app/logs              # application logs
       - chronicler-data:/data         # SQLite database
     restart: always
 
