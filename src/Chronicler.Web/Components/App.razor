@@ -20,8 +20,8 @@
     <script>
         (function () {
             var token = localStorage.getItem('chronicler_token');
-            var onLogin = window.location.pathname === '/login';
-            if (!token && !onLogin) window.location.replace('/login');
+            var onLogin = window.location.pathname.startsWith('/login');
+            if (!token && !onLogin) window.location.replace('/login.html');
         })();
     </script>
 

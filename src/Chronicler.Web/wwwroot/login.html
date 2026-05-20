@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Chronicler — Sign In</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600&family=Lora:ital@0;1&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/app.css"/>
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh; }
+  </style>
+</head>
+<body>
+<div class="auth-card" style="width:100%;max-width:400px">
+  <h1 style="text-align:center">Chronicler</h1>
+  <p class="auth-subtitle">Your audiobook library</p>
+
+  <div class="auth-tabs">
+    <button class="tab active" id="tab-login" onclick="setMode('login')">Sign In</button>
+    <button class="tab" id="tab-register" onclick="setMode('register')">Register</button>
+  </div>
+
+  <div class="auth-form">
+    <input type="email" id="email" placeholder="Email" class="form-input" autocomplete="email"/>
+    <input type="password" id="password" placeholder="Password" class="form-input" autocomplete="current-password"/>
+    <p id="error" class="auth-error" style="display:none"></p>
+    <button class="btn-primary" onclick="submit()" id="submit-btn">Sign In</button>
+  </div>
+</div>
+
+<script>
+  var mode = 'login';
+
+  // Redirect if already logged in
+  if (localStorage.getItem('chronicler_token')) window.location.replace('/');
+
+  function setMode(m) {
+    mode = m;
+    document.getElementById('tab-login').className = m === 'login' ? 'tab active' : 'tab';
+    document.getElementById('tab-register').className = m === 'register' ? 'tab active' : 'tab';
+    document.getElementById('submit-btn').textContent = m === 'login' ? 'Sign In' : 'Create Account';
+    document.getElementById('error').style.display = 'none';
+  }
+
+  async function submit() {
+    var email = document.getElementById('email').value.trim();
+    var password = document.getElementById('password').value;
+    var err = document.getElementById('error');
+    var btn = document.getElementById('submit-btn');
+
+    if (!email || !password) { showError('Please enter email and password.'); return; }
+
+    btn.disabled = true;
+    btn.textContent = '⚙ Working...';
+
+    try {
+      var resp = await fetch('http://192.168.1.71:5160/api/auth/' + mode, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: password })
+      });
+
+      if (resp.ok) {
+        var data = await resp.json();
+        localStorage.setItem('chronicler_token', data.token);
+        window.location.replace('/');
+      } else {
+        showError(mode === 'login' ? 'Invalid email or password.' : 'Registration failed. Try a different email.');
+        btn.disabled = false;
+        btn.textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+      }
+    } catch(e) {
+      showError('Cannot reach server. Check your connection.');
+      btn.disabled = false;
+      btn.textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+    }
+  }
+
+  function showError(msg) {
+    var err = document.getElementById('error');
+    err.textContent = msg;
+    err.style.display = 'block';
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') submit();
+  });
+</script>
+</body>
+</html>
