@@ -578,6 +578,32 @@ select {
     opacity: .3;
 }
 
+.book-cover-small {
+    width: 64px;
+    height: 96px;
+    object-fit: cover;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-brass);
+    box-shadow: var(--glow-brass);
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.book-cover-small-placeholder {
+    width: 64px;
+    height: 96px;
+    background: var(--leather);
+    border: 1px solid var(--border-brass);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    opacity: .5;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
 /* ── Audio Player ─────────────────────────────────────────────────────────── */
 .audio-player {
     background: var(--surface);

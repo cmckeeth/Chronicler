@@ -814,9 +814,36 @@ select {
 .blazor-error-boundary::after { content: "A most grievous malfunction hath occurred." }
 
 /* ── Cover container ──────────────────────────────────────────────────────── */
-.cover-container { display:flex; flex-direction:column; align-items:center; gap:.4rem; flex-shrink:0; }
-.btn-wrong-cover { background:transparent; color:var(--parchment-dim); border:1px solid var(--border); border-radius:var(--radius); font-size:.68rem; font-family:var(--font-serif); padding:.2rem .5rem; cursor:pointer; opacity:.6; transition:all .15s; }
-.btn-wrong-cover:hover { opacity:1; color:var(--rust); border-color:var(--rust); }
+.cover-container { display:flex; flex-direction:column; align-items:center; gap:.3rem; flex-shrink:0; }
+
+.book-cover-small {
+    width: 64px;
+    height: 96px;
+    object-fit: cover;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-brass);
+    box-shadow: var(--glow-brass);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.book-cover-small-placeholder {
+    width: 64px;
+    height: 96px;
+    background: var(--leather);
+    border: 1px solid var(--border-brass);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    opacity: .5;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
 .book-cover-placeholder-large { width:130px; height:195px; background:var(--leather); border:2px solid var(--border-brass); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; font-size:3.5rem; opacity:.3; }
 
 /* ── Chapter List ─────────────────────────────────────────────────────────── */

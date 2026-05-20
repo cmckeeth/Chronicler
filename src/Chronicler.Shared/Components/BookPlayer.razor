@@ -14,17 +14,21 @@ else
             <div class="cover-container">
                 @if (_coverSrc is not null)
                 {
-                    <img class="book-cover-large" src="@_coverSrc" alt="@_book.Title" />
-                    <button class="btn-wrong-cover" @onclick="WrongCover">✕ Wrong cover</button>
-                }
-                else if (_book.HasCover)
-                {
-                    <div class="book-cover-placeholder-large" style="opacity:.3">⚙</div>
+                    <img class="book-cover-small" src="@_coverSrc" alt="@_book.Title"
+                         @ontouchstart="OnCoverTouchStart" @ontouchend="OnCoverTouchEnd" @ontouchmove="OnCoverTouchEnd"
+                         title="Long press to replace cover" />
                 }
                 else
                 {
-                    <div class="book-cover-placeholder-large">📚</div>
-                    <button class="btn-secondary" style="font-size:.7rem;margin-top:.4rem" @onclick="RefetchCover">⚙ Find cover</button>
+                    <div class="book-cover-small-placeholder"
+                         @ontouchstart="OnCoverTouchStart" @ontouchend="OnCoverTouchEnd" @ontouchmove="OnCoverTouchEnd"
+                         title="Long press to find cover">
+                        @(_coverSearching ? "⚙" : "📚")
+                    </div>
+                }
+                @if (_coverSearching)
+                {
+                    <div style="font-size:.65rem;color:var(--parchment-dim);font-style:italic;margin-top:.2rem">Searching...</div>
                 }
             </div>
             <div class="book-info">
@@ -114,6 +118,8 @@ else
 
     private BookDto? _book;
     private string? _coverSrc;
+    private bool _coverSearching;
+    private System.Timers.Timer? _longPressTimer;
     private List<ChapterDto> _chapters = [];
     private List<ChapterProgressDto> _chapterProgresses = [];
     private ChapterDto? _currentChapter;
@@ -191,6 +197,37 @@ else
     {
         await Api.ResetBookAsync(BookId);
         _chapterProgresses = _chapterProgresses.Select(_ => new ChapterProgressDto(0, false)).ToList();
+    }
+
+    private void OnCoverTouchStart(TouchEventArgs e)
+    {
+        _longPressTimer?.Dispose();
+        _longPressTimer = new System.Timers.Timer(600);
+        _longPressTimer.AutoReset = false;
+        _longPressTimer.Elapsed += async (_, _) =>
+        {
+            _longPressTimer?.Dispose();
+            await InvokeAsync(async () =>
+            {
+                _coverSearching = true;
+                StateHasChanged();
+                // Clear existing cover then refetch
+                if (_book?.HasCover == true)
+                    await Api.ClearCoverAsync(BookId);
+                await Api.RefetchCoverAsync(BookId);
+                _book = await Api.GetBookAsync(BookId);
+                _coverSrc = _book?.HasCover == true ? await Api.GetCoverDataUriAsync(BookId) : null;
+                _coverSearching = false;
+                StateHasChanged();
+            });
+        };
+        _longPressTimer.Start();
+    }
+
+    private void OnCoverTouchEnd(TouchEventArgs e)
+    {
+        _longPressTimer?.Dispose();
+        _longPressTimer = null;
     }
 
     private async Task WrongCover()

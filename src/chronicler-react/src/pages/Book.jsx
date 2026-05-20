@@ -15,6 +15,8 @@ export default function Book() {
 
   const [book, setBook] = useState(null);
   const [coverBust, setCoverBust] = useState('');
+  const [coverSearching, setCoverSearching] = useState(false);
+  const longPressTimer = useRef(null);
   const [chapters, setChapters] = useState([]);
   const [progresses, setProgresses] = useState([]);
   const [bookmarks, setBookmarks] = useState([]);
@@ -129,6 +131,22 @@ export default function Book() {
     if (audioRef.current) audioRef.current.playbackRate = s;
   }
 
+  function onCoverPressStart() {
+    longPressTimer.current = setTimeout(async () => {
+      setCoverSearching(true);
+      if (book?.hasCover) await booksApi.clearCover(book.id);
+      await booksApi.refetchCover(book.id);
+      const b = await booksApi.get(id);
+      setBook(b);
+      setCoverBust(`?t=${Date.now()}`);
+      setCoverSearching(false);
+    }, 600);
+  }
+
+  function onCoverPressEnd() {
+    clearTimeout(longPressTimer.current);
+  }
+
   async function resetBook() {
     await booksApi.resetProgress(id);
     setProgresses(prev => prev.map(() => ({ positionSeconds: 0, isListened: false })));
@@ -151,24 +169,22 @@ export default function Book() {
       <div className="book-header">
         <div className="cover-container">
           {book.hasCover
-            ? <img className="book-cover-large" src={`${booksApi.coverUrl(book.id)}${coverBust}`} alt={book.title} />
-            : <div className="book-cover-placeholder-large">📚</div>
+            ? <img
+                className="book-cover-small"
+                src={`${booksApi.coverUrl(book.id)}${coverBust}`}
+                alt={book.title}
+                onMouseDown={onCoverPressStart} onMouseUp={onCoverPressEnd} onMouseLeave={onCoverPressEnd}
+                onTouchStart={onCoverPressStart} onTouchEnd={onCoverPressEnd} onTouchMove={onCoverPressEnd}
+                title="Long press to replace cover"
+              />
+            : <div
+                className="book-cover-small-placeholder"
+                onMouseDown={onCoverPressStart} onMouseUp={onCoverPressEnd} onMouseLeave={onCoverPressEnd}
+                onTouchStart={onCoverPressStart} onTouchEnd={onCoverPressEnd} onTouchMove={onCoverPressEnd}
+                title="Long press to find cover"
+              >{coverSearching ? '⚙' : '📚'}</div>
           }
-          {book.hasCover && (
-            <button className="btn-wrong-cover" onClick={async () => {
-              await booksApi.clearCover(book.id);
-              setBook(b => ({ ...b, hasCover: false }));
-              setCoverBust('');
-            }}>✕ Wrong cover</button>
-          )}
-          {!book.hasCover && (
-            <button className="btn-secondary" style={{fontSize:'.7rem',marginTop:'.4rem'}} onClick={async () => {
-              await booksApi.refetchCover(book.id);
-              const b = await booksApi.get(id);
-              setBook(b);
-              setCoverBust(`?t=${Date.now()}`);
-            }}>⚙ Find cover</button>
-          )}
+          {coverSearching && <div style={{fontSize:'.65rem',color:'var(--parchment-dim)',fontStyle:'italic',marginTop:'.2rem'}}>Searching...</div>}
         </div>
         <div className="book-info">
           <h1>{book.title}</h1>
