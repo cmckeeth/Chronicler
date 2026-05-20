@@ -1,5 +1,6 @@
 @inject IJSRuntime JS
 @inject IServiceProvider Services
+@inject ApiClient Api
 @using Microsoft.Extensions.DependencyInjection
 @implements IAsyncDisposable
 
@@ -100,6 +101,9 @@
 
     private async Task TogglePlay()
     {
+        var path = _nativePlayer is not null ? "native" : "js";
+        await Api.DiagAsync($"TogglePlay: path={path} playing={_playing} src={Src}");
+
         if (_nativePlayer is not null)
         {
             if (_playing)

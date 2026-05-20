@@ -111,6 +111,11 @@ public class ApiClient(HttpClient http)
 
     // ── Updates ───────────────────────────────────────────────────────────────
 
+    public async Task DiagAsync(string message)
+    {
+        try { await http.PostAsJsonAsync("/api/diag", new { message }); } catch { }
+    }
+
     public async Task<string?> GetLatestVersionAsync()
     {
         try
