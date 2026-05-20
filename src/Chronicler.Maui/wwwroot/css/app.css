@@ -21,44 +21,44 @@
 
 /* ── Status bar ───────────────────────────────────────────────────────────── */
 .status-bar {
-    flex-shrink: 0;
     display: flex;
     align-items: center;
-    gap: .6rem;
+    justify-content: center;
+    gap: .9rem;
     background: #160f07;
-    border-top: 1px solid #3d280f;
-    padding: .35rem .9rem calc(.35rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid #5a3418;
+    padding: .65rem 1.2rem calc(.65rem + env(safe-area-inset-bottom, 0px));
     font-family: 'Cinzel', Georgia, serif;
-    font-size: .65rem;
     letter-spacing: 1px;
+    width: 100%;
 }
 
 .status-indicator {
-    width: 7px;
-    height: 7px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     flex-shrink: 0;
 }
 
-.status-online  { background: #5a9c7a; box-shadow: 0 0 5px #5a9c7a; }
-.status-offline { background: #8b3510; box-shadow: 0 0 5px #8b3510; }
+.status-online  { background: #5a9c7a; box-shadow: 0 0 8px #5a9c7a; }
+.status-offline { background: #8b3510; box-shadow: 0 0 8px #8b3510; }
 
 .status-version {
-    color: #7a5010;
-    font-size: .62rem;
+    color: #9a6820;
+    font-size: .85rem;
 }
 
 .status-text {
-    color: #7a5010;
-    font-size: .62rem;
+    color: #9a6820;
+    font-size: .85rem;
 }
 
 .status-update {
     color: #f0b830;
-    text-shadow: 0 0 8px #d4920c80;
+    text-shadow: 0 0 10px #d4920c;
     cursor: pointer;
     animation: electric-text 1.5s ease-in-out infinite;
-    font-size: .65rem;
+    font-size: .9rem;
 }
 
 /* Pull the library and player to fill available height on mobile */
