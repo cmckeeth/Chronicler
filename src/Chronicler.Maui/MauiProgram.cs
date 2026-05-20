@@ -1,6 +1,7 @@
 using Chronicler.Maui.Services;
 using Chronicler.Shared.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Chronicler.Maui;
 
@@ -24,8 +25,14 @@ public static class MauiProgram
 
         builder.Services.AddMauiBlazorWebView();
         builder.Services.AddSingleton<IAudioPlayerService, NativeAudioPlayerService>();
-        builder.Services.AddScoped<ApiClient>(_ =>
-            new ApiClient(new HttpClient { BaseAddress = new Uri(ApiConfig.BaseUrl.TrimEnd('/') + "/") }));
+        builder.Services.AddSingleton<ITokenStorage, SecureTokenStorage>();
+        builder.Services.AddSingleton<AuthState>();
+        builder.Services.AddScoped<ApiClient>(sp =>
+        {
+            var auth = sp.GetRequiredService<AuthState>();
+            var http = new HttpClient { BaseAddress = new Uri(ApiConfig.BaseUrl.TrimEnd('/') + "/") };
+            return new ApiClient(http, auth);
+        });
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

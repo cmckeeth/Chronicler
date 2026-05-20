@@ -1,6 +1,7 @@
 @page "/login"
 @inject ApiClient Api
 @inject AuthState Auth
+@inject ITokenStorage TokenStorage
 @inject NavigationManager Nav
 
 <div class="auth-page">
@@ -44,13 +45,12 @@
 
         if (token is null)
         {
-            _error = _mode == "login"
-                ? "Invalid email or password."
-                : "Registration failed. Try a different email.";
+            _error = _mode == "login" ? "Invalid email or password." : "Registration failed.";
             return;
         }
 
-        Auth.SetToken(token);
+        await TokenStorage.SetAsync(token);
+        Auth.SetToken(token, _email);
         Nav.NavigateTo("/");
     }
 }

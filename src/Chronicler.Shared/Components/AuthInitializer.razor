@@ -1,0 +1,20 @@
+@inject ITokenStorage TokenStorage
+@inject AuthState Auth
+@inject NavigationManager Nav
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        var token = await TokenStorage.GetAsync();
+        if (token is not null)
+        {
+            Auth.SetToken(token);
+        }
+        else if (!Nav.Uri.Contains("/login"))
+        {
+            Nav.NavigateTo("/login");
+        }
+    }
+}

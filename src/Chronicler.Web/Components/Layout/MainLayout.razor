@@ -1,3 +1,14 @@
 @inherits LayoutComponentBase
+@inject AuthState Auth
+@inject NavigationManager Nav
 
-@Body
+<AuthInitializer />
+
+@if (Auth.IsAuthenticated || Nav.Uri.Contains("/login"))
+{
+    @Body
+}
+else
+{
+    <p style="color:#c8860a;font-family:serif;padding:2rem">Loading...</p>
+}

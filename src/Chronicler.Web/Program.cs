@@ -1,5 +1,6 @@
 using Chronicler.Shared.Services;
 using Chronicler.Web.Components;
+using Chronicler.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,8 +11,14 @@ var apiBase = builder.Configuration["ApiBaseUrl"]
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddScoped<ApiClient>(_ =>
-    new ApiClient(new HttpClient { BaseAddress = new Uri(apiBase.TrimEnd('/') + "/") }));
+builder.Services.AddScoped<ITokenStorage, LocalStorageTokenStorage>();
+builder.Services.AddScoped<AuthState>();
+builder.Services.AddScoped<ApiClient>(sp =>
+{
+    var auth = sp.GetRequiredService<AuthState>();
+    var http = new HttpClient { BaseAddress = new Uri(apiBase.TrimEnd('/') + "/") };
+    return new ApiClient(http, auth);
+});
 
 var app = builder.Build();
 

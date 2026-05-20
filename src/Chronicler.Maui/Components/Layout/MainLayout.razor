@@ -1,8 +1,18 @@
 @inherits LayoutComponentBase
+@inject AuthState Auth
+@inject NavigationManager Nav
+
+<AuthInitializer />
 
 <div class="maui-layout">
-    <UpdateBanner />
+    @if (Auth.IsAuthenticated)
+    {
+        <UpdateBanner />
+    }
     <main class="maui-content">
-        @Body
+        @if (Auth.IsAuthenticated || Nav.Uri.Contains("/login"))
+        {
+            @Body
+        }
     </main>
 </div>

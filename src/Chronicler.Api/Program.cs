@@ -152,7 +152,7 @@ app.MapGet("/api/auth/me", (ClaimsPrincipal principal) =>
 
 // ── Books ─────────────────────────────────────────────────────────────────────
 
-app.MapGet("/api/books", async (string? q, AppDbContext db) =>
+app.MapGet("/api/books", [Authorize] async (string? q, AppDbContext db) =>
 {
     var query = db.Books.AsQueryable();
     if (!string.IsNullOrWhiteSpace(q))
@@ -170,7 +170,7 @@ app.MapGet("/api/books", async (string? q, AppDbContext db) =>
     return Results.Ok(books);
 });
 
-app.MapGet("/api/books/{id:int}", async (int id, AppDbContext db) =>
+app.MapGet("/api/books/{id:int}", [Authorize] async (int id, AppDbContext db) =>
 {
     var b = await db.Books.FindAsync(id);
     return b is null ? Results.NotFound() : Results.Ok(b);
@@ -189,7 +189,7 @@ app.MapGet("/api/books/{id:int}/cover", async (int id, AppDbContext db, IWebHost
     return Results.File(fullPath, mime);
 });
 
-app.MapGet("/api/books/{id:int}/audio", async (
+app.MapGet("/api/books/{id:int}/audio", [Authorize] async (
     int id, HttpContext ctx, AppDbContext db, IWebHostEnvironment env, ILogger<Program> logger) =>
 {
     var book = await db.Books.FindAsync(id);
@@ -220,7 +220,7 @@ app.MapGet("/api/books/{id:int}/audio", async (
 
 // ── Chapters ──────────────────────────────────────────────────────────────────
 
-app.MapGet("/api/books/{bookId:int}/chapters", async (int bookId, AppDbContext db) =>
+app.MapGet("/api/books/{bookId:int}/chapters", [Authorize] async (int bookId, AppDbContext db) =>
 {
     var chapters = await db.Chapters
         .Where(c => c.BookId == bookId)
@@ -230,7 +230,7 @@ app.MapGet("/api/books/{bookId:int}/chapters", async (int bookId, AppDbContext d
     return Results.Ok(chapters);
 });
 
-app.MapGet("/api/chapters/{chapterId:int}/audio", async (
+app.MapGet("/api/chapters/{chapterId:int}/audio", [Authorize] async (
     int chapterId, HttpContext ctx, AppDbContext db, IWebHostEnvironment env, ILogger<Program> logger) =>
 {
     var chapter = await db.Chapters.FindAsync(chapterId);
@@ -258,22 +258,22 @@ app.MapGet("/api/chapters/{chapterId:int}/audio", async (
     return Results.File(fullPath, mime, enableRangeProcessing: true);
 });
 
-app.MapGet("/api/chapters/{chapterId:int}/progress", async (int chapterId, AppDbContext db) =>
+app.MapGet("/api/chapters/{chapterId:int}/progress", [Authorize] async (int chapterId, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var p = await db.ChapterProgresses
-        .FirstOrDefaultAsync(p => p.UserId == "default" && p.ChapterId == chapterId);
+        .FirstOrDefaultAsync(p => p.UserId == (principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? "default") && p.ChapterId == chapterId);
     return Results.Ok(new { positionSeconds = p?.PositionSeconds ?? 0, isListened = p?.IsListened ?? false });
 });
 
-app.MapPut("/api/chapters/{chapterId:int}/progress", async (
-    int chapterId, ChapterProgressRequest req, AppDbContext db) =>
+app.MapPut("/api/chapters/{chapterId:int}/progress", [Authorize] async (
+    int chapterId, ChapterProgressRequest req, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var p = await db.ChapterProgresses
-        .FirstOrDefaultAsync(cp => cp.UserId == "default" && cp.ChapterId == chapterId);
+        .FirstOrDefaultAsync(cp => cp.UserId == (principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? "default") && cp.ChapterId == chapterId);
 
     if (p is null)
     {
-        p = new ChapterProgress { UserId = "default", ChapterId = chapterId };
+        p = new ChapterProgress { UserId = (principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? "default"), ChapterId = chapterId };
         db.ChapterProgresses.Add(p);
     }
 
@@ -288,10 +288,10 @@ app.MapPut("/api/chapters/{chapterId:int}/progress", async (
     return Results.Ok();
 });
 
-app.MapPost("/api/chapters/{chapterId:int}/reset", async (int chapterId, AppDbContext db) =>
+app.MapPost("/api/chapters/{chapterId:int}/reset", [Authorize] async (int chapterId, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var p = await db.ChapterProgresses
-        .FirstOrDefaultAsync(cp => cp.UserId == "default" && cp.ChapterId == chapterId);
+        .FirstOrDefaultAsync(cp => cp.UserId == (principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? "default") && cp.ChapterId == chapterId);
     if (p is not null)
     {
         p.IsListened = false;
@@ -301,10 +301,10 @@ app.MapPost("/api/chapters/{chapterId:int}/reset", async (int chapterId, AppDbCo
     return Results.Ok();
 });
 
-app.MapPost("/api/books/{bookId:int}/reset", async (int bookId, AppDbContext db) =>
+app.MapPost("/api/books/{bookId:int}/reset", [Authorize] async (int bookId, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var progresses = await db.ChapterProgresses
-        .Where(p => p.UserId == "default" && p.Chapter.BookId == bookId)
+        .Where(p => p.UserId == (principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? "default") && p.Chapter.BookId == bookId)
         .ToListAsync();
     foreach (var p in progresses) { p.IsListened = false; p.PositionSeconds = 0; }
     await db.SaveChangesAsync();
@@ -348,21 +348,21 @@ app.MapPut("/api/books/{id:int}", async (int id, BookUpdateRequest req, AppDbCon
 
 // ── Progress ──────────────────────────────────────────────────────────────────
 
-app.MapGet("/api/progress/{bookId:int}", async (int bookId, AppDbContext db) =>
+app.MapGet("/api/progress/{bookId:int}", [Authorize] async (int bookId, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var progress = await db.Progresses
-        .FirstOrDefaultAsync(p => p.UserId == "default" && p.BookId == bookId);
+        .FirstOrDefaultAsync(p => p.UserId == (principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? "default") && p.BookId == bookId);
     return Results.Ok(new { positionSeconds = progress?.PositionSeconds ?? 0 });
 });
 
-app.MapPut("/api/progress/{bookId:int}", async (int bookId, ProgressRequest req, AppDbContext db) =>
+app.MapPut("/api/progress/{bookId:int}", [Authorize] async (int bookId, ProgressRequest req, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var progress = await db.Progresses
-        .FirstOrDefaultAsync(p => p.UserId == "default" && p.BookId == bookId);
+        .FirstOrDefaultAsync(p => p.UserId == (principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? "default") && p.BookId == bookId);
 
     if (progress is null)
     {
-        progress = new UserProgress { UserId = "default", BookId = bookId };
+        progress = new UserProgress { UserId = (principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? "default"), BookId = bookId };
         db.Progresses.Add(progress);
     }
 
@@ -374,21 +374,21 @@ app.MapPut("/api/progress/{bookId:int}", async (int bookId, ProgressRequest req,
 
 // ── Bookmarks ─────────────────────────────────────────────────────────────────
 
-app.MapGet("/api/bookmarks/{bookId:int}", async (int bookId, AppDbContext db) =>
+app.MapGet("/api/bookmarks/{bookId:int}", [Authorize] async (int bookId, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var bookmarks = await db.Bookmarks
-        .Where(b => b.UserId == "default" && b.BookId == bookId)
+        .Where(b => b.UserId == (principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? "default") && b.BookId == bookId)
         .OrderBy(b => b.PositionSeconds)
         .Select(b => new BookmarkDto(b.Id, b.BookId, b.PositionSeconds, b.Label, b.CreatedAt))
         .ToListAsync();
     return Results.Ok(bookmarks);
 });
 
-app.MapPost("/api/bookmarks/{bookId:int}", async (int bookId, BookmarkRequest req, AppDbContext db) =>
+app.MapPost("/api/bookmarks/{bookId:int}", [Authorize] async (int bookId, BookmarkRequest req, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var bookmark = new Bookmark
     {
-        UserId = "default",
+        UserId = (principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? "default"),
         BookId = bookId,
         PositionSeconds = req.PositionSeconds,
         Label = req.Label
@@ -399,7 +399,7 @@ app.MapPost("/api/bookmarks/{bookId:int}", async (int bookId, BookmarkRequest re
         bookmark.PositionSeconds, bookmark.Label, bookmark.CreatedAt));
 });
 
-app.MapDelete("/api/bookmarks/{id:int}", async (int id, AppDbContext db) =>
+app.MapDelete("/api/bookmarks/{id:int}", [Authorize] async (int id, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var bookmark = await db.Bookmarks.FindAsync(id);
     if (bookmark is null) return Results.NotFound();

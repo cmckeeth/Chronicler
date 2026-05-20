@@ -12,9 +12,16 @@ public record ChapterDto(int Id, int BookId, string Title, int TrackNumber);
 
 public record ChapterProgressDto(double PositionSeconds, bool IsListened);
 
-public class ApiClient(HttpClient http)
+public class ApiClient(HttpClient http, AuthState auth)
 {
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
+
+    private void ApplyAuth()
+    {
+        http.DefaultRequestHeaders.Authorization = auth.Token is not null
+            ? new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", auth.Token)
+            : null;
+    }
 
     // ── Auth ──────────────────────────────────────────────────────────────────
 
@@ -38,39 +45,55 @@ public class ApiClient(HttpClient http)
 
     public async Task<List<BookDto>> GetBooksAsync(string? search = null)
     {
-        var url = string.IsNullOrWhiteSpace(search)
-            ? "/api/books"
-            : $"/api/books?q={Uri.EscapeDataString(search)}";
+        ApplyAuth();
+        var url = string.IsNullOrWhiteSpace(search) ? "/api/books" : $"/api/books?q={Uri.EscapeDataString(search)}";
         return await http.GetFromJsonAsync<List<BookDto>>(url, JsonOpts) ?? [];
     }
 
-    public async Task<BookDto?> GetBookAsync(int id) =>
-        await http.GetFromJsonAsync<BookDto>($"/api/books/{id}", JsonOpts);
+    public async Task<BookDto?> GetBookAsync(int id)
+    {
+        ApplyAuth();
+        return await http.GetFromJsonAsync<BookDto>($"/api/books/{id}", JsonOpts);
+    }
 
     public string GetCoverUrl(int bookId) => $"{http.BaseAddress}api/books/{bookId}/cover";
     public string GetAudioUrl(int bookId) => $"{http.BaseAddress}api/books/{bookId}/audio";
     public string GetChapterAudioUrl(int chapterId) => $"{http.BaseAddress}api/chapters/{chapterId}/audio";
 
-    public async Task<List<ChapterDto>> GetChaptersAsync(int bookId) =>
-        await http.GetFromJsonAsync<List<ChapterDto>>($"/api/books/{bookId}/chapters", JsonOpts) ?? [];
+    public async Task<List<ChapterDto>> GetChaptersAsync(int bookId)
+    {
+        ApplyAuth();
+        return await http.GetFromJsonAsync<List<ChapterDto>>($"/api/books/{bookId}/chapters", JsonOpts) ?? [];
+    }
 
     public async Task<ChapterProgressDto> GetChapterProgressAsync(int chapterId)
     {
+        ApplyAuth();
         var result = await http.GetFromJsonAsync<ChapterProgressDto>($"/api/chapters/{chapterId}/progress", JsonOpts);
         return result ?? new ChapterProgressDto(0, false);
     }
 
-    public async Task SaveChapterProgressAsync(int chapterId, double position, double duration) =>
+    public async Task SaveChapterProgressAsync(int chapterId, double position, double duration)
+    {
+        ApplyAuth();
         await http.PutAsJsonAsync($"/api/chapters/{chapterId}/progress", new { positionSeconds = position, durationSeconds = duration });
+    }
 
-    public async Task ResetChapterAsync(int chapterId) =>
+    public async Task ResetChapterAsync(int chapterId)
+    {
+        ApplyAuth();
         await http.PostAsync($"/api/chapters/{chapterId}/reset", null);
+    }
 
-    public async Task ResetBookAsync(int bookId) =>
+    public async Task ResetBookAsync(int bookId)
+    {
+        ApplyAuth();
         await http.PostAsync($"/api/books/{bookId}/reset", null);
+    }
 
     public async Task<int> ScanLibraryAsync()
     {
+        ApplyAuth();
         var resp = await http.PostAsync("/api/library/scan", null);
         var result = await resp.Content.ReadFromJsonAsync<ScanResult>(JsonOpts);
         return result?.Added ?? 0;
@@ -78,6 +101,7 @@ public class ApiClient(HttpClient http)
 
     public async Task<int> EnrichLibraryAsync()
     {
+        ApplyAuth();
         var resp = await http.PostAsync("/api/library/enrich", null);
         var result = await resp.Content.ReadFromJsonAsync<EnrichResult>(JsonOpts);
         return result?.Enriched ?? 0;
@@ -87,29 +111,40 @@ public class ApiClient(HttpClient http)
 
     public async Task<double> GetProgressAsync(int bookId)
     {
+        ApplyAuth();
         var result = await http.GetFromJsonAsync<ProgressResult>($"/api/progress/{bookId}", JsonOpts);
         return result?.PositionSeconds ?? 0;
     }
 
-    public async Task SaveProgressAsync(int bookId, double positionSeconds) =>
+    public async Task SaveProgressAsync(int bookId, double positionSeconds)
+    {
+        ApplyAuth();
         await http.PutAsJsonAsync($"/api/progress/{bookId}", new { positionSeconds });
+    }
 
     // ── Bookmarks ─────────────────────────────────────────────────────────────
 
-    public async Task<List<BookmarkDto>> GetBookmarksAsync(int bookId) =>
-        await http.GetFromJsonAsync<List<BookmarkDto>>($"/api/bookmarks/{bookId}", JsonOpts) ?? [];
+    public async Task<List<BookmarkDto>> GetBookmarksAsync(int bookId)
+    {
+        ApplyAuth();
+        return await http.GetFromJsonAsync<List<BookmarkDto>>($"/api/bookmarks/{bookId}", JsonOpts) ?? [];
+    }
 
     public async Task<BookmarkDto?> AddBookmarkAsync(int bookId, double positionSeconds, string? label = null)
     {
+        ApplyAuth();
         var resp = await http.PostAsJsonAsync($"/api/bookmarks/{bookId}", new { positionSeconds, label });
         if (!resp.IsSuccessStatusCode) return null;
         return await resp.Content.ReadFromJsonAsync<BookmarkDto>(JsonOpts);
     }
 
-    public async Task DeleteBookmarkAsync(int id) =>
+    public async Task DeleteBookmarkAsync(int id)
+    {
+        ApplyAuth();
         await http.DeleteAsync($"/api/bookmarks/{id}");
+    }
 
-    // ── Updates ───────────────────────────────────────────────────────────────
+    // ── Updates / Diag ────────────────────────────────────────────────────────
 
     public async Task DiagAsync(string message)
     {
