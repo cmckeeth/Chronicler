@@ -71,10 +71,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    gap: 1.2rem;
     position: fixed;
     inset: 0;
-    padding: 1.2rem 1.5rem .8rem;
+    padding: 1rem 1.5rem;
     text-align: center;
     background:
         radial-gradient(ellipse at 50% 0%, rgba(200,134,10,.12) 0%, transparent 60%),
@@ -85,8 +86,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: .4rem;
-    padding-top: .5rem;
+    gap: .3rem;
 }
 
 .landing-logo {
@@ -125,7 +125,6 @@
 }
 
 .landing-middle {
-    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
