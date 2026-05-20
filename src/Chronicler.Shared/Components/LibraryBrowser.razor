@@ -1,8 +1,12 @@
 @inject ApiClient Api
+@inject NavigationManager Nav
 
 <div class="library-browser">
     <div class="library-header">
-        <h1>The Archive</h1>
+        <div style="display:flex;align-items:center;gap:.75rem">
+            <button class="btn-icon" @onclick='() => Nav.NavigateTo("/")' title="Home" style="font-size:1.3rem;padding:.3rem .5rem">⌂</button>
+            <h1>The Archive</h1>
+        </div>
         <div class="library-toolbar">
             <input type="search" placeholder="Query the archive..." class="search-input"
                    value="@_search" @oninput="OnSearch" />
