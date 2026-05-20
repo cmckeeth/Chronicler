@@ -66,7 +66,7 @@
     position: absolute;
     font-size: 1.4rem;
     color: #b87c20;
-    animation: corner-spark 4s ease-in-out infinite;
+    animation: corner-spark 9s ease-in-out infinite;
     pointer-events: none;
     user-select: none;
 }
@@ -107,7 +107,7 @@
     inset: 0;
     padding: 1rem 1.5rem;
     border: 2px solid #b87c20;
-    animation: border-flicker 3s ease-in-out infinite;
+    animation: border-flicker 12s ease-in-out infinite;
     background:
         radial-gradient(ellipse at 50% 0%, rgba(232,160,16,.08) 0%, transparent 50%),
         radial-gradient(ellipse at 0% 50%, rgba(232,160,16,.05) 0%, transparent 40%),
