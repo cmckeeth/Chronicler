@@ -118,7 +118,12 @@
                 // Seek to saved position on first play
                 if (!_hasStartedOnce && StartPosition > 1)
                 {
+                    await Api.DiagAsync($"Resuming chapter at {StartPosition:F1}s — {Src}");
                     await _nativePlayer.SeekAsync(StartPosition);
+                }
+                else
+                {
+                    await Api.DiagAsync($"Starting chapter from beginning — {Src}");
                 }
                 _hasStartedOnce = true;
             }
