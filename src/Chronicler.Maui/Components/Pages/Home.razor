@@ -1,12 +1,29 @@
 @page "/"
-@inject AuthState Auth
 @inject NavigationManager Nav
+@inject AuthState Auth
 
 @if (!Auth.IsAuthenticated)
 {
-    Nav.NavigateTo("/login", replace: true);
+    Nav.NavigateTo("/login");
 }
 else
 {
-    <LibraryBrowser />
+    <div class="landing-page">
+        <div class="landing-top">
+            <img src="logo.png" alt="Chronicler" class="landing-logo" />
+            <h1 class="landing-title">Chronicler</h1>
+            <p class="landing-subtitle">Your Audiobook Library</p>
+            <div class="landing-ornament">⚙ ───────── ⚙</div>
+        </div>
+
+        <div class="landing-middle">
+            <button class="landing-enter-btn" @onclick='() => Nav.NavigateTo("/archive")'>
+                <span class="landing-enter-icon">📚</span>
+                <span class="landing-enter-text">Enter the Archive</span>
+                <span class="landing-enter-sub">Browse your collection</span>
+            </button>
+        </div>
+
+        <div class="landing-bottom-spacer"></div>
+    </div>
 }

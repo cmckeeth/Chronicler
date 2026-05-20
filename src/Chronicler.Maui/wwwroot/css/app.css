@@ -66,6 +66,117 @@
     padding: 1rem;
 }
 
+/* ── Landing page ─────────────────────────────────────────────────────────── */
+.landing-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    padding: 2rem 1.5rem 1rem;
+    text-align: center;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(200,134,10,.12) 0%, transparent 60%),
+        radial-gradient(ellipse at 20% 80%, rgba(120,70,10,.1) 0%, transparent 50%);
+}
+
+.landing-top {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .75rem;
+    padding-top: 1rem;
+}
+
+.landing-logo {
+    width: 110px;
+    height: 110px;
+    border-radius: 22px;
+    box-shadow: 0 0 30px rgba(200,134,10,.5), 0 8px 32px rgba(0,0,0,.7);
+    animation: electric-pulse 3s ease-in-out infinite;
+}
+
+.landing-title {
+    font-family: 'Cinzel Decorative', 'Palatino Linotype', serif;
+    font-size: 2.2rem;
+    color: #f0b830;
+    text-shadow: 0 0 20px rgba(200,134,10,.8), 0 0 40px rgba(200,134,10,.4);
+    letter-spacing: 4px;
+    animation: electric-text 4s ease-in-out infinite;
+    margin: 0;
+}
+
+.landing-subtitle {
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: .8rem;
+    color: #b89458;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-style: italic;
+}
+
+.landing-ornament {
+    color: #7a5010;
+    font-size: .7rem;
+    letter-spacing: 4px;
+    opacity: .7;
+    margin-top: .25rem;
+}
+
+.landing-middle {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.landing-enter-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .6rem;
+    background: linear-gradient(145deg, #2a1a0a, #1e1208);
+    border: 2px solid #c8860a;
+    border-radius: 16px;
+    padding: 2rem 3rem;
+    cursor: pointer;
+    box-shadow: 0 0 30px rgba(200,134,10,.4), inset 0 0 30px rgba(200,134,10,.05), 0 8px 32px rgba(0,0,0,.6);
+    transition: all .2s;
+    min-width: 200px;
+}
+
+.landing-enter-btn:active {
+    transform: scale(.96);
+    box-shadow: 0 0 50px rgba(255,220,80,.8), inset 0 0 20px rgba(200,134,10,.15), 0 4px 16px rgba(0,0,0,.6);
+    animation: electric-pulse .3s ease-in-out infinite;
+}
+
+.landing-enter-icon {
+    font-size: 3rem;
+    filter: drop-shadow(0 0 8px rgba(200,134,10,.6));
+}
+
+.landing-enter-text {
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #f0b830;
+    text-shadow: 0 0 10px rgba(200,134,10,.6);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.landing-enter-sub {
+    font-family: 'Lora', Georgia, serif;
+    font-size: .75rem;
+    color: #b89458;
+    font-style: italic;
+}
+
+.landing-bottom-spacer {
+    height: 1rem;
+}
+
 #blazor-error-ui {
     background: #8b3510;
     color: #e8d5a8;
