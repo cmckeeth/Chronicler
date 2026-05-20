@@ -11,10 +11,18 @@ else
         <button class="btn-back" @onclick='() => Nav.NavigateTo("/")'>Library</button>
 
         <div class="book-header">
-            @if (_book.HasCover)
-            {
-                <img class="book-cover-large" src="@Api.GetCoverUrl(_book.Id)" alt="@_book.Title" />
-            }
+            <div class="cover-container">
+                @if (_book.HasCover)
+                {
+                    <img class="book-cover-large" src="@Api.GetCoverUrl(_book.Id)" alt="@_book.Title" />
+                    <button class="btn-wrong-cover" @onclick="WrongCover" title="Wrong cover art">✕ Wrong cover</button>
+                }
+                else
+                {
+                    <div class="book-cover-placeholder-large">📚</div>
+                    <button class="btn-secondary" style="font-size:.7rem;margin-top:.4rem" @onclick="RefetchCover">⚙ Find cover</button>
+                }
+            </div>
             <div class="book-info">
                 <h1>@_book.Title</h1>
                 <h2>@_book.Author</h2>
@@ -175,6 +183,18 @@ else
     {
         await Api.ResetBookAsync(BookId);
         _chapterProgresses = _chapterProgresses.Select(_ => new ChapterProgressDto(0, false)).ToList();
+    }
+
+    private async Task WrongCover()
+    {
+        await Api.ClearCoverAsync(BookId);
+        _book = await Api.GetBookAsync(BookId);
+    }
+
+    private async Task RefetchCover()
+    {
+        await Api.RefetchCoverAsync(BookId);
+        _book = await Api.GetBookAsync(BookId);
     }
 
     private void AddBookmark() { _showBookmarkInput = true; _bookmarkLabel = ""; }

@@ -35,8 +35,8 @@ var jwtKey = builder.Configuration["Jwt:Key"]
     ?? Environment.GetEnvironmentVariable("JWT_KEY")
     ?? "dev-secret-change-in-production-min-32-chars!!";
 
-var dbPath = builder.Configuration["DbPath"]
-    ?? Environment.GetEnvironmentVariable("CHRONICLER_DB_PATH")
+var dbPath = Environment.GetEnvironmentVariable("CHRONICLER_DB_PATH")
+    ?? builder.Configuration["DbPath"]
     ?? "chronicler.db";
 
 // ── Services ──────────────────────────────────────────────────────────────────
@@ -216,6 +216,37 @@ app.MapGet("/api/books/{id:int}/audio", async (
     };
 
     return Results.File(fullPath, mime, enableRangeProcessing: true);
+});
+
+// Clear wrong cover so it can be re-fetched
+app.MapDelete("/api/books/{id:int}/cover", [Authorize] async (int id, AppDbContext db, IWebHostEnvironment env) =>
+{
+    var book = await db.Books.FindAsync(id);
+    if (book is null) return Results.NotFound();
+
+    if (book.CoverPath is not null)
+    {
+        var fullPath = Path.Combine(env.ContentRootPath, "Library", book.CoverPath);
+        if (File.Exists(fullPath)) File.Delete(fullPath);
+        book.CoverPath = null;
+        await db.SaveChangesAsync();
+    }
+    return Results.Ok();
+});
+
+// Re-fetch cover from OpenLibrary for a specific book
+app.MapPost("/api/books/{id:int}/refetch-cover", [Authorize] async (
+    int id, AppDbContext db, MetadataService metadata, IWebHostEnvironment env) =>
+{
+    var book = await db.Books.FindAsync(id);
+    if (book is null) return Results.NotFound();
+
+    book.CoverPath = null; // force re-fetch
+    var libraryRoot = Path.Combine(env.ContentRootPath, "Library");
+    await metadata.EnrichAsync(book, libraryRoot);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new { hasCover = book.CoverPath != null });
 });
 
 // ── Chapters ──────────────────────────────────────────────────────────────────

@@ -91,6 +91,18 @@ public class ApiClient(HttpClient http, AuthState auth)
         await http.PostAsync($"/api/books/{bookId}/reset", null);
     }
 
+    public async Task RefetchCoverAsync(int bookId)
+    {
+        ApplyAuth();
+        await http.PostAsync($"/api/books/{bookId}/refetch-cover", null);
+    }
+
+    public async Task ClearCoverAsync(int bookId)
+    {
+        ApplyAuth();
+        await http.DeleteAsync($"/api/books/{bookId}/cover");
+    }
+
     public async Task<int> ScanLibraryAsync()
     {
         ApplyAuth();

@@ -542,6 +542,42 @@ select {
 
 .narrator::before { content: '~ '; }
 
+/* ── Cover container ──────────────────────────────────────────────────────── */
+.cover-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .4rem;
+    flex-shrink: 0;
+}
+
+.btn-wrong-cover {
+    background: transparent;
+    color: var(--parchment-dim);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: .68rem;
+    font-family: var(--font-serif);
+    padding: .2rem .5rem;
+    cursor: pointer;
+    opacity: .6;
+    transition: all .15s;
+}
+.btn-wrong-cover:hover { opacity: 1; color: var(--rust); border-color: var(--rust); }
+
+.book-cover-placeholder-large {
+    width: 130px;
+    height: 195px;
+    background: var(--leather);
+    border: 2px solid var(--border-brass);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3.5rem;
+    opacity: .3;
+}
+
 /* ── Audio Player ─────────────────────────────────────────────────────────── */
 .audio-player {
     background: var(--surface);
