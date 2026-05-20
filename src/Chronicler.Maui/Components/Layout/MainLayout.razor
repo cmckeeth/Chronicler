@@ -3,23 +3,13 @@
 @implements IDisposable
 
 <div class="maui-layout">
-    @if (Auth.IsAuthenticated)
-    {
-        <UpdateBanner />
-    }
     <main class="maui-content">
         @Body
     </main>
+    <UpdateBanner />
 </div>
 
 @code {
-    protected override void OnInitialized()
-    {
-        Auth.OnChange += StateHasChanged;
-    }
-
-    public void Dispose()
-    {
-        Auth.OnChange -= StateHasChanged;
-    }
+    protected override void OnInitialized() => Auth.OnChange += StateHasChanged;
+    public void Dispose() => Auth.OnChange -= StateHasChanged;
 }

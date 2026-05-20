@@ -1,66 +1,75 @@
 @inject ApiClient Api
 @implements IDisposable
 
-@if (_updateAvailable)
-{
-    <div class="update-modal-overlay" @onclick="Dismiss">
-        <div class="update-modal" @onclick:stopPropagation="true">
-            <div class="update-modal-title">⚙ Update Available</div>
-            <div class="update-modal-body">
-                Version <strong>@_latestVersion</strong> is ready to install.
-            </div>
-            <div class="update-modal-actions">
-                <button class="btn-primary" @onclick="DownloadUpdate">Download</button>
-                <button class="btn-secondary" @onclick="Dismiss">Later</button>
-            </div>
-        </div>
-    </div>
-}
+<div class="status-bar">
+    <span class="status-indicator @(_connected ? "status-online" : "status-offline")"></span>
+    <span class="status-version">v@(AppInfo.VersionString)</span>
+    @if (_updateAvailable)
+    {
+        <span class="status-update" @onclick="DownloadUpdate">
+            ⚡ v@_latestVersion available — tap to install
+        </span>
+    }
+    else if (_connected)
+    {
+        <span class="status-text">Connected</span>
+    }
+    else
+    {
+        <span class="status-text">Server unreachable</span>
+    }
+</div>
 
 @code {
+    private bool _connected;
     private bool _updateAvailable;
     private string? _latestVersion;
-    private CancellationTokenSource _cts = new();
+    private PeriodicTimer? _timer;
 
     protected override async Task OnInitializedAsync()
     {
-        // Check once on startup after a short delay
-        try
-        {
-            await Task.Delay(2000, _cts.Token);
-            await CheckUpdate();
-        }
-        catch (OperationCanceledException) { }
+        await Check();
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
+        _ = PollAsync();
     }
 
-    private async Task CheckUpdate()
+    private async Task PollAsync()
     {
-        var latest = await Api.GetLatestVersionAsync();
-        if (latest is null || latest == "0.0.0") return;
-
-        var current = AppInfo.VersionString;
-        if (Version.TryParse(latest, out var latestVer) &&
-            Version.TryParse(current, out var currentVer) &&
-            latestVer > currentVer)
+        while (_timer is not null && await _timer.WaitForNextTickAsync())
         {
-            _latestVersion = latest;
-            _updateAvailable = true;
+            await Check();
             await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task Check()
+    {
+        try
+        {
+            var latest = await Api.GetLatestVersionAsync();
+            _connected = latest is not null;
+            if (latest is not null && latest != "0.0.0" &&
+                Version.TryParse(latest, out var latestVer) &&
+                Version.TryParse(AppInfo.VersionString, out var currentVer) &&
+                latestVer > currentVer)
+            {
+                _updateAvailable = true;
+                _latestVersion = latest;
+            }
+        }
+        catch
+        {
+            _connected = false;
         }
     }
 
     private async Task DownloadUpdate()
     {
-        // Always download latest — no version in URL needed
-        await Launcher.OpenAsync(new Uri(ApiConfig.UpdateApkUrl));
-        Dismiss();
+        var url = _latestVersion is not null
+            ? $"{ApiConfig.BaseUrl}/api/update/apk/Chronicler-v{_latestVersion}.apk"
+            : ApiConfig.UpdateApkUrl;
+        await Launcher.OpenAsync(new Uri(url));
     }
 
-    private void Dismiss()
-    {
-        _updateAvailable = false;
-        StateHasChanged();
-    }
-
-    public void Dispose() => _cts.Cancel();
+    public void Dispose() => _timer?.Dispose();
 }
