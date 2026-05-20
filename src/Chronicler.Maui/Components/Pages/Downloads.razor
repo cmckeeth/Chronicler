@@ -1,5 +1,5 @@
 @page "/downloads"
-@inject IDownloadService Downloads
+@inject IDownloadService DownloadSvc
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -62,22 +62,22 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Downloads.OnChanged += Refresh;
+        DownloadSvc.OnChanged += Refresh;
         await Load();
     }
 
     private async Task Load()
     {
-        _chapters = (await Downloads.GetAllDownloadsAsync()).ToList();
-        _totalSize = await Downloads.GetTotalSizeAsync();
+        _chapters = (await DownloadSvc.GetAllDownloadsAsync()).ToList();
+        _totalSize = await DownloadSvc.GetTotalSizeAsync();
         _loading = false;
     }
 
     private void Refresh() => InvokeAsync(async () => { await Load(); StateHasChanged(); });
 
-    private async Task DeleteChapter(int id) { await Downloads.DeleteChapterAsync(id); }
-    private async Task DeleteBook(int id) { await Downloads.DeleteBookAsync(id); }
-    private async Task DeleteAll() { await Downloads.DeleteAllAsync(); }
+    private async Task DeleteChapter(int id) { await DownloadSvc.DeleteChapterAsync(id); }
+    private async Task DeleteBook(int id) { await DownloadSvc.DeleteBookAsync(id); }
+    private async Task DeleteAll() { await DownloadSvc.DeleteAllAsync(); }
 
     private static string FormatSize(long bytes)
     {
@@ -85,5 +85,5 @@
         return $"{bytes / 1024.0 / 1024.0:F1}MB";
     }
 
-    public void Dispose() => Downloads.OnChanged -= Refresh;
+    public void Dispose() => DownloadSvc.OnChanged -= Refresh;
 }
