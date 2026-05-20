@@ -72,8 +72,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    height: 100%;
-    overflow: hidden;
+    position: fixed;
+    inset: 0;
     padding: 2rem 1.5rem 1rem;
     text-align: center;
     background:
