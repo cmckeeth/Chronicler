@@ -58,20 +58,42 @@ public class MetadataService(ILogger<MetadataService> logger)
     private async Task<OpenLibraryResult?> SearchOpenLibraryAsync(
         string title, string author, CancellationToken ct)
     {
-        var query = Uri.EscapeDataString($"{title} {author}".Trim());
-        var url = $"https://openlibrary.org/search.json?q={query}&limit=3&fields=title,author_name,cover_i,first_sentence,description";
-
-        logger.LogInformation("Metadata: querying OpenLibrary → {Url}", url);
-        var response = await Http.GetFromJsonAsync<OpenLibraryResponse>(url, JsonOpts, ct);
-        var doc = response?.Docs?.FirstOrDefault();
-        if (doc is null)
+        // Try multiple query strategies — directory names may have title/author swapped
+        // or the "title" may be an edition/subtitle rather than the real book name
+        var queries = new[]
         {
-            logger.LogWarning("Metadata: OpenLibrary returned 0 results for '{Query}'", query);
-            return null;
+            author,                          // most likely the real book name (e.g. "Harry Potter...")
+            $"{author} {title}",            // combined
+            title,                           // fallback to raw title
+        };
+
+        foreach (var q in queries.Select(x => x.Trim()).Where(x => x.Length > 3).Distinct())
+        {
+            var encoded = Uri.EscapeDataString(q);
+            var url = $"https://openlibrary.org/search.json?q={encoded}&limit=3&fields=title,author_name,cover_i,first_sentence,description";
+            logger.LogInformation("Metadata: querying OpenLibrary q='{Query}'", q);
+
+            try
+            {
+                var response = await Http.GetFromJsonAsync<OpenLibraryResponse>(url, JsonOpts, ct);
+                var doc = response?.Docs?.FirstOrDefault(d => d.CoverId.HasValue && d.CoverId > 0)
+                          ?? response?.Docs?.FirstOrDefault();
+
+                if (doc is not null)
+                {
+                    logger.LogInformation("Metadata: matched '{Match}' (coverId={CoverId})", doc.Title, doc.CoverId);
+                    return new OpenLibraryResult(doc.CoverId ?? 0, doc.Description ?? doc.FirstSentence?.Value);
+                }
+
+                logger.LogWarning("Metadata: no results for q='{Query}'", q);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning("Metadata: query failed for '{Query}': {Error}", q, ex.Message);
+            }
         }
 
-        logger.LogInformation("Metadata: matched '{Match}' (coverId={CoverId})", doc.Title, doc.CoverId);
-        return new OpenLibraryResult(doc.CoverId ?? 0, doc.Description ?? doc.FirstSentence?.Value);
+        return null;
     }
 
     private async Task<string?> DownloadCoverAsync(
