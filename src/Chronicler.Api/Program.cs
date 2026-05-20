@@ -103,6 +103,16 @@ app.UseAuthorization();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 
+app.MapGet("/api/logs", (IWebHostEnvironment env) =>
+{
+    var logsDir = Path.Combine(env.ContentRootPath, "logs");
+    var today = DateTime.UtcNow.ToString("yyyyMMdd");
+    var logFile = Path.Combine(logsDir, $"chronicler-{today}.log");
+    if (!File.Exists(logFile)) return Results.NotFound(new { error = "No log file for today" });
+    var content = File.ReadAllText(logFile);
+    return Results.Content(content, "text/plain");
+});
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 app.MapPost("/api/auth/register", async (
@@ -174,12 +184,17 @@ app.MapGet("/api/books/{id:int}/cover", async (int id, AppDbContext db, IWebHost
 });
 
 app.MapGet("/api/books/{id:int}/audio", async (
-    int id, HttpContext ctx, AppDbContext db, IWebHostEnvironment env) =>
+    int id, HttpContext ctx, AppDbContext db, IWebHostEnvironment env, ILogger<Program> logger) =>
 {
     var book = await db.Books.FindAsync(id);
-    if (book is null) return Results.NotFound();
+    if (book is null) { logger.LogWarning("Audio: book {Id} not found", id); return Results.NotFound(); }
 
     var fullPath = Path.Combine(env.ContentRootPath, "Library", book.FilePath);
+    logger.LogInformation("Audio: book {Id} → {Path} | exists={Exists} | Range={Range} | UA={UA}",
+        id, fullPath, File.Exists(fullPath),
+        ctx.Request.Headers["Range"].ToString(),
+        ctx.Request.Headers["User-Agent"].ToString());
+
     if (!File.Exists(fullPath)) return Results.NotFound();
 
     var ext = Path.GetExtension(fullPath).ToLower();
@@ -210,12 +225,17 @@ app.MapGet("/api/books/{bookId:int}/chapters", async (int bookId, AppDbContext d
 });
 
 app.MapGet("/api/chapters/{chapterId:int}/audio", async (
-    int chapterId, AppDbContext db, IWebHostEnvironment env) =>
+    int chapterId, HttpContext ctx, AppDbContext db, IWebHostEnvironment env, ILogger<Program> logger) =>
 {
     var chapter = await db.Chapters.FindAsync(chapterId);
-    if (chapter is null) return Results.NotFound();
+    if (chapter is null) { logger.LogWarning("Audio: chapter {Id} not found", chapterId); return Results.NotFound(); }
 
     var fullPath = Path.Combine(env.ContentRootPath, "Library", chapter.FilePath);
+    logger.LogInformation("Audio: chapter {Id} → {Path} | exists={Exists} | Range={Range} | UA={UA}",
+        chapterId, fullPath, File.Exists(fullPath),
+        ctx.Request.Headers["Range"].ToString(),
+        ctx.Request.Headers["User-Agent"].ToString());
+
     if (!File.Exists(fullPath)) return Results.NotFound();
 
     var ext = Path.GetExtension(fullPath).ToLower();
