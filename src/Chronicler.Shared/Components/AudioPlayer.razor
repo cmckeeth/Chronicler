@@ -73,7 +73,14 @@
             _playing = false;
             CurrentPosition = 0;
             Duration = 0;
-            await JS.InvokeVoidAsync("diagLog", $"Blazor: loading src={Src}");
+            try
+            {
+                await JS.InvokeVoidAsync("window.diagLog", $"Blazor OnAfterRender: loading src={Src}");
+            }
+            catch (Exception ex)
+            {
+                await JS.InvokeVoidAsync("console.error", $"diagLog failed: {ex.Message}");
+            }
             await JS.InvokeVoidAsync("chroniclerAudio.load", _audioRef, Src);
             if (StartPosition > 0)
                 await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, StartPosition);

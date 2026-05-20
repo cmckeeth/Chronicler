@@ -1,12 +1,17 @@
-function diagLog(msg) {
+window.diagLog = function(msg) {
     console.log('[chronicler]', msg);
     try {
         fetch('/api/diag', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({message: msg}) });
     } catch(e) {}
-}
+};
+window.diagLog('chronicler.js loaded');
 
 window.chroniclerAudio = {
-    play: (el) => { if (el) el.play(); },
+    play: (el) => {
+        if (!el) { window.diagLog('play: el null'); return; }
+        window.diagLog('play: src=' + el.src + ' readyState=' + el.readyState + ' muted=' + el.muted + ' volume=' + el.volume + ' paused=' + el.paused);
+        el.play().then(() => window.diagLog('play: started')).catch(e => window.diagLog('play error: ' + e));
+    },
     pause: (el) => { if (el) el.pause(); },
     seek: (el, pos) => { if (el) el.currentTime = pos; },
     setRate: (el, rate) => { if (el) el.playbackRate = rate; },
