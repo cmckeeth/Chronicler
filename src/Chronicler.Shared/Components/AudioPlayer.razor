@@ -37,7 +37,7 @@
     }
 </div>
 
-<audio id="chronicler-audio" @ref="_audioRef" preload="auto"></audio>
+<audio id="chronicler-audio" @ref="_audioRef" src="@Src" preload="auto"></audio>
 
 @code {
     [Parameter, EditorRequired] public string Src { get; set; } = "";
@@ -73,15 +73,8 @@
             _playing = false;
             CurrentPosition = 0;
             Duration = 0;
-            try
-            {
-                await JS.InvokeVoidAsync("window.diagLog", $"Blazor OnAfterRender: loading src={Src}");
-            }
-            catch (Exception ex)
-            {
-                await JS.InvokeVoidAsync("console.error", $"diagLog failed: {ex.Message}");
-            }
-            await JS.InvokeVoidAsync("chroniclerAudio.load", _audioRef, Src);
+            // Let Blazor set src attribute via HTML binding above, then just call load()
+            await JS.InvokeVoidAsync("chroniclerAudio.reload", _audioRef);
             if (StartPosition > 0)
                 await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, StartPosition);
         }
