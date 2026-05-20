@@ -12,7 +12,7 @@
 
     <div class="player-controls">
         <button class="btn-icon" @onclick="SkipBack" title="Back 30s">⏮ 30s</button>
-        <button class="btn-icon btn-play" @onclick="TogglePlay">
+        <button class="btn-play" @onclick="TogglePlay">
             @(_playing ? "⏸" : "▶")
         </button>
         <button class="btn-icon" @onclick="SkipForward" title="Forward 30s">30s ⏭</button>
@@ -37,9 +37,7 @@
     }
 </div>
 
-<audio id="chronicler-audio" @ref="_audioRef" preload="metadata"
-       @onplay="OnPlay" @onpause="OnPause" @ontimeupdate="OnTimeUpdate"
-       @onloadedmetadata="OnMetadataLoaded">
+<audio id="chronicler-audio" @ref="_audioRef" preload="metadata">
     <source src="@Src" />
 </audio>
 
@@ -51,6 +49,7 @@
     [Parameter] public EventCallback OnBookmarkRequested { get; set; }
 
     private ElementReference _audioRef;
+    private DotNetObjectReference<AudioPlayer>? _dotnetRef;
     private bool _playing;
     private double _speed = 1.0;
     private DateTime _lastSave = DateTime.MinValue;
@@ -60,7 +59,12 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && StartPosition > 0)
+        if (!firstRender) return;
+
+        _dotnetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("chroniclerAudio.registerEvents", _audioRef, _dotnetRef);
+
+        if (StartPosition > 0)
             await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, StartPosition);
     }
 
@@ -93,19 +97,20 @@
         }
     }
 
-    private void OnPlay() => _playing = true;
-    private void OnPause() => _playing = false;
-    private void OnMetadataLoaded(EventArgs e) { }
+    [JSInvokable] public void OnJsPlay()  { _playing = true;  InvokeAsync(StateHasChanged); }
+    [JSInvokable] public void OnJsPause() { _playing = false; InvokeAsync(StateHasChanged); }
+    [JSInvokable] public void OnJsMetadata(double duration) { Duration = duration; InvokeAsync(StateHasChanged); }
 
-    private async Task OnTimeUpdate(EventArgs e)
+    [JSInvokable]
+    public async Task OnJsTimeUpdate(double currentTime)
     {
-        CurrentPosition = await JS.InvokeAsync<double>("chroniclerAudio.currentTime", _audioRef);
-
+        CurrentPosition = currentTime;
         if ((DateTime.UtcNow - _lastSave).TotalSeconds >= 10)
         {
             _lastSave = DateTime.UtcNow;
             await OnProgressChanged.InvokeAsync(CurrentPosition);
         }
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task AddBookmark() => await OnBookmarkRequested.InvokeAsync();
@@ -120,7 +125,7 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (_playing)
-            await JS.InvokeVoidAsync("chroniclerAudio.pause", _audioRef);
+        _dotnetRef?.Dispose();
+        try { await JS.InvokeVoidAsync("chroniclerAudio.pause", _audioRef); } catch { }
     }
 }

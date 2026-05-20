@@ -234,76 +234,61 @@ app.MapPut("/api/books/{id:int}", async (int id, BookUpdateRequest req, AppDbCon
 
 // ── Progress ──────────────────────────────────────────────────────────────────
 
-app.MapGet("/api/progress/{bookId:int}", async (
-    int bookId, ClaimsPrincipal principal, AppDbContext db) =>
+app.MapGet("/api/progress/{bookId:int}", async (int bookId, AppDbContext db) =>
 {
-    var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier)!;
     var progress = await db.Progresses
-        .FirstOrDefaultAsync(p => p.UserId == userId && p.BookId == bookId);
-
+        .FirstOrDefaultAsync(p => p.UserId == "default" && p.BookId == bookId);
     return Results.Ok(new { positionSeconds = progress?.PositionSeconds ?? 0 });
 });
 
-app.MapPut("/api/progress/{bookId:int}", async (
-    int bookId, ProgressRequest req, ClaimsPrincipal principal, AppDbContext db) =>
+app.MapPut("/api/progress/{bookId:int}", async (int bookId, ProgressRequest req, AppDbContext db) =>
 {
-    var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier)!;
     var progress = await db.Progresses
-        .FirstOrDefaultAsync(p => p.UserId == userId && p.BookId == bookId);
+        .FirstOrDefaultAsync(p => p.UserId == "default" && p.BookId == bookId);
 
     if (progress is null)
     {
-        progress = new UserProgress { UserId = userId, BookId = bookId };
+        progress = new UserProgress { UserId = "default", BookId = bookId };
         db.Progresses.Add(progress);
     }
 
     progress.PositionSeconds = req.PositionSeconds;
     progress.UpdatedAt = DateTime.UtcNow;
     await db.SaveChangesAsync();
-
     return Results.Ok();
 });
 
 // ── Bookmarks ─────────────────────────────────────────────────────────────────
 
-app.MapGet("/api/bookmarks/{bookId:int}", async (
-    int bookId, ClaimsPrincipal principal, AppDbContext db) =>
+app.MapGet("/api/bookmarks/{bookId:int}", async (int bookId, AppDbContext db) =>
 {
-    var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier)!;
     var bookmarks = await db.Bookmarks
-        .Where(b => b.UserId == userId && b.BookId == bookId)
+        .Where(b => b.UserId == "default" && b.BookId == bookId)
         .OrderBy(b => b.PositionSeconds)
         .Select(b => new BookmarkDto(b.Id, b.BookId, b.PositionSeconds, b.Label, b.CreatedAt))
         .ToListAsync();
-
     return Results.Ok(bookmarks);
 });
 
-app.MapPost("/api/bookmarks/{bookId:int}", async (
-    int bookId, BookmarkRequest req, ClaimsPrincipal principal, AppDbContext db) =>
+app.MapPost("/api/bookmarks/{bookId:int}", async (int bookId, BookmarkRequest req, AppDbContext db) =>
 {
-    var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier)!;
     var bookmark = new Bookmark
     {
-        UserId = userId,
+        UserId = "default",
         BookId = bookId,
         PositionSeconds = req.PositionSeconds,
         Label = req.Label
     };
-
     db.Bookmarks.Add(bookmark);
     await db.SaveChangesAsync();
-
     return Results.Ok(new BookmarkDto(bookmark.Id, bookmark.BookId,
         bookmark.PositionSeconds, bookmark.Label, bookmark.CreatedAt));
 });
 
-app.MapDelete("/api/bookmarks/{id:int}", async (
-    int id, ClaimsPrincipal principal, AppDbContext db) =>
+app.MapDelete("/api/bookmarks/{id:int}", async (int id, AppDbContext db) =>
 {
-    var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier)!;
     var bookmark = await db.Bookmarks.FindAsync(id);
-    if (bookmark is null || bookmark.UserId != userId) return Results.NotFound();
+    if (bookmark is null) return Results.NotFound();
 
     db.Bookmarks.Remove(bookmark);
     await db.SaveChangesAsync();
