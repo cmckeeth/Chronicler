@@ -152,9 +152,11 @@
     animation: electric-pulse .3s ease-in-out infinite;
 }
 
-.landing-enter-icon {
-    font-size: 3rem;
-    filter: drop-shadow(0 0 8px rgba(200,134,10,.6));
+.landing-enter-logo {
+    width: 72px;
+    height: 72px;
+    border-radius: 14px;
+    box-shadow: 0 0 16px rgba(200,134,10,.5);
 }
 
 .landing-enter-text {
