@@ -55,6 +55,14 @@ public class MetadataService(ILogger<MetadataService> logger)
         }
     }
 
+    private static string NormalizeQuery(string s) =>
+        s.Replace('\u2019', '\'')   // right single quote → apostrophe
+         .Replace('\u2018', '\'')   // left single quote
+         .Replace('\u201C', '"')    // left double quote
+         .Replace('\u201D', '"')    // right double quote
+         .Replace('\u2013', '-')    // en dash
+         .Replace('\u2014', '-');   // em dash
+
     private async Task<OpenLibraryResult?> SearchOpenLibraryAsync(
         string title, string author, CancellationToken ct)
     {
@@ -62,9 +70,9 @@ public class MetadataService(ILogger<MetadataService> logger)
         // or the "title" may be an edition/subtitle rather than the real book name
         var queries = new[]
         {
-            author,                          // most likely the real book name (e.g. "Harry Potter...")
-            $"{author} {title}",            // combined
-            title,                           // fallback to raw title
+            NormalizeQuery(author),                                    // most likely the real book name
+            NormalizeQuery($"{author} {title}"),                      // combined
+            NormalizeQuery(title),                                     // fallback to raw title
         };
 
         foreach (var q in queries.Select(x => x.Trim()).Where(x => x.Length > 3).Distinct())
