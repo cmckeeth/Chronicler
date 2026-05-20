@@ -267,12 +267,14 @@ else
     private async Task WrongCover()
     {
         _coverSrc = null;
+        ApiClient.InvalidateCoverCache(BookId);
         await Api.ClearCoverAsync(BookId);
         _book = await Api.GetBookAsync(BookId);
     }
 
     private async Task RefetchCover()
     {
+        ApiClient.InvalidateCoverCache(BookId);
         await Api.RefetchCoverAsync(BookId);
         _book = await Api.GetBookAsync(BookId);
         if (_book?.HasCover == true)

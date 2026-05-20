@@ -180,7 +180,7 @@ app.MapGet("/api/books/{id:int}", [Authorize] async (int id, AppDbContext db) =>
     return b is null ? Results.NotFound() : Results.Ok(b);
 });
 
-app.MapGet("/api/books/{id:int}/cover", async (int id, AppDbContext db, IWebHostEnvironment env) =>
+app.MapGet("/api/books/{id:int}/cover", async (int id, HttpContext ctx, AppDbContext db, IWebHostEnvironment env) =>
 {
     var book = await db.Books.FindAsync(id);
     if (book?.CoverPath is null) return Results.NotFound();
@@ -190,6 +190,9 @@ app.MapGet("/api/books/{id:int}/cover", async (int id, AppDbContext db, IWebHost
 
     var ext = Path.GetExtension(fullPath).ToLower();
     var mime = ext == ".png" ? "image/png" : "image/jpeg";
+
+    ctx.Response.Headers["Cache-Control"] = "public, max-age=86400";
+    ctx.Response.Headers["ETag"] = $"\"{id}-{File.GetLastWriteTimeUtc(fullPath).Ticks}\"";
     return Results.File(fullPath, mime);
 });
 

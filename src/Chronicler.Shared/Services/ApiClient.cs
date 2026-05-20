@@ -20,6 +20,8 @@ public record ChapterProgressDto(double PositionSeconds, bool IsListened);
 public class ApiClient(HttpClient http, AuthState auth)
 {
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
+    private static readonly Dictionary<int, string> CoverCache = [];
+    private static readonly SemaphoreSlim CoverLock = new(1, 1);
 
     private void ApplyAuth()
     {
@@ -65,13 +67,31 @@ public class ApiClient(HttpClient http, AuthState auth)
 
     public async Task<string?> GetCoverDataUriAsync(int bookId)
     {
+        await CoverLock.WaitAsync();
+        try
+        {
+            if (CoverCache.TryGetValue(bookId, out var cached)) return cached;
+        }
+        finally { CoverLock.Release(); }
+
         try
         {
             var bytes = await http.GetByteArrayAsync($"api/books/{bookId}/cover");
             if (bytes.Length < 100) return null;
-            return $"data:image/jpeg;base64,{Convert.ToBase64String(bytes)}";
+            var dataUri = $"data:image/jpeg;base64,{Convert.ToBase64String(bytes)}";
+            await CoverLock.WaitAsync();
+            try { CoverCache[bookId] = dataUri; }
+            finally { CoverLock.Release(); }
+            return dataUri;
         }
         catch { return null; }
+    }
+
+    public static void InvalidateCoverCache(int bookId)
+    {
+        CoverLock.Wait();
+        try { CoverCache.Remove(bookId); }
+        finally { CoverLock.Release(); }
     }
     public string GetAudioUrl(int bookId) => $"{http.BaseAddress}api/books/{bookId}/audio";
     public string GetChapterAudioUrl(int chapterId) => $"{http.BaseAddress}api/chapters/{chapterId}/audio";
