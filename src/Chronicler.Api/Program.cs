@@ -103,6 +103,12 @@ app.UseAuthorization();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 
+app.MapPost("/api/diag", (DiagMessage msg, ILogger<Program> logger) =>
+{
+    logger.LogInformation("[DIAG] {Message}", msg.Message);
+    return Results.Ok();
+});
+
 app.MapGet("/api/logs", (IWebHostEnvironment env) =>
 {
     var logsDir = Path.Combine(env.ContentRootPath, "logs");
@@ -616,6 +622,7 @@ record ProgressRequest(double PositionSeconds);
 record BookmarkRequest(double PositionSeconds, string? Label);
 record BookmarkDto(int Id, int BookId, double PositionSeconds, string? Label, DateTime CreatedAt);
 record BookUpdateRequest(string? Title, string? Author, string? Narrator, string? Description);
+record DiagMessage(string Message);
 record BookDto(int Id, string Title, string Author, string? Narrator, double DurationSeconds,
     bool HasCover, DateTime AddedAt);
 record ChapterDto(int Id, int BookId, string Title, int TrackNumber);
