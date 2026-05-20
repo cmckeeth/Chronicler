@@ -4,7 +4,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Chronicler.Api.Services;
 
-public class LibraryScanner(AppDbContext db, IWebHostEnvironment env, ILogger<LibraryScanner> logger)
+public class LibraryScanner(
+    AppDbContext db,
+    IWebHostEnvironment env,
+    MetadataService metadata,
+    ILogger<LibraryScanner> logger)
 {
     private static readonly string[] AudioExtensions = [".mp3", ".m4b", ".m4a", ".ogg", ".flac", ".aac", ".wav"];
 
@@ -19,7 +23,7 @@ public class LibraryScanner(AppDbContext db, IWebHostEnvironment env, ILogger<Li
         }
 
         var existingPaths = await db.Books.Select(b => b.FilePath).ToHashSetAsync(ct);
-        int added = 0;
+        var newBooks = new List<Book>();
 
         foreach (var dir in Directory.GetDirectories(LibraryRoot))
         {
@@ -29,7 +33,6 @@ public class LibraryScanner(AppDbContext db, IWebHostEnvironment env, ILogger<Li
             if (audioFile is null) continue;
 
             var relativePath = Path.GetRelativePath(LibraryRoot, audioFile);
-
             if (existingPaths.Contains(relativePath)) continue;
 
             var dirName = Path.GetFileName(dir);
@@ -45,12 +48,11 @@ public class LibraryScanner(AppDbContext db, IWebHostEnvironment env, ILogger<Li
                 AddedAt = DateTime.UtcNow
             };
 
-            db.Books.Add(book);
-            added++;
-            logger.LogInformation("Added book: {Title} by {Author}", title, author);
+            newBooks.Add(book);
+            logger.LogInformation("Found new book: {Title} by {Author}", title, author);
         }
 
-        // also scan flat audio files in root
+        // Flat audio files in root
         foreach (var file in Directory.GetFiles(LibraryRoot)
             .Where(f => AudioExtensions.Contains(Path.GetExtension(f).ToLowerInvariant())))
         {
@@ -60,23 +62,30 @@ public class LibraryScanner(AppDbContext db, IWebHostEnvironment env, ILogger<Li
             var nameWithoutExt = Path.GetFileNameWithoutExtension(file);
             var (title, author) = ParseDirectoryName(nameWithoutExt);
 
-            db.Books.Add(new Book
+            newBooks.Add(new Book
             {
                 Title = title,
                 Author = author,
                 FilePath = relativePath,
                 AddedAt = DateTime.UtcNow
             });
-            added++;
         }
 
-        await db.SaveChangesAsync(ct);
-        return added;
+        // Fetch metadata for books that don't have covers yet
+        foreach (var book in newBooks)
+        {
+            await metadata.EnrichAsync(book, LibraryRoot, ct);
+            db.Books.Add(book);
+        }
+
+        if (newBooks.Count > 0)
+            await db.SaveChangesAsync(ct);
+
+        return newBooks.Count;
     }
 
     private static (string title, string author) ParseDirectoryName(string name)
     {
-        // Expects: "Author Name - Book Title" or just "Book Title"
         var parts = name.Split(" - ", 2);
         return parts.Length == 2
             ? (parts[1].Trim(), parts[0].Trim())

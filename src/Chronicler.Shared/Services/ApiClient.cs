@@ -53,6 +53,13 @@ public class ApiClient(HttpClient http)
         return result?.Added ?? 0;
     }
 
+    public async Task<int> EnrichLibraryAsync()
+    {
+        var resp = await http.PostAsync("/api/library/enrich", null);
+        var result = await resp.Content.ReadFromJsonAsync<EnrichResult>(JsonOpts);
+        return result?.Enriched ?? 0;
+    }
+
     // ── Progress ──────────────────────────────────────────────────────────────
 
     public async Task<double> GetProgressAsync(int bookId)
@@ -96,5 +103,6 @@ public class ApiClient(HttpClient http)
     private record TokenResponse(string Token);
     private record ProgressResult(double PositionSeconds);
     private record ScanResult(int Added);
+    private record EnrichResult(int Enriched);
     private record VersionResult(string Version);
 }

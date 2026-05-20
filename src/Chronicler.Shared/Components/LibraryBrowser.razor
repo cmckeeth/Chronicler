@@ -9,6 +9,9 @@
             <button class="btn-secondary" @onclick="ScanLibrary" disabled="@_scanning">
                 @(_scanning ? "⚙ Cataloguing..." : "⚙ Catalogue")
             </button>
+            <button class="btn-secondary" @onclick="EnrichLibrary" disabled="@_enriching">
+                @(_enriching ? "⚙ Fetching..." : "⚙ Fetch Covers")
+            </button>
         </div>
     </div>
 
@@ -46,6 +49,7 @@
     private string? _error;
     private bool _loading = true;
     private bool _scanning;
+    private bool _enriching;
     private System.Timers.Timer? _debounce;
 
     protected override async Task OnInitializedAsync() => await LoadBooks();
@@ -89,5 +93,13 @@
         var added = await Api.ScanLibraryAsync();
         _scanning = false;
         if (added > 0) await LoadBooks(_search);
+    }
+
+    private async Task EnrichLibrary()
+    {
+        _enriching = true;
+        await Api.EnrichLibraryAsync();
+        _enriching = false;
+        await LoadBooks(_search);
     }
 }

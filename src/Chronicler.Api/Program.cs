@@ -71,6 +71,7 @@ builder.Services.AddAuthentication(opt =>
 });
 
 builder.Services.AddAuthorization();
+builder.Services.AddScoped<MetadataService>();
 builder.Services.AddScoped<LibraryScanner>();
 builder.Services.AddCors(opt =>
     opt.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
@@ -200,6 +201,21 @@ app.MapPost("/api/library/scan", async (LibraryScanner scanner) =>
 {
     var added = await scanner.ScanAsync();
     return Results.Ok(new { added });
+});
+
+app.MapPost("/api/library/enrich", async (AppDbContext db, MetadataService metadata, IWebHostEnvironment env) =>
+{
+    var books = await db.Books.Where(b => b.CoverPath == null || b.Description == null).ToListAsync();
+    var libraryRoot = Path.Combine(env.ContentRootPath, "Library");
+    int enriched = 0;
+    foreach (var book in books)
+    {
+        var coverBefore = book.CoverPath;
+        await metadata.EnrichAsync(book, libraryRoot);
+        if (book.CoverPath != coverBefore || book.Description != null) enriched++;
+    }
+    await db.SaveChangesAsync();
+    return Results.Ok(new { enriched });
 });
 
 app.MapPut("/api/books/{id:int}", async (int id, BookUpdateRequest req, AppDbContext db) =>
