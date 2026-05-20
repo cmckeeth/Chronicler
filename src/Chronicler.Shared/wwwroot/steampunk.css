@@ -879,10 +879,19 @@ select {
 /* ── Mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
     body::before { display: none; }
-    .book-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
     .library-header { flex-direction: column; align-items: stretch; }
     .library-toolbar { max-width: 100%; }
     .book-header { flex-direction: column; }
     .book-cover-large { width: 100%; height: auto; max-height: 250px; }
     .audio-player { padding: 1.2rem 1rem; }
+
+    /* Exactly 3 cards per row on phones */
+    .book-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: .4rem;
+    }
+    .book-meta { padding: .3rem .4rem .35rem; }
+    .book-title { font-size: .68rem; }
+    .book-author { font-size: .62rem; }
+    .book-narrator { display: none; }
 }
