@@ -1,4 +1,6 @@
 @inject IJSRuntime JS
+@inject IServiceProvider Services
+@using Microsoft.Extensions.DependencyInjection
 @implements IAsyncDisposable
 
 <div class="audio-player">
@@ -11,11 +13,11 @@
     </div>
 
     <div class="player-controls">
-        <button class="btn-icon" @onclick="SkipBack" title="Back 30s">⏮ 30s</button>
+        <button class="btn-icon" @onclick="SkipBack">⏮ 30s</button>
         <button class="btn-play" @onclick="TogglePlay">
             @(_playing ? "⏸" : "▶")
         </button>
-        <button class="btn-icon" @onclick="SkipForward" title="Forward 30s">30s ⏭</button>
+        <button class="btn-icon" @onclick="SkipForward">30s ⏭</button>
 
         <select class="speed-select" @onchange="OnSpeedChange" value="@_speed">
             <option value="0.75">0.75×</option>
@@ -25,7 +27,7 @@
             <option value="2">2×</option>
         </select>
 
-        <button class="btn-icon" @onclick="AddBookmark" title="Add bookmark">🔖</button>
+        <button class="btn-icon" @onclick="AddBookmark">🔖</button>
     </div>
 
     @if (Duration > 0)
@@ -37,9 +39,13 @@
     }
 </div>
 
-<audio id="chronicler-audio" @ref="_audioRef" preload="auto">
-    <source src="@Src" />
-</audio>
+@* HTML5 audio element — only used when native service is not available *@
+@if (_nativePlayer is null)
+{
+    <audio id="chronicler-audio" @ref="_audioRef" preload="auto">
+        <source src="@Src" />
+    </audio>
+}
 
 @code {
     [Parameter, EditorRequired] public string Src { get; set; } = "";
@@ -51,6 +57,7 @@
 
     private ElementReference _audioRef;
     private DotNetObjectReference<AudioPlayer>? _dotnetRef;
+    private IAudioPlayerService? _nativePlayer;
     private bool _playing;
     private double _speed = 1.0;
     private DateTime _lastSave = DateTime.MinValue;
@@ -58,52 +65,118 @@
     public double CurrentPosition { get; private set; }
     public double Duration { get; private set; }
 
+    protected override void OnInitialized()
+    {
+        _nativePlayer = Services.GetService<IAudioPlayerService>();
+        if (_nativePlayer is not null)
+        {
+            _nativePlayer.StateChanged += OnNativeStateChanged;
+            _nativePlayer.PositionChanged += OnNativePositionChanged;
+            _nativePlayer.Ended += OnNativeEnded;
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
-        {
-            _dotnetRef = DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("chroniclerAudio.registerEvents", _audioRef, _dotnetRef);
-        }
+        if (!firstRender || _nativePlayer is not null) return;
 
-        // On first render, src is already set via <source> — just seek if needed
-        if (firstRender && StartPosition > 0)
+        // Web path: use JS + HTML5 audio
+        _dotnetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("chroniclerAudio.registerEvents", _audioRef, _dotnetRef);
+        if (StartPosition > 0)
             await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, StartPosition);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Native path: load the new URL when Src changes
+        if (_nativePlayer is not null && !string.IsNullOrEmpty(Src))
+        {
+            _playing = false;
+            CurrentPosition = StartPosition;
+            // Don't auto-play on load — wait for play button
+        }
     }
 
     private async Task TogglePlay()
     {
-        if (_playing)
-            await JS.InvokeVoidAsync("chroniclerAudio.pause", _audioRef);
+        if (_nativePlayer is not null)
+        {
+            if (_playing)
+                await _nativePlayer.PauseAsync();
+            else
+                await _nativePlayer.PlayAsync(Src);
+        }
         else
-            await JS.InvokeVoidAsync("chroniclerAudio.play", _audioRef);
+        {
+            if (_playing)
+                await JS.InvokeVoidAsync("chroniclerAudio.pause", _audioRef);
+            else
+                await JS.InvokeVoidAsync("chroniclerAudio.play", _audioRef);
+        }
     }
 
-    private async Task SkipBack() =>
-        await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, Math.Max(0, CurrentPosition - 30));
+    private async Task SkipBack()
+    {
+        var pos = Math.Max(0, CurrentPosition - 30);
+        if (_nativePlayer is not null) await _nativePlayer.SeekAsync(pos);
+        else await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, pos);
+    }
 
-    private async Task SkipForward() =>
-        await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, Math.Min(Duration, CurrentPosition + 30));
+    private async Task SkipForward()
+    {
+        var pos = Math.Min(Duration, CurrentPosition + 30);
+        if (_nativePlayer is not null) await _nativePlayer.SeekAsync(pos);
+        else await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, pos);
+    }
 
     private async Task OnSeek(ChangeEventArgs e)
     {
-        if (double.TryParse(e.Value?.ToString(), out var pos))
-            await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, pos);
+        if (!double.TryParse(e.Value?.ToString(), out var pos)) return;
+        if (_nativePlayer is not null) await _nativePlayer.SeekAsync(pos);
+        else await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, pos);
     }
 
     private async Task OnSpeedChange(ChangeEventArgs e)
     {
-        if (double.TryParse(e.Value?.ToString(), out var speed))
-        {
-            _speed = speed;
-            await JS.InvokeVoidAsync("chroniclerAudio.setRate", _audioRef, speed);
-        }
+        if (!double.TryParse(e.Value?.ToString(), out var speed)) return;
+        _speed = speed;
+        if (_nativePlayer is not null) await _nativePlayer.SetRateAsync(speed);
+        else await JS.InvokeVoidAsync("chroniclerAudio.setRate", _audioRef, speed);
     }
+
+    // ── Native callbacks ──────────────────────────────────────────────────────
+
+    private void OnNativeStateChanged()
+    {
+        _playing = _nativePlayer?.IsPlaying ?? false;
+        Duration = _nativePlayer?.Duration ?? 0;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnNativePositionChanged(double position)
+    {
+        CurrentPosition = position;
+        if ((DateTime.UtcNow - _lastSave).TotalSeconds >= 10)
+        {
+            _lastSave = DateTime.UtcNow;
+            InvokeAsync(() => OnProgressChanged.InvokeAsync(CurrentPosition));
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnNativeEnded()
+    {
+        _playing = false;
+        InvokeAsync(async () => { StateHasChanged(); await OnChapterEnded.InvokeAsync(); });
+    }
+
+    // ── JS callbacks ──────────────────────────────────────────────────────────
 
     [JSInvokable] public void OnJsPlay()  { _playing = true;  InvokeAsync(StateHasChanged); }
     [JSInvokable] public void OnJsPause() { _playing = false; InvokeAsync(StateHasChanged); }
-    [JSInvokable] public void OnJsEnded() { _playing = false; InvokeAsync(async () => { StateHasChanged(); await OnChapterEnded.InvokeAsync(); }); }
     [JSInvokable] public void OnJsMetadata(double duration) { Duration = duration; InvokeAsync(StateHasChanged); }
+    [JSInvokable] public void OnJsEnded() { _playing = false; InvokeAsync(async () => { StateHasChanged(); await OnChapterEnded.InvokeAsync(); }); }
 
     [JSInvokable]
     public async Task OnJsTimeUpdate(double currentTime)
@@ -119,17 +192,25 @@
 
     private async Task AddBookmark() => await OnBookmarkRequested.InvokeAsync();
 
-    private static string FormatTime(double seconds)
+    private static string FormatTime(double s)
     {
-        var ts = TimeSpan.FromSeconds(seconds);
-        return ts.Hours > 0
-            ? $"{ts.Hours}:{ts.Minutes:D2}:{ts.Seconds:D2}"
-            : $"{ts.Minutes}:{ts.Seconds:D2}";
+        var ts = TimeSpan.FromSeconds(s);
+        return ts.Hours > 0 ? $"{ts.Hours}:{ts.Minutes:D2}:{ts.Seconds:D2}" : $"{ts.Minutes}:{ts.Seconds:D2}";
     }
 
     public async ValueTask DisposeAsync()
     {
-        _dotnetRef?.Dispose();
-        try { await JS.InvokeVoidAsync("chroniclerAudio.pause", _audioRef); } catch { }
+        if (_nativePlayer is not null)
+        {
+            _nativePlayer.StateChanged -= OnNativeStateChanged;
+            _nativePlayer.PositionChanged -= OnNativePositionChanged;
+            _nativePlayer.Ended -= OnNativeEnded;
+            if (_playing) await _nativePlayer.PauseAsync();
+        }
+        else
+        {
+            _dotnetRef?.Dispose();
+            try { await JS.InvokeVoidAsync("chroniclerAudio.pause", _audioRef); } catch { }
+        }
     }
 }

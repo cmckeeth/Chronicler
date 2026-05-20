@@ -1,3 +1,4 @@
+using Chronicler.Maui.Services;
 using Chronicler.Shared.Services;
 using Microsoft.Extensions.Logging;
 
@@ -22,6 +23,7 @@ public static class MauiProgram
             });
 
         builder.Services.AddMauiBlazorWebView();
+        builder.Services.AddSingleton<IAudioPlayerService, NativeAudioPlayerService>();
         builder.Services.AddScoped<ApiClient>(_ =>
             new ApiClient(new HttpClient { BaseAddress = new Uri(ApiConfig.BaseUrl.TrimEnd('/') + "/") }));
 
