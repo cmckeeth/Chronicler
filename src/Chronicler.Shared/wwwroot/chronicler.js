@@ -6,6 +6,7 @@ window.chroniclerAudio = {
     currentTime: (el) => el ? el.currentTime : 0,
     duration: (el) => (el && !isNaN(el.duration)) ? el.duration : 0,
     isPaused: (el) => !el || el.paused,
+    load: (el, src) => { if (!el) return; el.src = src; el.load(); },
 
     // Register event callbacks from Blazor
     registerEvents: (el, dotnetRef) => {

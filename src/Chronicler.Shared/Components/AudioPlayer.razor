@@ -37,7 +37,7 @@
     }
 </div>
 
-<audio id="chronicler-audio" @ref="_audioRef" src="@Src" preload="auto"></audio>
+<audio id="chronicler-audio" @ref="_audioRef" preload="auto"></audio>
 
 @code {
     [Parameter, EditorRequired] public string Src { get; set; } = "";
@@ -52,19 +52,31 @@
     private bool _playing;
     private double _speed = 1.0;
     private DateTime _lastSave = DateTime.MinValue;
+    private string _lastSrc = "";
+    private bool _initialized;
 
     public double CurrentPosition { get; private set; }
     public double Duration { get; private set; }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
+        if (firstRender)
+        {
+            _dotnetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("chroniclerAudio.registerEvents", _audioRef, _dotnetRef);
+            _initialized = true;
+        }
 
-        _dotnetRef = DotNetObjectReference.Create(this);
-        await JS.InvokeVoidAsync("chroniclerAudio.registerEvents", _audioRef, _dotnetRef);
-
-        if (StartPosition > 0)
-            await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, StartPosition);
+        if (_initialized && Src != _lastSrc)
+        {
+            _lastSrc = Src;
+            _playing = false;
+            CurrentPosition = 0;
+            Duration = 0;
+            await JS.InvokeVoidAsync("chroniclerAudio.load", _audioRef, Src);
+            if (StartPosition > 0)
+                await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, StartPosition);
+        }
     }
 
     private async Task TogglePlay()
