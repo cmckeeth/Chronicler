@@ -37,7 +37,9 @@
     }
 </div>
 
-<audio id="chronicler-audio" @ref="_audioRef" src="@Src" preload="auto"></audio>
+<audio id="chronicler-audio" @ref="_audioRef" preload="auto">
+    <source src="@Src" />
+</audio>
 
 @code {
     [Parameter, EditorRequired] public string Src { get; set; } = "";
@@ -52,8 +54,6 @@
     private bool _playing;
     private double _speed = 1.0;
     private DateTime _lastSave = DateTime.MinValue;
-    private string _lastSrc = "";
-    private bool _initialized;
 
     public double CurrentPosition { get; private set; }
     public double Duration { get; private set; }
@@ -64,20 +64,11 @@
         {
             _dotnetRef = DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("chroniclerAudio.registerEvents", _audioRef, _dotnetRef);
-            _initialized = true;
         }
 
-        if (_initialized && Src != _lastSrc)
-        {
-            _lastSrc = Src;
-            _playing = false;
-            CurrentPosition = 0;
-            Duration = 0;
-            // Let Blazor set src attribute via HTML binding above, then just call load()
-            await JS.InvokeVoidAsync("chroniclerAudio.reload", _audioRef);
-            if (StartPosition > 0)
-                await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, StartPosition);
-        }
+        // On first render, src is already set via <source> — just seek if needed
+        if (firstRender && StartPosition > 0)
+            await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, StartPosition);
     }
 
     private async Task TogglePlay()

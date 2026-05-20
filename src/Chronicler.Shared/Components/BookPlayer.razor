@@ -29,7 +29,8 @@ else
 
         @if (_currentChapter is not null)
         {
-            <AudioPlayer Src="@Api.GetChapterAudioUrl(_currentChapter.Id)"
+            <AudioPlayer @key="_currentChapter.Id"
+                         Src="@Api.GetChapterAudioUrl(_currentChapter.Id)"
                          BookTitle="@_currentChapter.Title"
                          StartPosition="@_startPosition"
                          OnProgressChanged="SaveChapterProgress"
