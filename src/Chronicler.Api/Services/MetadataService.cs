@@ -55,13 +55,16 @@ public class MetadataService(ILogger<MetadataService> logger)
         }
     }
 
+    // Strip/normalize chars that break OpenLibrary search
     private static string NormalizeQuery(string s) =>
-        s.Replace('\u2019', '\'')   // right single quote → apostrophe
-         .Replace('\u2018', '\'')   // left single quote
-         .Replace('\u201C', '"')    // left double quote
-         .Replace('\u201D', '"')    // right double quote
-         .Replace('\u2013', '-')    // en dash
-         .Replace('\u2014', '-');   // em dash
+        s.Replace('\u2019', ' ')   // right single quote → space (apostrophes break OL)
+         .Replace('\u2018', ' ')   // left single quote
+         .Replace('\'', ' ')       // straight apostrophe → space
+         .Replace('\u201C', ' ')   // left double quote
+         .Replace('\u201D', ' ')   // right double quote
+         .Replace('\u2013', ' ')   // en dash
+         .Replace('\u2014', ' ')   // em dash
+         .Replace("  ", " ").Trim();
 
     private async Task<OpenLibraryResult?> SearchOpenLibraryAsync(
         string title, string author, CancellationToken ct)
@@ -78,12 +81,18 @@ public class MetadataService(ILogger<MetadataService> logger)
         foreach (var q in queries.Select(x => x.Trim()).Where(x => x.Length > 3).Distinct())
         {
             var encoded = Uri.EscapeDataString(q);
-            var url = $"https://openlibrary.org/search.json?q={encoded}&limit=3&fields=title,author_name,cover_i,first_sentence,description";
+            var url = $"https://openlibrary.org/search.json?q={encoded}&limit=3";
             logger.LogInformation("Metadata: querying OpenLibrary q='{Query}'", q);
 
             try
             {
-                var response = await Http.GetFromJsonAsync<OpenLibraryResponse>(url, JsonOpts, ct);
+                using var resp = await Http.GetAsync(url, ct);
+                if (!resp.IsSuccessStatusCode)
+                {
+                    logger.LogWarning("Metadata: OpenLibrary returned {Status} for q='{Query}'", (int)resp.StatusCode, q);
+                    continue;
+                }
+                var response = await resp.Content.ReadFromJsonAsync<OpenLibraryResponse>(JsonOpts, ct);
                 var doc = response?.Docs?.FirstOrDefault(d => d.CoverId.HasValue && d.CoverId > 0)
                           ?? response?.Docs?.FirstOrDefault();
 
