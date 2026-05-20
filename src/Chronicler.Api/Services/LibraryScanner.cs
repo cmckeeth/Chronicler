@@ -22,6 +22,25 @@ public class LibraryScanner(
             return 0;
         }
 
+        // Remove books whose audio files no longer exist
+        var allBooks = await db.Books.Include(b => b.Chapters).ToListAsync(ct);
+        var removed = 0;
+        foreach (var book in allBooks)
+        {
+            var fullPath = Path.Combine(LibraryRoot, book.FilePath);
+            if (!File.Exists(fullPath))
+            {
+                logger.LogInformation("Removing missing book: {Title} ({Path})", book.Title, book.FilePath);
+                db.Books.Remove(book);
+                removed++;
+            }
+        }
+        if (removed > 0)
+        {
+            await db.SaveChangesAsync(ct);
+            logger.LogInformation("Removed {Count} missing book(s) from library", removed);
+        }
+
         var existingPaths = await db.Books.Select(b => b.FilePath).ToHashSetAsync(ct);
         var newBooks = new List<Book>();
 

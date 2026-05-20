@@ -9,7 +9,7 @@ public class MetadataService(ILogger<MetadataService> logger)
 {
     private static readonly HttpClient Http = new()
     {
-        Timeout = TimeSpan.FromSeconds(10),
+        Timeout = TimeSpan.FromSeconds(15),
         DefaultRequestHeaders = { { "User-Agent", "Chronicler/1.0 (audiobook library app)" } }
     };
 
@@ -20,33 +20,24 @@ public class MetadataService(ILogger<MetadataService> logger)
         logger.LogInformation("Metadata: enriching '{Title}' by '{Author}'", book.Title, book.Author);
         try
         {
-            var result = await SearchOpenLibraryAsync(book.Title, book.Author, ct);
+            var result = await SearchAsync(book.Title, book.Author, ct);
             if (result is null)
             {
-                logger.LogWarning("Metadata: no OpenLibrary match for '{Title}'", book.Title);
+                logger.LogWarning("Metadata: no match found for '{Title}'", book.Title);
                 return;
             }
 
             if (!string.IsNullOrWhiteSpace(result.Description))
                 book.Description = result.Description;
 
-            if (result.CoverId > 0 && book.CoverPath is null)
+            if (result.CoverUrl is not null && book.CoverPath is null)
             {
-                logger.LogInformation("Metadata: downloading cover id={CoverId} for '{Title}'", result.CoverId, book.Title);
-                var coverPath = await DownloadCoverAsync(result.CoverId, book, libraryRoot, ct);
+                var coverPath = await DownloadCoverAsync(result.CoverUrl, book, libraryRoot, ct);
                 if (coverPath is not null)
                 {
                     book.CoverPath = coverPath;
                     logger.LogInformation("Metadata: cover saved → {Path}", coverPath);
                 }
-                else
-                {
-                    logger.LogWarning("Metadata: cover download returned empty/placeholder for '{Title}'", book.Title);
-                }
-            }
-            else if (result.CoverId == 0)
-            {
-                logger.LogWarning("Metadata: OpenLibrary match has no cover image for '{Title}'", book.Title);
             }
         }
         catch (Exception ex)
@@ -55,75 +46,101 @@ public class MetadataService(ILogger<MetadataService> logger)
         }
     }
 
-    // Strip/normalize chars that break OpenLibrary search
-    private static string NormalizeQuery(string s) =>
-        s.Replace('\u2019', ' ')   // right single quote → space (apostrophes break OL)
-         .Replace('\u2018', ' ')   // left single quote
-         .Replace('\'', ' ')       // straight apostrophe → space
-         .Replace('\u201C', ' ')   // left double quote
-         .Replace('\u201D', ' ')   // right double quote
-         .Replace('\u2013', ' ')   // en dash
-         .Replace('\u2014', ' ')   // em dash
-         .Replace("  ", " ").Trim();
-
-    private async Task<OpenLibraryResult?> SearchOpenLibraryAsync(
-        string title, string author, CancellationToken ct)
+    private async Task<SearchResult?> SearchAsync(string title, string author, CancellationToken ct)
     {
-        // Try multiple query strategies — directory names may have title/author swapped
-        // or the "title" may be an edition/subtitle rather than the real book name
-        var queries = new[]
+        // The scanner parses "Author - Title" so `author` often contains the real book name.
+        // Try several strategies in order of quality.
+        var strategies = new (string label, string url)[]
         {
-            NormalizeQuery(author),                                    // most likely the real book name
-            NormalizeQuery($"{author} {title}"),                      // combined
-            NormalizeQuery(title),                                     // fallback to raw title
+            // 1. OpenLibrary: search by title field using the "author" value (most likely to be the real title)
+            ("OL title=author",  $"https://openlibrary.org/search.json?title={Uri.EscapeDataString(Clean(author))}&limit=3"),
+            // 2. OpenLibrary: search by title field using the "title" value
+            ("OL title=title",   $"https://openlibrary.org/search.json?title={Uri.EscapeDataString(Clean(title))}&limit=3"),
+            // 3. OpenLibrary: combined general search
+            ("OL q=combined",    $"https://openlibrary.org/search.json?q={Uri.EscapeDataString(Clean($"{author} {title}").Trim())}&limit=3"),
+            // 4. Google Books: search by author value as the query
+            ("GB author",        $"https://www.googleapis.com/books/v1/volumes?q={Uri.EscapeDataString(Clean(author))}&maxResults=3"),
         };
 
-        foreach (var q in queries.Select(x => x.Trim()).Where(x => x.Length > 3).Distinct())
+        foreach (var (label, url) in strategies)
         {
-            var encoded = Uri.EscapeDataString(q);
-            var url = $"https://openlibrary.org/search.json?q={encoded}&limit=3";
-            logger.LogInformation("Metadata: querying OpenLibrary q='{Query}'", q);
-
             try
             {
+                logger.LogInformation("Metadata: [{Label}] {Url}", label, url);
                 using var resp = await Http.GetAsync(url, ct);
                 if (!resp.IsSuccessStatusCode)
                 {
-                    logger.LogWarning("Metadata: OpenLibrary returned {Status} for q='{Query}'", (int)resp.StatusCode, q);
+                    logger.LogWarning("Metadata: [{Label}] HTTP {Status}", label, (int)resp.StatusCode);
                     continue;
                 }
-                var response = await resp.Content.ReadFromJsonAsync<OpenLibraryResponse>(JsonOpts, ct);
-                var doc = response?.Docs?.FirstOrDefault(d => d.CoverId.HasValue && d.CoverId > 0)
-                          ?? response?.Docs?.FirstOrDefault();
 
-                if (doc is not null)
+                SearchResult? result = label.StartsWith("GB")
+                    ? await ParseGoogleBooks(resp, ct)
+                    : await ParseOpenLibrary(resp, ct);
+
+                if (result?.CoverUrl is not null)
                 {
-                    logger.LogInformation("Metadata: matched '{Match}' (coverId={CoverId})", doc.Title, doc.CoverId);
-                    return new OpenLibraryResult(doc.CoverId ?? 0, doc.Description ?? doc.FirstSentence?.Value);
+                    logger.LogInformation("Metadata: [{Label}] found cover", label);
+                    return result;
                 }
-
-                logger.LogWarning("Metadata: no results for q='{Query}'", q);
+                if (result is not null)
+                    logger.LogWarning("Metadata: [{Label}] matched but no cover image", label);
             }
             catch (Exception ex)
             {
-                logger.LogWarning("Metadata: query failed for '{Query}': {Error}", q, ex.Message);
+                logger.LogWarning("Metadata: [{Label}] error: {Error}", label, ex.Message);
             }
         }
 
         return null;
     }
 
-    private async Task<string?> DownloadCoverAsync(
-        int coverId, Book book, string libraryRoot, CancellationToken ct)
+    private static async Task<SearchResult?> ParseOpenLibrary(HttpResponseMessage resp, CancellationToken ct)
     {
-        var url = $"https://covers.openlibrary.org/b/id/{coverId}-L.jpg";
-        logger.LogInformation("Metadata: fetching cover from {Url}", url);
-        var bytes = await Http.GetByteArrayAsync(url, ct);
-        logger.LogInformation("Metadata: cover response {Bytes} bytes", bytes.Length);
+        var response = await resp.Content.ReadFromJsonAsync<OLResponse>(JsonOpts, ct);
+        var doc = response?.Docs?.FirstOrDefault(d => d.CoverId.HasValue && d.CoverId > 0)
+                  ?? response?.Docs?.FirstOrDefault();
+        if (doc is null) return null;
 
-        if (bytes.Length < 1000)
+        var coverUrl = doc.CoverId.HasValue && doc.CoverId > 0
+            ? $"https://covers.openlibrary.org/b/id/{doc.CoverId}-L.jpg"
+            : null;
+
+        return new SearchResult(coverUrl, doc.Description ?? doc.FirstSentence?.Value);
+    }
+
+    private static async Task<SearchResult?> ParseGoogleBooks(HttpResponseMessage resp, CancellationToken ct)
+    {
+        var response = await resp.Content.ReadFromJsonAsync<GBResponse>(JsonOpts, ct);
+        var item = response?.Items?.FirstOrDefault(i => i.VolumeInfo?.ImageLinks?.Large is not null
+                                                     || i.VolumeInfo?.ImageLinks?.Thumbnail is not null);
+        if (item?.VolumeInfo is null) return null;
+
+        var coverUrl = item.VolumeInfo.ImageLinks?.Large
+                    ?? item.VolumeInfo.ImageLinks?.Thumbnail;
+
+        // Force HTTPS and larger size
+        if (coverUrl is not null)
+            coverUrl = coverUrl.Replace("http://", "https://").Replace("&zoom=1", "&zoom=3");
+
+        return new SearchResult(coverUrl, item.VolumeInfo.Description);
+    }
+
+    private static string Clean(string s) =>
+        s.Replace('\u2019', ' ').Replace('\u2018', ' ')
+         .Replace('\'', ' ').Replace('\u201C', ' ').Replace('\u201D', ' ')
+         .Replace('\u2013', ' ').Replace('\u2014', ' ')
+         .Replace("  ", " ").Trim();
+
+    private async Task<string?> DownloadCoverAsync(string url, Book book, string libraryRoot, CancellationToken ct)
+    {
+        logger.LogInformation("Metadata: downloading cover from {Url}", url);
+        var bytes = await Http.GetByteArrayAsync(url, ct);
+        logger.LogInformation("Metadata: cover {Bytes} bytes", bytes.Length);
+
+        if (bytes.Length < 2000)
         {
-            logger.LogWarning("Metadata: cover too small ({Bytes}b), likely placeholder — skipping", bytes.Length);
+            logger.LogWarning("Metadata: cover too small ({Bytes}b), skipping", bytes.Length);
             return null;
         }
 
@@ -131,26 +148,28 @@ public class MetadataService(ILogger<MetadataService> logger)
         if (audioDir is null) return null;
 
         var coverFile = Path.Combine(audioDir, "cover.jpg");
-        logger.LogInformation("Metadata: saving cover to {Path}", coverFile);
         await File.WriteAllBytesAsync(coverFile, bytes, ct);
-
         return Path.GetRelativePath(libraryRoot, coverFile);
     }
 
-    // ── OpenLibrary DTOs ──────────────────────────────────────────────────────
+    // ── DTOs ─────────────────────────────────────────────────────────────────
 
-    private record OpenLibraryResponse(
-        [property: JsonPropertyName("docs")] List<OpenLibraryDoc>? Docs);
+    private record SearchResult(string? CoverUrl, string? Description);
 
-    private record OpenLibraryDoc(
+    private record OLResponse([property: JsonPropertyName("docs")] List<OLDoc>? Docs);
+    private record OLDoc(
         [property: JsonPropertyName("title")] string? Title,
-        [property: JsonPropertyName("author_name")] List<string>? AuthorName,
         [property: JsonPropertyName("cover_i")] int? CoverId,
         [property: JsonPropertyName("description")] string? Description,
-        [property: JsonPropertyName("first_sentence")] FirstSentence? FirstSentence);
+        [property: JsonPropertyName("first_sentence")] OLSentence? FirstSentence);
+    private record OLSentence([property: JsonPropertyName("value")] string? Value);
 
-    private record FirstSentence(
-        [property: JsonPropertyName("value")] string? Value);
-
-    private record OpenLibraryResult(int CoverId, string? Description);
+    private record GBResponse([property: JsonPropertyName("items")] List<GBItem>? Items);
+    private record GBItem([property: JsonPropertyName("volumeInfo")] GBVolumeInfo? VolumeInfo);
+    private record GBVolumeInfo(
+        [property: JsonPropertyName("description")] string? Description,
+        [property: JsonPropertyName("imageLinks")] GBImageLinks? ImageLinks);
+    private record GBImageLinks(
+        [property: JsonPropertyName("large")] string? Large,
+        [property: JsonPropertyName("thumbnail")] string? Thumbnail);
 }
