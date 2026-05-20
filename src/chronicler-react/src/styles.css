@@ -456,7 +456,9 @@ select {
 .chip { background: var(--surface2); color: var(--parchment-dim); border: 1px solid var(--border); border-radius: 20px; padding: .2rem .7rem; font-family: var(--font-serif); font-size: .7rem; letter-spacing: .5px; cursor: pointer; transition: all .15s; }
 .chip:hover { border-color: var(--brass); color: var(--brass); }
 .chip-active { background: linear-gradient(135deg, var(--border-brass), var(--brass)); color: var(--ink); border-color: var(--brass-light); font-weight: 700; box-shadow: var(--glow-brass); }
-.library-bottom { display: flex; gap: .5rem; justify-content: center; padding: .75rem 0 .25rem; border-top: 1px solid var(--border); margin-top: .75rem; flex-wrap: wrap; }
+.library-bottom { display: flex; gap: .4rem; justify-content: flex-end; border-top: 1px solid var(--border); margin-top: auto; padding-top: .5rem; }
+.library-bottom .btn-secondary { font-size: .65rem; padding: .2rem .6rem; letter-spacing: .5px; opacity: .6; }
+.library-bottom .btn-secondary:hover { opacity: 1; }
 
 /* ── Book Grid ────────────────────────────────────────────────────────────── */
 .book-grid {

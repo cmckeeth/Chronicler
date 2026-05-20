@@ -56,15 +56,11 @@
 
     
     <div class="library-bottom">
-        @if (_hasDownloads)
-        {
-            <button class="btn-secondary" @onclick='() => Nav.NavigateTo("/downloads")'>⬇ Downloads</button>
-        }
         <button class="btn-secondary" @onclick="ScanLibrary" disabled="@_scanning">
-            @(_scanning ? "⚙ Cataloguing..." : "⚙ Catalogue")
+            @(_scanning ? "Cataloguing..." : "Catalogue")
         </button>
         <button class="btn-secondary" @onclick="EnrichLibrary" disabled="@_enriching">
-            @(_enriching ? "⚙ Fetching..." : "⚙ Fetch Covers")
+            @(_enriching ? "Fetching..." : "Fetch Covers")
         </button>
     </div>
 

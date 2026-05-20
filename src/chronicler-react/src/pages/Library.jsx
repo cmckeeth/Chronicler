@@ -94,10 +94,10 @@ export default function Library() {
       {/* Bottom: admin buttons */}
       <div className="library-bottom">
         <button className="btn-secondary" onClick={scan} disabled={scanning}>
-          {scanning ? '⚙ Cataloguing...' : '⚙ Catalogue'}
+          {scanning ? 'Cataloguing...' : 'Catalogue'}
         </button>
         <button className="btn-secondary" onClick={enrich} disabled={enriching}>
-          {enriching ? '⚙ Fetching...' : '⚙ Fetch Covers'}
+          {enriching ? 'Fetching...' : 'Fetch Covers'}
         </button>
       </div>
     </div>
