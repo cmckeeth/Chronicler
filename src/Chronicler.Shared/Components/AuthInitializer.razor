@@ -11,6 +11,9 @@
         if (token is not null)
         {
             Auth.SetToken(token);
+            // If we're on the login page, go home
+            if (Nav.Uri.Contains("/login"))
+                Nav.NavigateTo("/");
         }
         else if (!Nav.Uri.Contains("/login"))
         {

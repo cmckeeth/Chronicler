@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @inject AuthState Auth
 @inject NavigationManager Nav
+@implements IDisposable
 
 <AuthInitializer />
 
@@ -10,9 +11,18 @@
         <UpdateBanner />
     }
     <main class="maui-content">
-        @if (Auth.IsAuthenticated || Nav.Uri.Contains("/login"))
-        {
-            @Body
-        }
+        @Body
     </main>
 </div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Auth.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        Auth.OnChange -= StateHasChanged;
+    }
+}
