@@ -36,6 +36,7 @@ public static class MauiProgram
 
         builder.Services.AddMauiBlazorWebView();
         builder.Services.AddSingleton<IAudioPlayerService, NativeAudioPlayerService>();
+        builder.Services.AddSingleton<IDownloadService, MauiDownloadService>();
         builder.Services.AddSingleton<ITokenStorage>(tokenStorage);
         builder.Services.AddSingleton(authState);
         builder.Services.AddScoped<ApiClient>(sp =>

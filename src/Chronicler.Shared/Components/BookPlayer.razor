@@ -1,5 +1,7 @@
 @inject ApiClient Api
 @inject NavigationManager Nav
+@inject IServiceProvider Services
+@using Microsoft.Extensions.DependencyInjection
 
 @if (_book is null)
 {
@@ -63,6 +65,7 @@ else
                 @foreach (var (chapter, progress) in _chapters.Zip(_chapterProgresses))
                 {
                     var isCurrent = chapter.Id == _currentChapter?.Id;
+                    var dlState = _downloadStates.GetValueOrDefault(chapter.Id, DownloadState.None);
                     <div class="chapter-item @(isCurrent ? "chapter-active" : "") @(progress.IsListened ? "chapter-listened" : "")"
                          @onclick="() => SelectChapter(chapter)">
                         <span class="chapter-number">@chapter.TrackNumber</span>
@@ -81,6 +84,23 @@ else
                                 <span class="playing-badge">▶</span>
                             }
                         </span>
+                        @if (_downloadSvc is not null)
+                        {
+                            @if (dlState == DownloadState.Downloaded)
+                            {
+                                <span class="download-badge" title="Downloaded" @onclick:stopPropagation="true"
+                                      @onclick="() => DeleteDownload(chapter.Id)">⬇✓</span>
+                            }
+                            else if (dlState == DownloadState.Downloading)
+                            {
+                                <span class="download-badge downloading" title="Downloading...">⏳</span>
+                            }
+                            else
+                            {
+                                <button class="btn-download" @onclick:stopPropagation="true"
+                                        @onclick="() => DownloadChapter(chapter)" title="Download for offline">⬇</button>
+                            }
+                        }
                         <button class="btn-reset-chapter" @onclick:stopPropagation="true"
                                 @onclick="() => ResetChapter(chapter.Id)" title="Reset chapter">↺</button>
                     </div>
@@ -116,10 +136,14 @@ else
 @code {
     [Parameter, EditorRequired] public int BookId { get; set; }
 
+    private enum DownloadState { None, Downloading, Downloaded }
+
     private BookDto? _book;
     private string? _coverSrc;
     private bool _coverSearching;
     private System.Timers.Timer? _longPressTimer;
+    private IDownloadService? _downloadSvc;
+    private Dictionary<int, DownloadState> _downloadStates = [];
     private List<ChapterDto> _chapters = [];
     private List<ChapterProgressDto> _chapterProgresses = [];
     private ChapterDto? _currentChapter;
@@ -131,6 +155,7 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
+        _downloadSvc = Services.GetService<IDownloadService>();
         _book = await Api.GetBookAsync(BookId);
         if (_book is null) return;
 
@@ -141,6 +166,15 @@ else
         _chapterProgresses = await Task.WhenAll(_chapters.Select(c => Api.GetChapterProgressAsync(c.Id)))
             .ContinueWith(t => t.Result.ToList());
         _bookmarks = await Api.GetBookmarksAsync(BookId);
+
+        // Load download states
+        if (_downloadSvc is not null)
+        {
+            _downloadStates = [];
+            foreach (var ch in _chapters)
+                _downloadStates[ch.Id] = await _downloadSvc.IsDownloadedAsync(ch.Id)
+                    ? DownloadState.Downloaded : DownloadState.None;
+        }
 
         // Resume the first unlistened chapter, or first chapter
         var resumeIdx = _chapterProgresses.FindIndex(p => !p.IsListened && p.PositionSeconds > 0);
@@ -259,6 +293,34 @@ else
     {
         await Api.DeleteBookmarkAsync(id);
         _bookmarks.RemoveAll(b => b.Id == id);
+    }
+
+    private async Task DownloadChapter(ChapterDto chapter)
+    {
+        if (_downloadSvc is null || _book is null) return;
+        _downloadStates[chapter.Id] = DownloadState.Downloading;
+        StateHasChanged();
+        try
+        {
+            var url = Api.GetChapterAudioUrl(chapter.Id);
+            await _downloadSvc.DownloadAsync(
+                chapter.Id, _book.Id, _book.Title, chapter.Title,
+                chapter.TrackNumber, url);
+            _downloadStates[chapter.Id] = DownloadState.Downloaded;
+        }
+        catch
+        {
+            _downloadStates[chapter.Id] = DownloadState.None;
+        }
+        StateHasChanged();
+    }
+
+    private async Task DeleteDownload(int chapterId)
+    {
+        if (_downloadSvc is null) return;
+        await _downloadSvc.DeleteChapterAsync(chapterId);
+        _downloadStates[chapterId] = DownloadState.None;
+        StateHasChanged();
     }
 
     private static string FormatTime(double s)

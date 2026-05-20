@@ -1,0 +1,89 @@
+@page "/downloads"
+@inject IDownloadService Downloads
+@inject NavigationManager Nav
+@implements IDisposable
+
+<div class="library-browser">
+    <div class="library-header">
+        <div style="display:flex;align-items:center;gap:.75rem">
+            <button class="btn-icon" @onclick='() => Nav.NavigateTo("/archive")' style="font-size:1.3rem;padding:.3rem .5rem">←</button>
+            <h1>Downloads</h1>
+        </div>
+        @if (_chapters.Count > 0)
+        {
+            <div style="display:flex;gap:.5rem;align-items:center">
+                <span style="font-size:.7rem;color:var(--parchment-dim);font-family:var(--font-serif)">@FormatSize(_totalSize) used</span>
+                <button class="btn-secondary" style="font-size:.7rem" @onclick="DeleteAll">⚙ Clear All</button>
+            </div>
+        }
+    </div>
+
+    @if (_loading)
+    {
+        <div class="loading">Consulting the local archive...</div>
+    }
+    else if (_chapters.Count == 0)
+    {
+        <div class="empty-state">
+            <p>No downloaded chapters.</p>
+            <p>Open a book and tap ⬇ next to a chapter to save it for offline listening.</p>
+        </div>
+    }
+    else
+    {
+        @foreach (var group in _chapters.GroupBy(c => c.BookTitle))
+        {
+            <div class="chapter-list" style="margin-bottom:1rem">
+                <div class="chapter-list-header" style="display:flex;justify-content:space-between;align-items:center">
+                    <h3>@group.Key</h3>
+                    <button class="btn-secondary" style="font-size:.65rem" @onclick="() => DeleteBook(group.First().BookId)">✕ Remove book</button>
+                </div>
+                @foreach (var ch in group.OrderBy(c => c.TrackNumber))
+                {
+                    <div class="chapter-item">
+                        <span class="chapter-number">@ch.TrackNumber</span>
+                        <span class="chapter-title">@ch.ChapterTitle</span>
+                        <span style="font-size:.65rem;color:var(--parchment-dim);margin-left:auto;margin-right:.5rem">@FormatSize(ch.FileSize)</span>
+                        <button class="btn-reset-chapter" style="opacity:1" @onclick="() => DeleteChapter(ch.ChapterId)">✕</button>
+                    </div>
+                }
+                <div style="padding:.4rem 1.2rem;font-size:.65rem;color:var(--parchment-dim);font-style:italic;border-top:1px solid var(--border)">
+                    @group.Count() chapter(s) — @FormatSize(group.Sum(c => c.FileSize))
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private List<DownloadedChapter> _chapters = [];
+    private long _totalSize;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Downloads.OnChanged += Refresh;
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        _chapters = (await Downloads.GetAllDownloadsAsync()).ToList();
+        _totalSize = await Downloads.GetTotalSizeAsync();
+        _loading = false;
+    }
+
+    private void Refresh() => InvokeAsync(async () => { await Load(); StateHasChanged(); });
+
+    private async Task DeleteChapter(int id) { await Downloads.DeleteChapterAsync(id); }
+    private async Task DeleteBook(int id) { await Downloads.DeleteBookAsync(id); }
+    private async Task DeleteAll() { await Downloads.DeleteAllAsync(); }
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes < 1024 * 1024) return $"{bytes / 1024}KB";
+        return $"{bytes / 1024.0 / 1024.0:F1}MB";
+    }
+
+    public void Dispose() => Downloads.OnChanged -= Refresh;
+}

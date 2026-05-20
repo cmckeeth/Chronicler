@@ -1,12 +1,14 @@
 using Android.Media;
 using Android.Util;
 using Chronicler.Shared.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Chronicler.Maui.Services;
 
-public class NativeAudioPlayerService : IAudioPlayerService, IDisposable
+public class NativeAudioPlayerService(IServiceProvider services) : IAudioPlayerService, IDisposable
 {
     private const string TAG = "ChroniclerAudio";
+    private IDownloadService? Downloads => services.GetService<IDownloadService>();
     private MediaPlayer? _player;
     private System.Timers.Timer? _positionTimer;
     private string _currentUrl = "";
@@ -27,6 +29,18 @@ public class NativeAudioPlayerService : IAudioPlayerService, IDisposable
 
     public async Task PlayAsync(string url)
     {
+        // Check for local downloaded file first
+        if (Downloads is not null)
+        {
+            if (Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+                uri.Segments.Length >= 2 &&
+                int.TryParse(uri.Segments.Last(), out var chapterId))
+            {
+                var localPath = await Downloads.GetLocalPathAsync(chapterId);
+                if (localPath is not null) { url = localPath; Dbg($"Using local file: {url}"); }
+            }
+        }
+
         Dbg($"PlayAsync: url={url} currentUrl={_currentUrl}");
 
         if (url != _currentUrl)
@@ -47,8 +61,12 @@ public class NativeAudioPlayerService : IAudioPlayerService, IDisposable
                 .SetContentType(AudioContentType.Music)!
                 .Build()!);
 
-            Dbg($"SetDataSource: {url}");
-            await _player.SetDataSourceAsync(Android.App.Application.Context, Android.Net.Uri.Parse(url)!);
+            var isLocal = !url.StartsWith("http", StringComparison.OrdinalIgnoreCase);
+            Dbg($"SetDataSource: {url} (local={isLocal})");
+            if (isLocal)
+                _player.SetDataSource(url);
+            else
+                await _player.SetDataSourceAsync(Android.App.Application.Context, Android.Net.Uri.Parse(url)!);
 
             _player.Completion += (_, _) => { Dbg("Completion"); StopTimer(); StateChanged?.Invoke(); Ended?.Invoke(); };
             _player.Error += (_, e) => { Dbg($"Error: what={e.What} extra={e.Extra}"); StateChanged?.Invoke(); };

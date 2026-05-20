@@ -1,5 +1,7 @@
 @inject ApiClient Api
 @inject NavigationManager Nav
+@inject IServiceProvider Services
+@using Microsoft.Extensions.DependencyInjection
 
 <div class="library-browser">
     <div class="library-header">
@@ -16,6 +18,10 @@
             <button class="btn-secondary" @onclick="EnrichLibrary" disabled="@_enriching">
                 @(_enriching ? "⚙ Fetching..." : "⚙ Fetch Covers")
             </button>
+            @if (_hasDownloads)
+            {
+                <button class="btn-secondary" @onclick='() => Nav.NavigateTo("/downloads")' title="Downloads">⬇ Downloads</button>
+            }
         </div>
     </div>
 
@@ -54,9 +60,16 @@
     private bool _loading = true;
     private bool _scanning;
     private bool _enriching;
+    private bool _hasDownloads;
     private System.Timers.Timer? _debounce;
 
-    protected override async Task OnInitializedAsync() => await LoadBooks();
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBooks();
+        var dl = Services?.GetService<IDownloadService>();
+        if (dl is not null)
+            _hasDownloads = (await dl.GetTotalSizeAsync()) > 0;
+    }
 
     private async Task LoadBooks(string? search = null)
     {

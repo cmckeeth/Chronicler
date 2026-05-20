@@ -891,6 +891,11 @@ select {
 }
 .chapter-item:hover .btn-reset-chapter { opacity: 1; }
 
+.btn-download { background:transparent; color:var(--border-brass); border:1px solid var(--border); border-radius:var(--radius); font-size:.75rem; padding:.15rem .4rem; cursor:pointer; transition:all .15s; flex-shrink:0; }
+.btn-download:hover, .btn-download:active { color:var(--brass); border-color:var(--brass); }
+.download-badge { font-size:.8rem; color:var(--verdigris); flex-shrink:0; cursor:pointer; padding:.1rem .3rem; }
+.download-badge.downloading { color:var(--brass); animation:pulse 1s ease-in-out infinite; }
+
 /* ── Blazor errors ────────────────────────────────────────────────────────── */
 .blazor-error-boundary {
     background: var(--rust);
