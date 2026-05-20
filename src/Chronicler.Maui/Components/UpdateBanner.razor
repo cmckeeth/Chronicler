@@ -3,31 +3,34 @@
 
 @if (_updateAvailable)
 {
-    <div class="update-banner" @onclick="DownloadUpdate">
-        <span>⚙ Update available — v@(_latestVersion)</span>
-        <span class="update-tap">Tap to download</span>
+    <div class="update-modal-overlay" @onclick="Dismiss">
+        <div class="update-modal" @onclick:stopPropagation="true">
+            <div class="update-modal-title">⚙ Update Available</div>
+            <div class="update-modal-body">
+                Version <strong>@_latestVersion</strong> is ready to install.
+            </div>
+            <div class="update-modal-actions">
+                <button class="btn-primary" @onclick="DownloadUpdate">Download</button>
+                <button class="btn-secondary" @onclick="Dismiss">Later</button>
+            </div>
+        </div>
     </div>
 }
 
 @code {
     private bool _updateAvailable;
     private string? _latestVersion;
-    private PeriodicTimer? _timer;
+    private CancellationTokenSource _cts = new();
 
     protected override async Task OnInitializedAsync()
     {
-        await CheckUpdate();
-        _timer = new PeriodicTimer(TimeSpan.FromSeconds(60));
-        _ = PollAsync();
-    }
-
-    private async Task PollAsync()
-    {
-        while (_timer is not null && await _timer.WaitForNextTickAsync())
+        // Check once on startup after a short delay
+        try
         {
+            await Task.Delay(2000, _cts.Token);
             await CheckUpdate();
-            await InvokeAsync(StateHasChanged);
         }
+        catch (OperationCanceledException) { }
     }
 
     private async Task CheckUpdate()
@@ -40,19 +43,24 @@
             Version.TryParse(current, out var currentVer) &&
             latestVer > currentVer)
         {
-            _updateAvailable = true;
             _latestVersion = latest;
+            _updateAvailable = true;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
     private async Task DownloadUpdate()
     {
-        var url = _latestVersion is not null
-            ? $"{ApiConfig.BaseUrl}/api/update/apk/Chronicler-v{_latestVersion}.apk"
-            : ApiConfig.UpdateApkUrl;
-
-        await Launcher.OpenAsync(new Uri(url));
+        // Always download latest — no version in URL needed
+        await Launcher.OpenAsync(new Uri(ApiConfig.UpdateApkUrl));
+        Dismiss();
     }
 
-    public void Dispose() => _timer?.Dispose();
+    private void Dismiss()
+    {
+        _updateAvailable = false;
+        StateHasChanged();
+    }
+
+    public void Dispose() => _cts.Cancel();
 }

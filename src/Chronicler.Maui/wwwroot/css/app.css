@@ -19,25 +19,50 @@
     background: #0a0704;
 }
 
-.update-banner {
-    background: linear-gradient(90deg, #3d280f, #7a5010);
-    border-bottom: 1px solid #c8860a;
-    color: #e8d5a8;
-    padding: .5rem 1rem;
+.update-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.75);
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    font-size: .8rem;
-    font-family: 'Cinzel', Georgia, serif;
-    letter-spacing: 1px;
-    cursor: pointer;
-    box-shadow: 0 0 12px #c8860a40;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1.5rem;
 }
 
-.update-tap {
-    font-size: .7rem;
-    color: #c8860a;
-    font-style: italic;
+.update-modal {
+    background: #2a1a0a;
+    border: 1px solid #d4920c;
+    border-radius: 4px;
+    padding: 1.8rem;
+    max-width: 320px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    box-shadow: 0 0 24px #d4920c60, 0 20px 60px rgba(0,0,0,.8);
+}
+
+.update-modal-title {
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #f0b830;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.update-modal-body {
+    color: #f5e8c8;
+    font-size: .9rem;
+    line-height: 1.5;
+}
+
+.update-modal-body strong { color: #f0b830; }
+
+.update-modal-actions {
+    display: flex;
+    gap: .75rem;
 }
 
 /* Pull the library and player to fill available height on mobile */

@@ -64,6 +64,10 @@ fi
 # ── Copy APK to updates dir ───────────────────────────────────────────────────
 
 mkdir -p "$API_UPDATES_DIR"
+
+# Remove old versioned APKs, keep only the new one
+rm -f "$API_UPDATES_DIR"/Chronicler-v*.apk
+
 cp "$APK_PATH" "$API_UPDATES_DIR/Chronicler-v$NEW_VER.apk"
 cp "$APK_PATH" "$API_UPDATES_DIR/Chronicler.apk"
 echo "APK saved: $API_UPDATES_DIR/Chronicler-v$NEW_VER.apk"
