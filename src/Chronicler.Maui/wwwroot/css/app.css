@@ -61,12 +61,42 @@
     font-size: .9rem;
 }
 
+/* Corner gear sparks */
+.landing-corner {
+    position: absolute;
+    font-size: 1.4rem;
+    color: #b87c20;
+    animation: corner-spark 4s ease-in-out infinite;
+    pointer-events: none;
+    user-select: none;
+}
+.landing-corner.tl { top: .5rem; left: .6rem; animation-delay: 0s; }
+.landing-corner.tr { top: .5rem; right: .6rem; animation-delay: .8s; }
+.landing-corner.bl { bottom: .5rem; left: .6rem; animation-delay: 1.6s; }
+.landing-corner.br { bottom: .5rem; right: .6rem; animation-delay: 2.4s; }
+
 /* Pull the library and player to fill available height on mobile */
 .library-browser, .book-player-page {
     padding: 1rem;
 }
 
 /* ── Landing page ─────────────────────────────────────────────────────────── */
+@keyframes border-flicker {
+    0%, 100% { box-shadow: inset 0 0 20px rgba(232,160,16,.3), inset 0 0 40px rgba(232,160,16,.1), 0 0 15px rgba(232,160,16,.4); border-color: #b87c20; }
+    15%  { box-shadow: inset 0 0 40px rgba(255,192,48,.7), inset 0 0 80px rgba(232,160,16,.3), 0 0 30px rgba(255,192,48,.6); border-color: #ffc030; }
+    30%  { box-shadow: inset 0 0 15px rgba(232,160,16,.2), inset 0 0 30px rgba(232,160,16,.08), 0 0 10px rgba(232,160,16,.3); border-color: #9a6820; }
+    55%  { box-shadow: inset 0 0 50px rgba(255,224,96,.8), inset 0 0 100px rgba(232,160,16,.4), 0 0 40px rgba(255,224,96,.7); border-color: #ffe060; }
+    70%  { box-shadow: inset 0 0 25px rgba(232,160,16,.4), inset 0 0 50px rgba(232,160,16,.15), 0 0 20px rgba(232,160,16,.4); border-color: #e8a010; }
+    88%  { box-shadow: inset 0 0 60px rgba(255,192,48,.9), inset 0 0 120px rgba(232,160,16,.5), 0 0 50px rgba(255,192,48,.8); border-color: #ffc030; }
+}
+
+@keyframes corner-spark {
+    0%, 85%, 100% { opacity: .4; text-shadow: 0 0 4px #b87c20; }
+    87% { opacity: 1; text-shadow: 0 0 16px #ffc030, 0 0 32px #e8a010; }
+    92% { opacity: .5; text-shadow: 0 0 6px #e8a010; }
+    96% { opacity: 1; text-shadow: 0 0 20px #ffe060, 0 0 40px #ffc030; }
+}
+
 .landing-page {
     display: flex;
     flex-direction: column;
@@ -76,6 +106,13 @@
     position: fixed;
     inset: 0;
     padding: 1rem 1.5rem;
+    border: 2px solid #b87c20;
+    animation: border-flicker 3s ease-in-out infinite;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(232,160,16,.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 0% 50%, rgba(232,160,16,.05) 0%, transparent 40%),
+        radial-gradient(ellipse at 100% 50%, rgba(232,160,16,.05) 0%, transparent 40%),
+        radial-gradient(ellipse at 50% 100%, rgba(232,160,16,.06) 0%, transparent 40%);
     text-align: center;
     background:
         radial-gradient(ellipse at 50% 0%, rgba(200,134,10,.12) 0%, transparent 60%),
