@@ -221,12 +221,7 @@
             _nativePlayer.StateChanged -= OnNativeStateChanged;
             _nativePlayer.PositionChanged -= OnNativePositionChanged;
             _nativePlayer.Ended -= OnNativeEnded;
-            if (_playing)
-            {
-                await _nativePlayer.PauseAsync();
-                // Final position save on close
-                await OnProgressChanged.InvokeAsync(CurrentPosition);
-            }
+            if (_playing) await _nativePlayer.PauseAsync();
         }
         else
         {
