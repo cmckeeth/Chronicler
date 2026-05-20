@@ -12,6 +12,6 @@ public class MainActivity : MauiAppCompatActivity
     {
         base.OnCreate(savedInstanceState);
         // Enable media playback in WebView without requiring user gesture
-        WebView.SetWebContentsDebuggingEnabled(true);
+        Android.Webkit.WebView.SetWebContentsDebuggingEnabled(true);
     }
 }
