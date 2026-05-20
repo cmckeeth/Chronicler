@@ -74,7 +74,7 @@
     justify-content: space-between;
     position: fixed;
     inset: 0;
-    padding: 2rem 1.5rem 1rem;
+    padding: 1.2rem 1.5rem .8rem;
     text-align: center;
     background:
         radial-gradient(ellipse at 50% 0%, rgba(200,134,10,.12) 0%, transparent 60%),
@@ -85,8 +85,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: .75rem;
-    padding-top: 1rem;
+    gap: .4rem;
+    padding-top: .5rem;
 }
 
 .landing-logo {
@@ -99,7 +99,7 @@
 
 .landing-title {
     font-family: 'Cinzel Decorative', 'Palatino Linotype', serif;
-    font-size: 2.2rem;
+    font-size: 1.7rem;
     color: #f0b830;
     text-shadow: 0 0 20px rgba(200,134,10,.8), 0 0 40px rgba(200,134,10,.4);
     letter-spacing: 4px;
@@ -135,11 +135,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: .6rem;
+    gap: .45rem;
     background: linear-gradient(145deg, #2a1a0a, #1e1208);
     border: 2px solid #c8860a;
     border-radius: 16px;
-    padding: 2rem 3rem;
+    padding: 1.4rem 2.5rem;
     cursor: pointer;
     box-shadow: 0 0 30px rgba(200,134,10,.4), inset 0 0 30px rgba(200,134,10,.05), 0 8px 32px rgba(0,0,0,.6);
     transition: all .2s;
@@ -153,8 +153,8 @@
 }
 
 .landing-enter-logo {
-    width: 72px;
-    height: 72px;
+    width: 56px;
+    height: 56px;
     border-radius: 14px;
     box-shadow: 0 0 16px rgba(200,134,10,.5);
 }
