@@ -37,15 +37,14 @@
     }
 </div>
 
-<audio id="chronicler-audio" @ref="_audioRef" preload="metadata">
-    <source src="@Src" />
-</audio>
+<audio id="chronicler-audio" @ref="_audioRef" src="@Src" preload="auto"></audio>
 
 @code {
     [Parameter, EditorRequired] public string Src { get; set; } = "";
     [Parameter, EditorRequired] public string BookTitle { get; set; } = "";
     [Parameter] public double StartPosition { get; set; }
     [Parameter] public EventCallback<double> OnProgressChanged { get; set; }
+    [Parameter] public EventCallback OnChapterEnded { get; set; }
     [Parameter] public EventCallback OnBookmarkRequested { get; set; }
 
     private ElementReference _audioRef;
@@ -99,6 +98,7 @@
 
     [JSInvokable] public void OnJsPlay()  { _playing = true;  InvokeAsync(StateHasChanged); }
     [JSInvokable] public void OnJsPause() { _playing = false; InvokeAsync(StateHasChanged); }
+    [JSInvokable] public void OnJsEnded() { _playing = false; InvokeAsync(async () => { StateHasChanged(); await OnChapterEnded.InvokeAsync(); }); }
     [JSInvokable] public void OnJsMetadata(double duration) { Duration = duration; InvokeAsync(StateHasChanged); }
 
     [JSInvokable]

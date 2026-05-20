@@ -27,13 +27,16 @@ public class LibraryScanner(
 
         foreach (var dir in Directory.GetDirectories(LibraryRoot))
         {
-            var audioFile = Directory.GetFiles(dir)
-                .FirstOrDefault(f => AudioExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
+            var audioFiles = Directory.GetFiles(dir)
+                .Where(f => AudioExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                .OrderBy(f => f)
+                .ToList();
 
-            if (audioFile is null) continue;
+            if (audioFiles.Count == 0) continue;
 
-            var relativePath = Path.GetRelativePath(LibraryRoot, audioFile);
-            if (existingPaths.Contains(relativePath)) continue;
+            // Skip if we already have this book (check first file)
+            var firstRelative = Path.GetRelativePath(LibraryRoot, audioFiles[0]);
+            if (existingPaths.Contains(firstRelative)) continue;
 
             var dirName = Path.GetFileName(dir);
             var (title, author) = ParseDirectoryName(dirName);
@@ -43,13 +46,26 @@ public class LibraryScanner(
             {
                 Title = title,
                 Author = author,
-                FilePath = relativePath,
+                FilePath = firstRelative,
                 CoverPath = coverPath is not null ? Path.GetRelativePath(LibraryRoot, coverPath) : null,
                 AddedAt = DateTime.UtcNow
             };
 
+            // Create chapters for each audio file
+            int track = 1;
+            foreach (var audioFile in audioFiles)
+            {
+                book.Chapters.Add(new Chapter
+                {
+                    FilePath = Path.GetRelativePath(LibraryRoot, audioFile),
+                    Title = ParseChapterTitle(Path.GetFileNameWithoutExtension(audioFile), track),
+                    TrackNumber = track++
+                });
+            }
+
             newBooks.Add(book);
-            logger.LogInformation("Found new book: {Title} by {Author}", title, author);
+            logger.LogInformation("Found new book: {Title} by {Author} ({Chapters} chapters)",
+                title, author, book.Chapters.Count);
         }
 
         // Flat audio files in root
@@ -82,6 +98,17 @@ public class LibraryScanner(
             await db.SaveChangesAsync(ct);
 
         return newBooks.Count;
+    }
+
+    private static string ParseChapterTitle(string fileName, int track)
+    {
+        // Clean up filenames like "01 - Chapter One" or "Chapter_01" → "Chapter One"
+        var clean = fileName
+            .Replace("_", " ")
+            .TrimStart('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ', '-', '.')
+            .Trim();
+
+        return string.IsNullOrWhiteSpace(clean) ? $"Chapter {track}" : clean;
     }
 
     private static (string title, string author) ParseDirectoryName(string name)

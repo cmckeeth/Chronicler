@@ -14,4 +14,5 @@ public class Book
 
     public ICollection<UserProgress> Progresses { get; set; } = [];
     public ICollection<Bookmark> Bookmarks { get; set; } = [];
+    public ICollection<Chapter> Chapters { get; set; } = [];
 }

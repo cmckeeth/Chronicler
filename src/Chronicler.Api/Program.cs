@@ -197,6 +197,94 @@ app.MapGet("/api/books/{id:int}/audio", async (
     return Results.File(fullPath, mime, enableRangeProcessing: true);
 });
 
+// ── Chapters ──────────────────────────────────────────────────────────────────
+
+app.MapGet("/api/books/{bookId:int}/chapters", async (int bookId, AppDbContext db) =>
+{
+    var chapters = await db.Chapters
+        .Where(c => c.BookId == bookId)
+        .OrderBy(c => c.TrackNumber)
+        .Select(c => new ChapterDto(c.Id, c.BookId, c.Title, c.TrackNumber))
+        .ToListAsync();
+    return Results.Ok(chapters);
+});
+
+app.MapGet("/api/chapters/{chapterId:int}/audio", async (
+    int chapterId, AppDbContext db, IWebHostEnvironment env) =>
+{
+    var chapter = await db.Chapters.FindAsync(chapterId);
+    if (chapter is null) return Results.NotFound();
+
+    var fullPath = Path.Combine(env.ContentRootPath, "Library", chapter.FilePath);
+    if (!File.Exists(fullPath)) return Results.NotFound();
+
+    var ext = Path.GetExtension(fullPath).ToLower();
+    var mime = ext switch
+    {
+        ".mp3" => "audio/mpeg",
+        ".m4b" or ".m4a" => "audio/mp4",
+        ".ogg" => "audio/ogg",
+        ".flac" => "audio/flac",
+        ".aac" => "audio/aac",
+        ".wav" => "audio/wav",
+        _ => "application/octet-stream"
+    };
+    return Results.File(fullPath, mime, enableRangeProcessing: true);
+});
+
+app.MapGet("/api/chapters/{chapterId:int}/progress", async (int chapterId, AppDbContext db) =>
+{
+    var p = await db.ChapterProgresses
+        .FirstOrDefaultAsync(p => p.UserId == "default" && p.ChapterId == chapterId);
+    return Results.Ok(new { positionSeconds = p?.PositionSeconds ?? 0, isListened = p?.IsListened ?? false });
+});
+
+app.MapPut("/api/chapters/{chapterId:int}/progress", async (
+    int chapterId, ChapterProgressRequest req, AppDbContext db) =>
+{
+    var p = await db.ChapterProgresses
+        .FirstOrDefaultAsync(cp => cp.UserId == "default" && cp.ChapterId == chapterId);
+
+    if (p is null)
+    {
+        p = new ChapterProgress { UserId = "default", ChapterId = chapterId };
+        db.ChapterProgresses.Add(p);
+    }
+
+    p.PositionSeconds = req.PositionSeconds;
+    p.UpdatedAt = DateTime.UtcNow;
+
+    // Mark as listened if > 90% complete (requires duration from client)
+    if (req.DurationSeconds > 0 && req.PositionSeconds / req.DurationSeconds >= 0.9)
+        p.IsListened = true;
+
+    await db.SaveChangesAsync();
+    return Results.Ok();
+});
+
+app.MapPost("/api/chapters/{chapterId:int}/reset", async (int chapterId, AppDbContext db) =>
+{
+    var p = await db.ChapterProgresses
+        .FirstOrDefaultAsync(cp => cp.UserId == "default" && cp.ChapterId == chapterId);
+    if (p is not null)
+    {
+        p.IsListened = false;
+        p.PositionSeconds = 0;
+        await db.SaveChangesAsync();
+    }
+    return Results.Ok();
+});
+
+app.MapPost("/api/books/{bookId:int}/reset", async (int bookId, AppDbContext db) =>
+{
+    var progresses = await db.ChapterProgresses
+        .Where(p => p.UserId == "default" && p.Chapter.BookId == bookId)
+        .ToListAsync();
+    foreach (var p in progresses) { p.IsListened = false; p.PositionSeconds = 0; }
+    await db.SaveChangesAsync();
+    return Results.Ok();
+});
+
 app.MapPost("/api/library/scan", async (LibraryScanner scanner) =>
 {
     var added = await scanner.ScanAsync();
@@ -510,3 +598,5 @@ record BookmarkDto(int Id, int BookId, double PositionSeconds, string? Label, Da
 record BookUpdateRequest(string? Title, string? Author, string? Narrator, string? Description);
 record BookDto(int Id, string Title, string Author, string? Narrator, double DurationSeconds,
     bool HasCover, DateTime AddedAt);
+record ChapterDto(int Id, int BookId, string Title, int TrackNumber);
+record ChapterProgressRequest(double PositionSeconds, double DurationSeconds);

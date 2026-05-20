@@ -8,6 +8,10 @@ public record BookDto(int Id, string Title, string Author, string? Narrator,
 
 public record BookmarkDto(int Id, int BookId, double PositionSeconds, string? Label, DateTime CreatedAt);
 
+public record ChapterDto(int Id, int BookId, string Title, int TrackNumber);
+
+public record ChapterProgressDto(double PositionSeconds, bool IsListened);
+
 public class ApiClient(HttpClient http)
 {
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
@@ -45,6 +49,25 @@ public class ApiClient(HttpClient http)
 
     public string GetCoverUrl(int bookId) => $"{http.BaseAddress}api/books/{bookId}/cover";
     public string GetAudioUrl(int bookId) => $"{http.BaseAddress}api/books/{bookId}/audio";
+    public string GetChapterAudioUrl(int chapterId) => $"{http.BaseAddress}api/chapters/{chapterId}/audio";
+
+    public async Task<List<ChapterDto>> GetChaptersAsync(int bookId) =>
+        await http.GetFromJsonAsync<List<ChapterDto>>($"/api/books/{bookId}/chapters", JsonOpts) ?? [];
+
+    public async Task<ChapterProgressDto> GetChapterProgressAsync(int chapterId)
+    {
+        var result = await http.GetFromJsonAsync<ChapterProgressDto>($"/api/chapters/{chapterId}/progress", JsonOpts);
+        return result ?? new ChapterProgressDto(0, false);
+    }
+
+    public async Task SaveChapterProgressAsync(int chapterId, double position, double duration) =>
+        await http.PutAsJsonAsync($"/api/chapters/{chapterId}/progress", new { positionSeconds = position, durationSeconds = duration });
+
+    public async Task ResetChapterAsync(int chapterId) =>
+        await http.PostAsync($"/api/chapters/{chapterId}/reset", null);
+
+    public async Task ResetBookAsync(int bookId) =>
+        await http.PostAsync($"/api/books/{bookId}/reset", null);
 
     public async Task<int> ScanLibraryAsync()
     {

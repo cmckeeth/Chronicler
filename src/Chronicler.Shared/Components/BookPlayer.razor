@@ -3,12 +3,12 @@
 
 @if (_book is null)
 {
-    <div class="loading">Loading...</div>
+    <div class="loading">Consulting the archive...</div>
 }
 else
 {
     <div class="book-player-page">
-        <button class="btn-back" @onclick='() => Nav.NavigateTo("/")'>← Library</button>
+        <button class="btn-back" @onclick='() => Nav.NavigateTo("/")'>Library</button>
 
         <div class="book-header">
             @if (_book.HasCover)
@@ -20,16 +20,56 @@ else
                 <h2>@_book.Author</h2>
                 @if (_book.Narrator is not null)
                 {
-                    <p class="narrator">Narrated by @_book.Narrator</p>
+                    <p class="narrator">@_book.Narrator</p>
                 }
+                <button class="btn-secondary" style="margin-top:.5rem;font-size:.7rem"
+                        @onclick="ResetBook" title="Reset all chapters">⚙ Reset All</button>
             </div>
         </div>
 
-        <AudioPlayer Src="@_audioUrl"
-                     BookTitle="@_book.Title"
-                     StartPosition="@_startPosition"
-                     OnProgressChanged="SaveProgress"
-                     OnBookmarkRequested="AddBookmark" />
+        @if (_currentChapter is not null)
+        {
+            <AudioPlayer Src="@Api.GetChapterAudioUrl(_currentChapter.Id)"
+                         BookTitle="@_currentChapter.Title"
+                         StartPosition="@_startPosition"
+                         OnProgressChanged="SaveChapterProgress"
+                         OnChapterEnded="AdvanceChapter"
+                         OnBookmarkRequested="AddBookmark" />
+        }
+
+        @if (_chapters.Count > 0)
+        {
+            <div class="chapter-list">
+                <div class="chapter-list-header">
+                    <h3>Chapters</h3>
+                </div>
+                @foreach (var (chapter, progress) in _chapters.Zip(_chapterProgresses))
+                {
+                    var isCurrent = chapter.Id == _currentChapter?.Id;
+                    <div class="chapter-item @(isCurrent ? "chapter-active" : "") @(progress.IsListened ? "chapter-listened" : "")"
+                         @onclick="() => SelectChapter(chapter)">
+                        <span class="chapter-number">@chapter.TrackNumber</span>
+                        <span class="chapter-title">@chapter.Title</span>
+                        <span class="chapter-status">
+                            @if (progress.IsListened)
+                            {
+                                <span class="listened-badge" title="Listened">✓</span>
+                            }
+                            else if (progress.PositionSeconds > 0)
+                            {
+                                <span class="in-progress-badge" title="In progress">…</span>
+                            }
+                            @if (isCurrent)
+                            {
+                                <span class="playing-badge">▶</span>
+                            }
+                        </span>
+                        <button class="btn-reset-chapter" @onclick:stopPropagation="true"
+                                @onclick="() => ResetChapter(chapter.Id)" title="Reset chapter">↺</button>
+                    </div>
+                }
+            </div>
+        }
 
         @if (_bookmarks.Count > 0)
         {
@@ -48,9 +88,9 @@ else
         @if (_showBookmarkInput)
         {
             <div class="bookmark-input">
-                <input @bind="_bookmarkLabel" placeholder="Bookmark label (optional)" />
+                <input @bind="_bookmarkLabel" placeholder="Label (optional)" />
                 <button class="btn-primary" @onclick="ConfirmBookmark">Save</button>
-                <button @onclick="() => _showBookmarkInput = false">Cancel</button>
+                <button class="btn-secondary" @onclick="() => _showBookmarkInput = false">Cancel</button>
             </div>
         }
     </div>
@@ -60,7 +100,9 @@ else
     [Parameter, EditorRequired] public int BookId { get; set; }
 
     private BookDto? _book;
-    private string _audioUrl = "";
+    private List<ChapterDto> _chapters = [];
+    private List<ChapterProgressDto> _chapterProgresses = [];
+    private ChapterDto? _currentChapter;
     private double _startPosition;
     private List<BookmarkDto> _bookmarks = [];
     private bool _showBookmarkInput;
@@ -72,22 +114,69 @@ else
         _book = await Api.GetBookAsync(BookId);
         if (_book is null) return;
 
-        _audioUrl = Api.GetAudioUrl(BookId);
-        _startPosition = await Api.GetProgressAsync(BookId);
+        _chapters = await Api.GetChaptersAsync(BookId);
+        _chapterProgresses = await Task.WhenAll(_chapters.Select(c => Api.GetChapterProgressAsync(c.Id)))
+            .ContinueWith(t => t.Result.ToList());
         _bookmarks = await Api.GetBookmarksAsync(BookId);
+
+        // Resume the first unlistened chapter, or first chapter
+        var resumeIdx = _chapterProgresses.FindIndex(p => !p.IsListened && p.PositionSeconds > 0);
+        if (resumeIdx < 0) resumeIdx = _chapterProgresses.FindIndex(p => !p.IsListened);
+        if (resumeIdx < 0) resumeIdx = 0;
+
+        if (_chapters.Count > 0)
+        {
+            _currentChapter = _chapters[resumeIdx];
+            _startPosition = _chapterProgresses[resumeIdx].PositionSeconds;
+        }
     }
 
-    private async Task SaveProgress(double position)
+    private async Task SelectChapter(ChapterDto chapter)
+    {
+        _currentChapter = chapter;
+        var idx = _chapters.IndexOf(chapter);
+        _startPosition = idx >= 0 ? _chapterProgresses[idx].PositionSeconds : 0;
+    }
+
+    private async Task AdvanceChapter()
+    {
+        if (_currentChapter is null) return;
+        var idx = _chapters.FindIndex(c => c.Id == _currentChapter.Id);
+        if (idx < _chapters.Count - 1)
+        {
+            // Mark current as listened
+            _chapterProgresses[idx] = _chapterProgresses[idx] with { IsListened = true };
+            _currentChapter = _chapters[idx + 1];
+            _startPosition = 0;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveChapterProgress(double position)
     {
         _currentPosition = position;
-        await Api.SaveProgressAsync(BookId, position);
+        if (_currentChapter is null) return;
+        var idx = _chapters.FindIndex(c => c.Id == _currentChapter.Id);
+        // We don't know duration here — pass 0, server will check on next update with duration
+        await Api.SaveChapterProgressAsync(_currentChapter.Id, position, 0);
+        if (idx >= 0)
+            _chapterProgresses[idx] = _chapterProgresses[idx] with { PositionSeconds = position };
     }
 
-    private void AddBookmark()
+    private async Task ResetChapter(int chapterId)
     {
-        _showBookmarkInput = true;
-        _bookmarkLabel = "";
+        await Api.ResetChapterAsync(chapterId);
+        var idx = _chapters.FindIndex(c => c.Id == chapterId);
+        if (idx >= 0) _chapterProgresses[idx] = new ChapterProgressDto(0, false);
     }
+
+    private async Task ResetBook()
+    {
+        await Api.ResetBookAsync(BookId);
+        _chapterProgresses = _chapterProgresses.Select(_ => new ChapterProgressDto(0, false)).ToList();
+    }
+
+    private void AddBookmark() { _showBookmarkInput = true; _bookmarkLabel = ""; }
 
     private async Task ConfirmBookmark()
     {
@@ -103,11 +192,9 @@ else
         _bookmarks.RemoveAll(b => b.Id == id);
     }
 
-    private static string FormatTime(double seconds)
+    private static string FormatTime(double s)
     {
-        var ts = TimeSpan.FromSeconds(seconds);
-        return ts.Hours > 0
-            ? $"{ts.Hours}:{ts.Minutes:D2}:{ts.Seconds:D2}"
-            : $"{ts.Minutes}:{ts.Seconds:D2}";
+        var ts = TimeSpan.FromSeconds(s);
+        return ts.Hours > 0 ? $"{ts.Hours}:{ts.Minutes:D2}:{ts.Seconds:D2}" : $"{ts.Minutes}:{ts.Seconds:D2}";
     }
 }

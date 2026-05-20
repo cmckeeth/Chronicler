@@ -12,7 +12,7 @@ window.chroniclerAudio = {
         if (!el) return;
         el.addEventListener('play',        () => dotnetRef.invokeMethodAsync('OnJsPlay'));
         el.addEventListener('pause',       () => dotnetRef.invokeMethodAsync('OnJsPause'));
-        el.addEventListener('ended',       () => dotnetRef.invokeMethodAsync('OnJsPause'));
+        el.addEventListener('ended',       () => dotnetRef.invokeMethodAsync('OnJsEnded'));
         el.addEventListener('timeupdate',  () => dotnetRef.invokeMethodAsync('OnJsTimeUpdate', el.currentTime));
         el.addEventListener('loadedmetadata', () => dotnetRef.invokeMethodAsync('OnJsMetadata', el.duration));
     }

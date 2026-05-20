@@ -734,6 +734,101 @@ select {
     box-shadow: var(--glow-copper);
 }
 
+/* ── Chapter List ─────────────────────────────────────────────────────────── */
+.chapter-list {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    position: relative;
+}
+
+.chapter-list-header {
+    padding: .7rem 1.2rem .4rem;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--surface2) 0%, var(--surface) 100%);
+}
+
+.chapter-item {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .65rem 1rem .65rem 1.2rem;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background .15s;
+    font-size: .85rem;
+}
+
+.chapter-item:last-child { border-bottom: none; }
+
+.chapter-item:hover { background: var(--surface2); }
+
+.chapter-active {
+    background: linear-gradient(90deg, rgba(212,146,12,.12) 0%, transparent 100%);
+    border-left: 3px solid var(--brass);
+}
+
+.chapter-listened {
+    opacity: .65;
+}
+
+.chapter-number {
+    font-family: var(--font-serif);
+    font-size: .72rem;
+    color: var(--parchment-dim);
+    min-width: 1.6rem;
+    text-align: right;
+}
+
+.chapter-title {
+    flex: 1;
+    font-family: var(--font-body);
+    color: var(--parchment);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chapter-status {
+    display: flex;
+    gap: .3rem;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.listened-badge {
+    color: var(--verdigris);
+    font-weight: 700;
+    font-size: .9rem;
+}
+
+.in-progress-badge {
+    color: var(--brass);
+    font-size: .9rem;
+}
+
+.playing-badge {
+    color: var(--brass-light);
+    font-size: .8rem;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+
+.btn-reset-chapter {
+    background: transparent;
+    color: var(--parchment-dim);
+    border: none;
+    font-size: .9rem;
+    padding: .2rem .4rem;
+    cursor: pointer;
+    border-radius: var(--radius);
+    opacity: 0;
+    transition: opacity .15s;
+}
+.chapter-item:hover .btn-reset-chapter { opacity: 1; }
+
 /* ── Blazor errors ────────────────────────────────────────────────────────── */
 .blazor-error-boundary {
     background: var(--rust);
