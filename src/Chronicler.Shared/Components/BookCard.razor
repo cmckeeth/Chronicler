@@ -1,10 +1,15 @@
 @inject NavigationManager Nav
+@inject ApiClient Api
 
 <div class="book-card" @onclick="Navigate">
     <div class="book-cover">
-        @if (Book.HasCover)
+        @if (_coverSrc is not null)
         {
-            <img src="@CoverUrl" alt="@Book.Title cover" loading="lazy" />
+            <img src="@_coverSrc" alt="@Book.Title cover" />
+        }
+        else if (Book.HasCover && _loading)
+        {
+            <div class="book-cover-placeholder" style="opacity:.1">⚙</div>
         }
         else
         {
@@ -23,7 +28,19 @@
 
 @code {
     [Parameter, EditorRequired] public BookDto Book { get; set; } = null!;
-    [Parameter, EditorRequired] public string CoverUrl { get; set; } = "";
+
+    private string? _coverSrc;
+    private bool _loading;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Book.HasCover && _coverSrc is null)
+        {
+            _loading = true;
+            _coverSrc = await Api.GetCoverDataUriAsync(Book.Id);
+            _loading = false;
+        }
+    }
 
     private void Navigate() => Nav.NavigateTo($"/book/{Book.Id}");
 }

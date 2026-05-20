@@ -12,10 +12,14 @@ else
 
         <div class="book-header">
             <div class="cover-container">
-                @if (_book.HasCover)
+                @if (_coverSrc is not null)
                 {
-                    <img class="book-cover-large" src="@Api.GetCoverUrl(_book.Id)" alt="@_book.Title" />
-                    <button class="btn-wrong-cover" @onclick="WrongCover" title="Wrong cover art">✕ Wrong cover</button>
+                    <img class="book-cover-large" src="@_coverSrc" alt="@_book.Title" />
+                    <button class="btn-wrong-cover" @onclick="WrongCover">✕ Wrong cover</button>
+                }
+                else if (_book.HasCover)
+                {
+                    <div class="book-cover-placeholder-large" style="opacity:.3">⚙</div>
                 }
                 else
                 {
@@ -109,6 +113,7 @@ else
     [Parameter, EditorRequired] public int BookId { get; set; }
 
     private BookDto? _book;
+    private string? _coverSrc;
     private List<ChapterDto> _chapters = [];
     private List<ChapterProgressDto> _chapterProgresses = [];
     private ChapterDto? _currentChapter;
@@ -122,6 +127,9 @@ else
     {
         _book = await Api.GetBookAsync(BookId);
         if (_book is null) return;
+
+        if (_book.HasCover)
+            _coverSrc = await Api.GetCoverDataUriAsync(BookId);
 
         _chapters = await Api.GetChaptersAsync(BookId);
         _chapterProgresses = await Task.WhenAll(_chapters.Select(c => Api.GetChapterProgressAsync(c.Id)))
@@ -187,6 +195,7 @@ else
 
     private async Task WrongCover()
     {
+        _coverSrc = null;
         await Api.ClearCoverAsync(BookId);
         _book = await Api.GetBookAsync(BookId);
     }
@@ -195,6 +204,8 @@ else
     {
         await Api.RefetchCoverAsync(BookId);
         _book = await Api.GetBookAsync(BookId);
+        if (_book?.HasCover == true)
+            _coverSrc = await Api.GetCoverDataUriAsync(BookId);
     }
 
     private void AddBookmark() { _showBookmarkInput = true; _bookmarkLabel = ""; }

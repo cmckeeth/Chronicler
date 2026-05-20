@@ -57,6 +57,17 @@ public class ApiClient(HttpClient http, AuthState auth)
     }
 
     public string GetCoverUrl(int bookId) => $"{http.BaseAddress}api/books/{bookId}/cover";
+
+    public async Task<string?> GetCoverDataUriAsync(int bookId)
+    {
+        try
+        {
+            var bytes = await http.GetByteArrayAsync($"api/books/{bookId}/cover");
+            if (bytes.Length < 100) return null;
+            return $"data:image/jpeg;base64,{Convert.ToBase64String(bytes)}";
+        }
+        catch { return null; }
+    }
     public string GetAudioUrl(int bookId) => $"{http.BaseAddress}api/books/{bookId}/audio";
     public string GetChapterAudioUrl(int chapterId) => $"{http.BaseAddress}api/chapters/{chapterId}/audio";
 

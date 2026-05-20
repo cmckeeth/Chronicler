@@ -37,7 +37,7 @@
         <div class="book-grid">
             @foreach (var book in _books)
             {
-                <BookCard Book="book" CoverUrl="@Api.GetCoverUrl(book.Id)" />
+                <BookCard Book="book" />
             }
         </div>
     }
