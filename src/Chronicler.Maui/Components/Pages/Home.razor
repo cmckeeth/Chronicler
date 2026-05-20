@@ -2,7 +2,11 @@
 @inject AuthState Auth
 @inject NavigationManager Nav
 
-@if (Auth.IsAuthenticated)
+@if (!Auth.IsAuthenticated)
+{
+    Nav.NavigateTo("/login", replace: true);
+}
+else
 {
     <LibraryBrowser />
 }

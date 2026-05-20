@@ -23,10 +23,21 @@ public static class MauiProgram
 #endif
             });
 
+        // Load stored token before first render so AuthState is correct immediately
+        var tokenStorage = new SecureTokenStorage();
+        var authState = new AuthState();
+        try
+        {
+            var token = SecureStorage.Default.GetAsync("chronicler_token").GetAwaiter().GetResult();
+            if (token is not null)
+                authState.SetToken(token);
+        }
+        catch { /* SecureStorage unavailable — start unauthenticated */ }
+
         builder.Services.AddMauiBlazorWebView();
         builder.Services.AddSingleton<IAudioPlayerService, NativeAudioPlayerService>();
-        builder.Services.AddSingleton<ITokenStorage, SecureTokenStorage>();
-        builder.Services.AddSingleton<AuthState>();
+        builder.Services.AddSingleton<ITokenStorage>(tokenStorage);
+        builder.Services.AddSingleton(authState);
         builder.Services.AddScoped<ApiClient>(sp =>
         {
             var auth = sp.GetRequiredService<AuthState>();
