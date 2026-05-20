@@ -13,6 +13,12 @@ else
 }
 
 @code {
-    protected override void OnInitialized() => Auth.OnChange += StateHasChanged;
-    public void Dispose() => Auth.OnChange -= StateHasChanged;
+    protected override void OnInitialized() =>
+        Auth.OnChange += OnAuthChanged;
+
+    private void OnAuthChanged() =>
+        InvokeAsync(StateHasChanged);
+
+    public void Dispose() =>
+        Auth.OnChange -= OnAuthChanged;
 }
