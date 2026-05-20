@@ -10,7 +10,7 @@ public class LibraryScanner(
     MetadataService metadata,
     ILogger<LibraryScanner> logger)
 {
-    private static readonly string[] AudioExtensions = [".mp3", ".m4b", ".m4a", ".ogg", ".flac", ".aac", ".wav"];
+    private static readonly string[] AudioExtensions = [".mp3", ".m4b", ".m4a", ".ogg", ".opus", ".flac", ".aac", ".wav"];
 
     public string LibraryRoot => Path.Combine(env.ContentRootPath, "Library");
 
