@@ -99,17 +99,29 @@
         }
     }
 
+    private bool _hasStartedOnce;
+
     private async Task TogglePlay()
     {
-        var path = _nativePlayer is not null ? "native" : "js";
-        await Api.DiagAsync($"TogglePlay: path={path} playing={_playing} src={Src}");
-
         if (_nativePlayer is not null)
+
         {
             if (_playing)
+            {
                 await _nativePlayer.PauseAsync();
+                // Save immediately on pause
+                await OnProgressChanged.InvokeAsync(CurrentPosition);
+            }
             else
+            {
                 await _nativePlayer.PlayAsync(Src);
+                // Seek to saved position on first play
+                if (!_hasStartedOnce && StartPosition > 1)
+                {
+                    await _nativePlayer.SeekAsync(StartPosition);
+                }
+                _hasStartedOnce = true;
+            }
         }
         else
         {
@@ -209,7 +221,12 @@
             _nativePlayer.StateChanged -= OnNativeStateChanged;
             _nativePlayer.PositionChanged -= OnNativePositionChanged;
             _nativePlayer.Ended -= OnNativeEnded;
-            if (_playing) await _nativePlayer.PauseAsync();
+            if (_playing)
+            {
+                await _nativePlayer.PauseAsync();
+                // Final position save on close
+                await OnProgressChanged.InvokeAsync(CurrentPosition);
+            }
         }
         else
         {
