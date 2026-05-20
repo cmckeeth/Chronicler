@@ -1,0 +1,16 @@
+[Unit]
+Description=Chronicler Deploy Webhook
+After=network.target
+
+[Service]
+Type=simple
+User=corbin
+WorkingDirectory=/home/corbin/Servers/chronicler-server/Chronicler
+ExecStart=/usr/bin/python3 /home/corbin/Servers/chronicler-server/Chronicler/webhook.py
+Environment=DEPLOY_SECRET=changeme
+Environment=WEBHOOK_PORT=5162
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
