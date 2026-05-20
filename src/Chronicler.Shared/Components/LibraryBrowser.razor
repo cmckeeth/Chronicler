@@ -4,64 +4,110 @@
 @using Microsoft.Extensions.DependencyInjection
 
 <div class="library-browser">
-    <div class="library-header">
-        <div style="display:flex;align-items:center;gap:.75rem">
+
+    
+    <div class="library-top">
+        <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem">
             <button class="btn-icon" @onclick='() => Nav.NavigateTo("/")' title="Home" style="font-size:1.3rem;padding:.3rem .5rem">⌂</button>
-            <h1>The Archive</h1>
-        </div>
-        <div class="library-toolbar">
             <input type="search" placeholder="Query the archive..." class="search-input"
                    value="@_search" @oninput="OnSearch" />
-            <button class="btn-secondary" @onclick="ScanLibrary" disabled="@_scanning">
-                @(_scanning ? "⚙ Cataloguing..." : "⚙ Catalogue")
-            </button>
-            <button class="btn-secondary" @onclick="EnrichLibrary" disabled="@_enriching">
-                @(_enriching ? "⚙ Fetching..." : "⚙ Fetch Covers")
-            </button>
-            @if (_hasDownloads)
-            {
-                <button class="btn-secondary" @onclick='() => Nav.NavigateTo("/downloads")' title="Downloads">⬇ Downloads</button>
-            }
+        </div>
+
+        <div class="library-controls">
+            <div class="sort-group">
+                <span class="control-label">Sort</span>
+                <button class="@ChipClass(_sort,"name")"   @onclick='() => SetSort("name")'>Name</button>
+                <button class="@ChipClass(_sort,"date")"   @onclick='() => SetSort("date")'>Added</button>
+                <button class="@ChipClass(_sort,"progress")" @onclick='() => SetSort("progress")'>Progress</button>
+            </div>
+            <div class="sort-group">
+                <span class="control-label">Show</span>
+                <button class="@ChipClass(_filter,"all")"        @onclick='() => SetFilter("all")'>All</button>
+                <button class="@ChipClass(_filter,"inprogress")" @onclick='() => SetFilter("inprogress")'>In Progress</button>
+                <button class="@ChipClass(_filter,"completed")"  @onclick='() => SetFilter("completed")'>Done</button>
+            </div>
         </div>
     </div>
 
+    
     @if (_loading)
     {
         <div class="loading">Consulting the archive...</div>
     }
     else if (_error is not null)
     {
-        <div class="empty-state">
-            <p>The pneumatic tubes have failed: @_error</p>
-        </div>
+        <div class="empty-state"><p>The pneumatic tubes have failed: @_error</p></div>
     }
-    else if (_books.Count == 0)
+    else if (!FilteredBooks.Any())
     {
         <div class="empty-state">
-            <p>The archive lies empty, traveller.</p>
-            <p>Deposit volumes in the Library vault and engage the Catalogue mechanism.</p>
+            <p>@(_books.Count == 0 ? "The archive lies empty, traveller." : "No volumes match this filter.")</p>
         </div>
     }
     else
     {
         <div class="book-grid">
-            @foreach (var book in _books)
+            @foreach (var book in FilteredBooks)
             {
                 <BookCard Book="book" />
             }
         </div>
     }
+
+    
+    <div class="library-bottom">
+        @if (_hasDownloads)
+        {
+            <button class="btn-secondary" @onclick='() => Nav.NavigateTo("/downloads")'>⬇ Downloads</button>
+        }
+        <button class="btn-secondary" @onclick="ScanLibrary" disabled="@_scanning">
+            @(_scanning ? "⚙ Cataloguing..." : "⚙ Catalogue")
+        </button>
+        <button class="btn-secondary" @onclick="EnrichLibrary" disabled="@_enriching">
+            @(_enriching ? "⚙ Fetching..." : "⚙ Fetch Covers")
+        </button>
+    </div>
+
 </div>
 
 @code {
     private List<BookDto> _books = [];
     private string _search = "";
+    private string _sort = "name";
+    private string _filter = "all";
     private string? _error;
     private bool _loading = true;
     private bool _scanning;
     private bool _enriching;
     private bool _hasDownloads;
     private System.Timers.Timer? _debounce;
+
+    private string ChipClass(string current, string value) =>
+        $"chip{(current == value ? " chip-active" : "")}";
+
+    private void SetSort(string s) { _sort = s; }
+    private void SetFilter(string f) { _filter = f; }
+
+    private IEnumerable<BookDto> FilteredBooks
+    {
+        get
+        {
+            var q = _filter switch
+            {
+                "inprogress" => _books.Where(b => b.IsInProgress),
+                "completed"  => _books.Where(b => b.IsCompleted),
+                _            => _books.AsEnumerable()
+            };
+            return _sort switch
+            {
+                "date"     => q.OrderByDescending(b => b.AddedAt),
+                "progress" => q.OrderByDescending(b => b.IsInProgress)
+                               .ThenByDescending(b => b.IsCompleted)
+                               .ThenBy(b => b.Title),
+                _          => q.OrderBy(b => b.Title)
+            };
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -75,14 +121,8 @@
     {
         _loading = true;
         _error = null;
-        try
-        {
-            _books = await Api.GetBooksAsync(search);
-        }
-        catch (Exception ex)
-        {
-            _error = ex.Message;
-        }
+        try { _books = await Api.GetBooksAsync(search); }
+        catch (Exception ex) { _error = ex.Message; }
         _loading = false;
     }
 
@@ -94,11 +134,7 @@
         _debounce.Elapsed += async (_, _) =>
         {
             _debounce?.Dispose();
-            await InvokeAsync(async () =>
-            {
-                await LoadBooks(_search);
-                StateHasChanged();
-            });
+            await InvokeAsync(async () => { await LoadBooks(_search); StateHasChanged(); });
         };
         _debounce.AutoReset = false;
         _debounce.Start();
@@ -107,16 +143,16 @@
     private async Task ScanLibrary()
     {
         _scanning = true;
-        var added = await Api.ScanLibraryAsync();
+        await Api.ScanLibraryAsync();
+        await LoadBooks(_search);
         _scanning = false;
-        if (added > 0) await LoadBooks(_search);
     }
 
     private async Task EnrichLibrary()
     {
         _enriching = true;
         await Api.EnrichLibraryAsync();
-        _enriching = false;
         await LoadBooks(_search);
+        _enriching = false;
     }
 }

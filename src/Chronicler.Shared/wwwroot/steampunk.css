@@ -380,6 +380,43 @@ select {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Library controls ─────────────────────────────────────────────────────── */
+.library-top { padding-bottom: .5rem; border-bottom: 1px solid var(--border); margin-bottom: .75rem; }
+.library-controls { display: flex; flex-wrap: wrap; gap: .5rem; }
+.sort-group { display: flex; align-items: center; gap: .3rem; flex-wrap: wrap; }
+.control-label { font-family: var(--font-serif); font-size: .65rem; color: var(--parchment-dim); text-transform: uppercase; letter-spacing: 1px; margin-right: .1rem; }
+
+.chip {
+    background: var(--surface2);
+    color: var(--parchment-dim);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: .2rem .7rem;
+    font-family: var(--font-serif);
+    font-size: .7rem;
+    letter-spacing: .5px;
+    cursor: pointer;
+    transition: all .15s;
+}
+.chip:hover { border-color: var(--brass); color: var(--brass); }
+.chip-active {
+    background: linear-gradient(135deg, var(--brass-dim, var(--border-brass)), var(--brass));
+    color: var(--ink);
+    border-color: var(--brass-light);
+    font-weight: 700;
+    box-shadow: var(--glow-brass);
+}
+
+.library-bottom {
+    display: flex;
+    gap: .5rem;
+    justify-content: center;
+    padding: .75rem 0 .25rem;
+    border-top: 1px solid var(--border);
+    margin-top: .75rem;
+    flex-wrap: wrap;
+}
+
 /* ── Book Grid ────────────────────────────────────────────────────────────── */
 .book-grid {
     display: grid;

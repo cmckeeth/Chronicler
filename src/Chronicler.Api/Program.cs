@@ -152,8 +152,9 @@ app.MapGet("/api/auth/me", (ClaimsPrincipal principal) =>
 
 // ── Books ─────────────────────────────────────────────────────────────────────
 
-app.MapGet("/api/books", [Authorize] async (string? q, AppDbContext db) =>
+app.MapGet("/api/books", [Authorize] async (string? q, ClaimsPrincipal principal, AppDbContext db) =>
 {
+    var userId = (principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? "default");
     var query = db.Books.AsQueryable();
     if (!string.IsNullOrWhiteSpace(q))
         query = query.Where(b =>
@@ -163,8 +164,11 @@ app.MapGet("/api/books", [Authorize] async (string? q, AppDbContext db) =>
 
     var books = await query
         .OrderBy(b => b.Author).ThenBy(b => b.Title)
-        .Select(b => new BookDto(b.Id, b.Title, b.Author, b.Narrator, b.DurationSeconds,
-            b.CoverPath != null, b.AddedAt))
+        .Select(b => new BookDto(
+            b.Id, b.Title, b.Author, b.Narrator, b.DurationSeconds,
+            b.CoverPath != null, b.AddedAt,
+            b.Chapters.Count(),
+            b.Chapters.Count(c => c.Progresses.Any(p => p.UserId == userId && p.IsListened))))
         .ToListAsync();
 
     return Results.Ok(books);
@@ -655,6 +659,6 @@ record BookmarkDto(int Id, int BookId, double PositionSeconds, string? Label, Da
 record BookUpdateRequest(string? Title, string? Author, string? Narrator, string? Description);
 record DiagMessage(string Message);
 record BookDto(int Id, string Title, string Author, string? Narrator, double DurationSeconds,
-    bool HasCover, DateTime AddedAt);
+    bool HasCover, DateTime AddedAt, int ChapterCount = 0, int ListenedCount = 0);
 record ChapterDto(int Id, int BookId, string Title, int TrackNumber);
 record ChapterProgressRequest(double PositionSeconds, double DurationSeconds);

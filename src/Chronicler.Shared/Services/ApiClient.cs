@@ -4,7 +4,12 @@ using System.Text.Json;
 namespace Chronicler.Shared.Services;
 
 public record BookDto(int Id, string Title, string Author, string? Narrator,
-    double DurationSeconds, bool HasCover, DateTime AddedAt);
+    double DurationSeconds, bool HasCover, DateTime AddedAt,
+    int ChapterCount = 0, int ListenedCount = 0)
+{
+    public bool IsCompleted => ChapterCount > 0 && ListenedCount >= ChapterCount;
+    public bool IsInProgress => ListenedCount > 0 && !IsCompleted;
+}
 
 public record BookmarkDto(int Id, int BookId, double PositionSeconds, string? Label, DateTime CreatedAt);
 
