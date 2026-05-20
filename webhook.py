@@ -31,7 +31,7 @@ def run_deploy():
         f.write(f"\n[{time.strftime('%Y-%m-%d %H:%M:%S')}] Deploy triggered\n")
         f.flush()
         result = subprocess.run(
-            ["bash", "-c", "git pull && ./deploy.sh"],
+            ["bash", "-c", "git checkout -- . && git pull && ./deploy.sh"],
             cwd=REPO, stdout=f, stderr=subprocess.STDOUT
         )
         f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Deploy exited: {result.returncode}\n")
