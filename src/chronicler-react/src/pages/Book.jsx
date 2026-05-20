@@ -14,6 +14,7 @@ export default function Book() {
   const audioRef = useRef(null);
 
   const [book, setBook] = useState(null);
+  const [coverBust, setCoverBust] = useState('');
   const [chapters, setChapters] = useState([]);
   const [progresses, setProgresses] = useState([]);
   const [bookmarks, setBookmarks] = useState([]);
@@ -150,13 +151,14 @@ export default function Book() {
       <div className="book-header">
         <div className="cover-container">
           {book.hasCover
-            ? <img className="book-cover-large" src={booksApi.coverUrl(book.id)} alt={book.title} />
+            ? <img className="book-cover-large" src={`${booksApi.coverUrl(book.id)}${coverBust}`} alt={book.title} />
             : <div className="book-cover-placeholder-large">📚</div>
           }
           {book.hasCover && (
             <button className="btn-wrong-cover" onClick={async () => {
               await booksApi.clearCover(book.id);
               setBook(b => ({ ...b, hasCover: false }));
+              setCoverBust('');
             }}>✕ Wrong cover</button>
           )}
           {!book.hasCover && (
@@ -164,6 +166,7 @@ export default function Book() {
               await booksApi.refetchCover(book.id);
               const b = await booksApi.get(id);
               setBook(b);
+              setCoverBust(`?t=${Date.now()}`);
             }}>⚙ Find cover</button>
           )}
         </div>
