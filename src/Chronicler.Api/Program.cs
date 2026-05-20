@@ -189,7 +189,7 @@ app.MapGet("/api/books/{id:int}/cover", async (int id, AppDbContext db, IWebHost
     return Results.File(fullPath, mime);
 });
 
-app.MapGet("/api/books/{id:int}/audio", [Authorize] async (
+app.MapGet("/api/books/{id:int}/audio", async (
     int id, HttpContext ctx, AppDbContext db, IWebHostEnvironment env, ILogger<Program> logger) =>
 {
     var book = await db.Books.FindAsync(id);
@@ -230,7 +230,7 @@ app.MapGet("/api/books/{bookId:int}/chapters", [Authorize] async (int bookId, Ap
     return Results.Ok(chapters);
 });
 
-app.MapGet("/api/chapters/{chapterId:int}/audio", [Authorize] async (
+app.MapGet("/api/chapters/{chapterId:int}/audio", async (
     int chapterId, HttpContext ctx, AppDbContext db, IWebHostEnvironment env, ILogger<Program> logger) =>
 {
     var chapter = await db.Chapters.FindAsync(chapterId);
