@@ -1,17 +1,23 @@
 @inject ITokenStorage TokenStorage
 @inject AuthState Auth
 @inject NavigationManager Nav
+@inject ApiClient Api
 
 @code {
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
 
+        await Api.DiagAsync("AuthInitializer.OnAfterRenderAsync fired");
+
         var token = await TokenStorage.GetAsync();
+
+        await Api.DiagAsync($"Token from storage: {(token is null ? "NULL" : "found")}");
+
         if (token is not null)
         {
             Auth.SetToken(token);
-            // If we're on the login page, go home
+            await Api.DiagAsync("Auth.SetToken called");
             if (Nav.Uri.Contains("/login"))
                 Nav.NavigateTo("/");
         }
