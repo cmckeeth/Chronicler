@@ -1,4 +1,15 @@
 @page "/"
 @rendermode InteractiveServer
+@inject AuthState Auth
+@inject NavigationManager Nav
+@implements IDisposable
 
-<LibraryBrowser />
+@if (Auth.IsAuthenticated)
+{
+    <LibraryBrowser />
+}
+
+@code {
+    protected override void OnInitialized() => Auth.OnChange += StateHasChanged;
+    public void Dispose() => Auth.OnChange -= StateHasChanged;
+}

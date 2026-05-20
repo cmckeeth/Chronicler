@@ -17,24 +17,41 @@ public class MetadataService(ILogger<MetadataService> logger)
 
     public async Task EnrichAsync(Book book, string libraryRoot, CancellationToken ct = default)
     {
+        logger.LogInformation("Metadata: enriching '{Title}' by '{Author}'", book.Title, book.Author);
         try
         {
             var result = await SearchOpenLibraryAsync(book.Title, book.Author, ct);
-            if (result is null) return;
+            if (result is null)
+            {
+                logger.LogWarning("Metadata: no OpenLibrary match for '{Title}'", book.Title);
+                return;
+            }
 
             if (!string.IsNullOrWhiteSpace(result.Description))
                 book.Description = result.Description;
 
             if (result.CoverId > 0 && book.CoverPath is null)
             {
+                logger.LogInformation("Metadata: downloading cover id={CoverId} for '{Title}'", result.CoverId, book.Title);
                 var coverPath = await DownloadCoverAsync(result.CoverId, book, libraryRoot, ct);
                 if (coverPath is not null)
+                {
                     book.CoverPath = coverPath;
+                    logger.LogInformation("Metadata: cover saved → {Path}", coverPath);
+                }
+                else
+                {
+                    logger.LogWarning("Metadata: cover download returned empty/placeholder for '{Title}'", book.Title);
+                }
+            }
+            else if (result.CoverId == 0)
+            {
+                logger.LogWarning("Metadata: OpenLibrary match has no cover image for '{Title}'", book.Title);
             }
         }
         catch (Exception ex)
         {
-            logger.LogWarning("Metadata fetch failed for '{Title}': {Error}", book.Title, ex.Message);
+            logger.LogWarning("Metadata: fetch failed for '{Title}': {Error}", book.Title, ex.Message);
         }
     }
 
@@ -44,29 +61,38 @@ public class MetadataService(ILogger<MetadataService> logger)
         var query = Uri.EscapeDataString($"{title} {author}".Trim());
         var url = $"https://openlibrary.org/search.json?q={query}&limit=3&fields=title,author_name,cover_i,first_sentence,description";
 
+        logger.LogInformation("Metadata: querying OpenLibrary → {Url}", url);
         var response = await Http.GetFromJsonAsync<OpenLibraryResponse>(url, JsonOpts, ct);
         var doc = response?.Docs?.FirstOrDefault();
-        if (doc is null) return null;
+        if (doc is null)
+        {
+            logger.LogWarning("Metadata: OpenLibrary returned 0 results for '{Query}'", query);
+            return null;
+        }
 
-        logger.LogInformation("OpenLibrary match for '{Title}': {Match}", title, doc.Title);
-
-        return new OpenLibraryResult(
-            doc.CoverId ?? 0,
-            doc.Description ?? doc.FirstSentence?.Value);
+        logger.LogInformation("Metadata: matched '{Match}' (coverId={CoverId})", doc.Title, doc.CoverId);
+        return new OpenLibraryResult(doc.CoverId ?? 0, doc.Description ?? doc.FirstSentence?.Value);
     }
 
     private async Task<string?> DownloadCoverAsync(
         int coverId, Book book, string libraryRoot, CancellationToken ct)
     {
         var url = $"https://covers.openlibrary.org/b/id/{coverId}-L.jpg";
+        logger.LogInformation("Metadata: fetching cover from {Url}", url);
         var bytes = await Http.GetByteArrayAsync(url, ct);
-        if (bytes.Length < 1000) return null; // tiny = placeholder, skip
+        logger.LogInformation("Metadata: cover response {Bytes} bytes", bytes.Length);
 
-        // Save next to the audio file
+        if (bytes.Length < 1000)
+        {
+            logger.LogWarning("Metadata: cover too small ({Bytes}b), likely placeholder — skipping", bytes.Length);
+            return null;
+        }
+
         var audioDir = Path.GetDirectoryName(Path.Combine(libraryRoot, book.FilePath));
         if (audioDir is null) return null;
 
         var coverFile = Path.Combine(audioDir, "cover.jpg");
+        logger.LogInformation("Metadata: saving cover to {Path}", coverFile);
         await File.WriteAllBytesAsync(coverFile, bytes, ct);
 
         return Path.GetRelativePath(libraryRoot, coverFile);

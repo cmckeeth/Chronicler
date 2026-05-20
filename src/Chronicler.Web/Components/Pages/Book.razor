@@ -1,8 +1,16 @@
 @page "/book/{BookId:int}"
 @rendermode InteractiveServer
+@inject AuthState Auth
+@inject NavigationManager Nav
+@implements IDisposable
 
-<BookPlayer BookId="@BookId" />
+@if (Auth.IsAuthenticated)
+{
+    <BookPlayer BookId="@BookId" />
+}
 
 @code {
     [Parameter] public int BookId { get; set; }
+    protected override void OnInitialized() => Auth.OnChange += StateHasChanged;
+    public void Dispose() => Auth.OnChange -= StateHasChanged;
 }
