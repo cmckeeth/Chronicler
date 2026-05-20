@@ -16,6 +16,15 @@
 </head>
 
 <body>
+    <!-- Auth redirect before Blazor connects — avoids blank screen on new devices -->
+    <script>
+        (function () {
+            var token = localStorage.getItem('chronicler_token');
+            var onLogin = window.location.pathname === '/login';
+            if (!token && !onLogin) window.location.replace('/login');
+        })();
+    </script>
+
     <Routes />
     <script src="_framework/blazor.web.js"></script>
     <script src="_content/Chronicler.Shared/chronicler.js"></script>
