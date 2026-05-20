@@ -1,5 +1,4 @@
 @inject ApiClient Api
-@inject NavigationManager Nav
 
 <div class="library-browser">
     <div class="library-header">
@@ -62,10 +61,6 @@
         try
         {
             _books = await Api.GetBooksAsync(search);
-        }
-        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-        {
-            Nav.NavigateTo("/login.html", forceLoad: true);
         }
         catch (Exception ex)
         {

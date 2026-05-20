@@ -1,4 +1,18 @@
 @page "/"
 @rendermode InteractiveServer
+@inject AuthState Auth
+@implements IDisposable
 
-<LibraryBrowser />
+@if (Auth.IsAuthenticated)
+{
+    <LibraryBrowser />
+}
+else
+{
+    <div class="loading" style="padding-top:30vh">⚙ Consulting the archive...</div>
+}
+
+@code {
+    protected override void OnInitialized() => Auth.OnChange += StateHasChanged;
+    public void Dispose() => Auth.OnChange -= StateHasChanged;
+}
