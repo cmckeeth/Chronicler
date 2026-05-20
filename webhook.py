@@ -18,7 +18,8 @@ import time
 REPO    = os.path.dirname(os.path.abspath(__file__))
 SECRET  = os.environ.get("DEPLOY_SECRET", "")
 PORT    = int(os.environ.get("WEBHOOK_PORT", "5162"))
-LOG     = os.path.join(REPO, "logs", "webhook.log")
+# Write to home dir to avoid Docker-owned logs/ dir
+LOG     = os.path.expanduser("~/webhook.log")
 
 _deploying = False
 
