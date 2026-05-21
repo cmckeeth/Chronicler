@@ -38,8 +38,8 @@ public class LibraryScanner(AppDbContext db, IWebHostEnvironment env, ILogger<Li
             logger.LogInformation("Removed {Count} missing book(s)", removed);
         }
 
-        // Update cover/meta for existing books that have no cover set
-        var booksNeedingUpdate = await db.Books.Where(b => b.CoverPath == null).ToListAsync(ct);
+        // Refresh cover + meta for ALL existing books on every scan
+        var booksNeedingUpdate = await db.Books.ToListAsync(ct);
         var coverUpdates = 0;
         foreach (var book in booksNeedingUpdate)
         {
@@ -47,11 +47,12 @@ public class LibraryScanner(AppDbContext db, IWebHostEnvironment env, ILogger<Li
             if (audioDir is null) continue;
 
             var cover = FindCoverImage(audioDir);
-            if (cover is not null)
+            var newCoverPath = cover is not null ? Path.GetRelativePath(LibraryRoot, cover) : null;
+            if (newCoverPath != book.CoverPath)
             {
-                book.CoverPath = Path.GetRelativePath(LibraryRoot, cover);
+                book.CoverPath = newCoverPath;
                 coverUpdates++;
-                logger.LogInformation("Updated cover for '{Title}': {Cover}", book.Title, book.CoverPath);
+                logger.LogInformation("Cover updated for '{Title}': {Cover}", book.Title, newCoverPath ?? "(none)");
             }
 
             // Also update from meta.json if title/author look like defaults
