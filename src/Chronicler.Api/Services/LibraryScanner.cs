@@ -38,6 +38,39 @@ public class LibraryScanner(AppDbContext db, IWebHostEnvironment env, ILogger<Li
             logger.LogInformation("Removed {Count} missing book(s)", removed);
         }
 
+        // Update cover/meta for existing books that have no cover set
+        var booksNeedingUpdate = await db.Books.Where(b => b.CoverPath == null).ToListAsync(ct);
+        var coverUpdates = 0;
+        foreach (var book in booksNeedingUpdate)
+        {
+            var audioDir = Path.GetDirectoryName(Path.Combine(LibraryRoot, book.FilePath));
+            if (audioDir is null) continue;
+
+            var cover = FindCoverImage(audioDir);
+            if (cover is not null)
+            {
+                book.CoverPath = Path.GetRelativePath(LibraryRoot, cover);
+                coverUpdates++;
+                logger.LogInformation("Updated cover for '{Title}': {Cover}", book.Title, book.CoverPath);
+            }
+
+            // Also update from meta.json if title/author look like defaults
+            var meta = ReadMetaJson(audioDir);
+            if (meta is not null)
+            {
+                if (meta.Title is not null) book.Title = meta.Title;
+                if (meta.Author is not null) book.Author = meta.Author;
+                if (meta.Narrator is not null) book.Narrator = meta.Narrator;
+                if (meta.Year is not null) book.Year = meta.Year;
+                if (meta.Description is not null) book.Description = meta.Description;
+            }
+        }
+        if (coverUpdates > 0)
+        {
+            await db.SaveChangesAsync(ct);
+            logger.LogInformation("Updated covers for {Count} existing book(s)", coverUpdates);
+        }
+
         var existingPaths = await db.Books.Select(b => b.FilePath).ToHashSetAsync(ct);
         var newBooks = new List<Book>();
 
