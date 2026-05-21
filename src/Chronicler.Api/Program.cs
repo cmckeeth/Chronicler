@@ -42,7 +42,7 @@ var dbPath = Environment.GetEnvironmentVariable("CHRONICLER_DB_PATH")
 // ── Services ──────────────────────────────────────────────────────────────────
 
 builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseSqlite($"Data Source={dbPath}"));
+    opt.UseSqlite($"Data Source={dbPath};Cache=Shared;Mode=ReadWriteCreate"));
 
 builder.Services.AddIdentity<AppUser, IdentityRole>(opt =>
 {
@@ -84,6 +84,9 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
+    // Enable WAL mode for better concurrent read performance
+    await db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
+    await db.Database.ExecuteSqlRawAsync("PRAGMA cache_size=-32000;"); // 32MB cache
 
     var scanner = scope.ServiceProvider.GetRequiredService<LibraryScanner>();
     var added = await scanner.ScanAsync();
@@ -182,13 +185,18 @@ app.MapGet("/api/books/{id:int}", [Authorize] async (int id, AppDbContext db) =>
 
 app.MapGet("/api/books/{id:int}/cover", async (int id, HttpContext ctx, AppDbContext db) =>
 {
-    var book = await db.Books.FindAsync(id);
-    if (book?.CoverData is null || book.CoverData.Length == 0) return Results.NotFound();
+    // Select only the cover columns — don't load the whole book row
+    var cover = await db.Books
+        .Where(b => b.Id == id)
+        .Select(b => new { b.CoverData, b.CoverMimeType })
+        .FirstOrDefaultAsync();
 
-    var mime = book.CoverMimeType ?? "image/jpeg";
+    if (cover?.CoverData is null || cover.CoverData.Length == 0) return Results.NotFound();
+
+    var mime = cover.CoverMimeType ?? "image/jpeg";
     ctx.Response.Headers["Cache-Control"] = "public, max-age=86400";
-    ctx.Response.Headers["ETag"] = $"\"{id}-{book.CoverData.Length}\"";
-    return Results.File(book.CoverData, mime);
+    ctx.Response.Headers["ETag"] = $"\"{id}-{cover.CoverData.Length}\"";
+    return Results.File(cover.CoverData, mime);
 });
 
 app.MapGet("/api/books/{id:int}/audio", async (
