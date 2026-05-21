@@ -42,7 +42,7 @@ var dbPath = Environment.GetEnvironmentVariable("CHRONICLER_DB_PATH")
 // ── Services ──────────────────────────────────────────────────────────────────
 
 builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseSqlite($"Data Source={dbPath};Cache=Shared;Mode=ReadWriteCreate"));
+    opt.UseSqlite($"Data Source={dbPath}"));
 
 builder.Services.AddIdentity<AppUser, IdentityRole>(opt =>
 {
