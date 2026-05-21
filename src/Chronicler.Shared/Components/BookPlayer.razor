@@ -18,21 +18,43 @@ else
                 {
                     <img class="book-cover-small" src="@_coverSrc" alt="@_book.Title"
                          @ontouchstart="OnCoverTouchStart" @ontouchend="OnCoverTouchEnd" @ontouchmove="OnCoverTouchEnd"
-                         title="Long press to replace cover" />
+                         @onmousedown="OnCoverTouchStart" @onmouseup="OnCoverTouchEnd" @onmouseleave="OnCoverTouchEnd"
+                         title="Long press to edit details" />
                 }
                 else
                 {
                     <div class="book-cover-small-placeholder"
                          @ontouchstart="OnCoverTouchStart" @ontouchend="OnCoverTouchEnd" @ontouchmove="OnCoverTouchEnd"
-                         title="Long press to find cover">
-                        @(_coverSearching ? "⚙" : "📚")
+                         @onmousedown="OnCoverTouchStart" @onmouseup="OnCoverTouchEnd" @onmouseleave="OnCoverTouchEnd"
+                         title="Long press to edit details">
+                        📚
                     </div>
                 }
-                @if (_coverSearching)
-                {
-                    <div style="font-size:.65rem;color:var(--parchment-dim);font-style:italic;margin-top:.2rem">Searching...</div>
-                }
             </div>
+
+            @if (_showMetaEditor)
+            {
+                <div class="meta-editor-overlay" @onclick="CloseMetaEditor">
+                    <div class="meta-editor" @onclick:stopPropagation="true">
+                        <h3 style="margin-bottom:.75rem;text-align:center">Edit Details</h3>
+                        <label class="meta-label">Title</label>
+                        <input class="form-input" @bind="_editTitle" />
+                        <label class="meta-label">Author</label>
+                        <input class="form-input" @bind="_editAuthor" />
+                        <label class="meta-label">Narrator</label>
+                        <input class="form-input" @bind="_editNarrator" placeholder="(optional)" />
+                        <label class="meta-label">Year</label>
+                        <input class="form-input" type="number" @bind="_editYear" placeholder="(optional)" />
+                        <div style="display:flex;gap:.5rem;margin-top:.75rem;justify-content:center">
+                            <button class="btn-primary" @onclick="SaveMeta">Save</button>
+                            <button class="btn-secondary" @onclick="RefetchCover" disabled="@_coverSearching">
+                                @(_coverSearching ? "⚙ Searching..." : "⚙ Find Cover")
+                            </button>
+                            <button class="btn-secondary" @onclick="CloseMetaEditor">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            }
             <div class="book-info">
                 <h1>@_book.Title</h1>
                 <h2>@_book.Author</h2>
@@ -141,6 +163,11 @@ else
     private BookDto? _book;
     private string? _coverSrc;
     private bool _coverSearching;
+    private bool _showMetaEditor;
+    private string _editTitle = "";
+    private string _editAuthor = "";
+    private string? _editNarrator;
+    private int? _editYear;
     private System.Timers.Timer? _longPressTimer;
     private IDownloadService? _downloadSvc;
     private Dictionary<int, DownloadState> _downloadStates = [];
@@ -233,7 +260,7 @@ else
         _chapterProgresses = _chapterProgresses.Select(_ => new ChapterProgressDto(0, false)).ToList();
     }
 
-    private void OnCoverTouchStart(TouchEventArgs e)
+    private void OnCoverTouchStart(EventArgs e)
     {
         _longPressTimer?.Dispose();
         _longPressTimer = new System.Timers.Timer(600);
@@ -243,25 +270,34 @@ else
             _longPressTimer?.Dispose();
             await InvokeAsync(async () =>
             {
-                _coverSearching = true;
-                StateHasChanged();
-                // Clear existing cover then refetch
-                if (_book?.HasCover == true)
-                    await Api.ClearCoverAsync(BookId);
-                await Api.RefetchCoverAsync(BookId);
-                _book = await Api.GetBookAsync(BookId);
-                _coverSrc = _book?.HasCover == true ? await Api.GetCoverDataUriAsync(BookId) : null;
-                _coverSearching = false;
+                // Load current meta then show editor
+                var meta = await Api.GetBookMetaAsync(BookId);
+                _editTitle = meta?.Title ?? _book?.Title ?? "";
+                _editAuthor = meta?.Author ?? _book?.Author ?? "";
+                _editNarrator = meta?.Narrator ?? _book?.Narrator;
+                _editYear = meta?.Year ?? _book?.Year;
+                _showMetaEditor = true;
                 StateHasChanged();
             });
         };
         _longPressTimer.Start();
     }
 
-    private void OnCoverTouchEnd(TouchEventArgs e)
+    private void OnCoverTouchEnd(EventArgs e)
     {
         _longPressTimer?.Dispose();
         _longPressTimer = null;
+    }
+
+    private void CloseMetaEditor() => _showMetaEditor = false;
+
+    private async Task SaveMeta()
+    {
+        if (_book is null) return;
+        await Api.SaveBookMetaAsync(BookId, _editTitle, _editAuthor, _editNarrator, null, _editYear);
+        _book = await Api.GetBookAsync(BookId);
+        _showMetaEditor = false;
+        StateHasChanged();
     }
 
     private async Task WrongCover()

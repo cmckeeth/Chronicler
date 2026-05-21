@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Chronicler.Api.Data;
 using Chronicler.Api.Models;
 using Microsoft.EntityFrameworkCore;
@@ -58,13 +60,17 @@ public class LibraryScanner(
             if (existingPaths.Contains(firstRelative)) continue;
 
             var dirName = Path.GetFileName(dir);
-            var (title, author) = ParseDirectoryName(dirName);
+            var (defaultTitle, defaultAuthor) = ParseDirectoryName(dirName);
             var coverPath = FindCoverImage(dir);
+            var meta = ReadMetaJson(dir);
 
             var book = new Book
             {
-                Title = title,
-                Author = author,
+                Title = meta?.Title ?? defaultTitle,
+                Author = meta?.Author ?? defaultAuthor,
+                Narrator = meta?.Narrator,
+                Description = meta?.Description,
+                Year = meta?.Year,
                 FilePath = firstRelative,
                 CoverPath = coverPath is not null ? Path.GetRelativePath(LibraryRoot, coverPath) : null,
                 AddedAt = DateTime.UtcNow
@@ -84,7 +90,7 @@ public class LibraryScanner(
 
             newBooks.Add(book);
             logger.LogInformation("Found new book: {Title} by {Author} ({Chapters} chapters)",
-                title, author, book.Chapters.Count);
+                book.Title, book.Author, book.Chapters.Count);
         }
 
         // Flat audio files in root
@@ -138,16 +144,40 @@ public class LibraryScanner(
             : (name.Trim(), "Unknown");
     }
 
+    private static readonly string[] ImageExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tiff"];
+
     private static string? FindCoverImage(string dir)
     {
-        string[] imageNames = ["cover.jpg", "cover.png", "folder.jpg", "folder.png", "thumb.jpg"];
-        foreach (var name in imageNames)
+        // Check common named files first
+        string[] preferred = ["cover.jpg", "cover.jpeg", "cover.png", "cover.webp",
+                               "folder.jpg", "folder.jpeg", "folder.png", "thumb.jpg"];
+        foreach (var name in preferred)
         {
             var path = Path.Combine(dir, name);
             if (File.Exists(path)) return path;
         }
 
-        return Directory.GetFiles(dir, "*.jpg").FirstOrDefault()
-            ?? Directory.GetFiles(dir, "*.png").FirstOrDefault();
+        // Fall back to any image file in the directory
+        return Directory.GetFiles(dir)
+            .Where(f => ImageExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+            .FirstOrDefault();
     }
+
+    private static readonly JsonSerializerOptions MetaJsonOpts = new(JsonSerializerDefaults.Web);
+
+    private static BookMetaFile? ReadMetaJson(string dir)
+    {
+        var path = Path.Combine(dir, "meta.json");
+        if (!File.Exists(path)) return null;
+        try
+        {
+            var json = File.ReadAllText(path);
+            return JsonSerializer.Deserialize<BookMetaFile>(json, MetaJsonOpts);
+        }
+        catch { return null; }
+    }
+
+    public record BookMetaFile(
+        string? Title, string? Author, string? Narrator,
+        int? Year, string? Description);
 }

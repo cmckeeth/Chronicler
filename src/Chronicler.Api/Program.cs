@@ -168,7 +168,8 @@ app.MapGet("/api/books", [Authorize] async (string? q, ClaimsPrincipal principal
             b.Id, b.Title, b.Author, b.Narrator, b.DurationSeconds,
             b.CoverPath != null, b.AddedAt,
             b.Chapters.Count(),
-            b.Chapters.Count(c => c.Progresses.Any(p => p.UserId == userId && p.IsListened))))
+            b.Chapters.Count(c => c.Progresses.Any(p => p.UserId == userId && p.IsListened)),
+            b.Year))
         .ToListAsync();
 
     return Results.Ok(books);
@@ -224,6 +225,66 @@ app.MapGet("/api/books/{id:int}/audio", async (
     };
 
     return Results.File(fullPath, mime, enableRangeProcessing: true);
+});
+
+// ── Book metadata (reads/writes meta.json) ────────────────────────────────────
+
+app.MapGet("/api/books/{id:int}/meta", [Authorize] async (int id, AppDbContext db, IWebHostEnvironment env) =>
+{
+    var book = await db.Books.FindAsync(id);
+    if (book is null) return Results.NotFound();
+
+    var audioDir = Path.GetDirectoryName(Path.Combine(env.ContentRootPath, "Library", book.FilePath));
+    var metaPath = audioDir is not null ? Path.Combine(audioDir, "meta.json") : null;
+    int? year = book.Year;
+
+    if (metaPath is not null && File.Exists(metaPath))
+    {
+        try
+        {
+            var raw = await File.ReadAllTextAsync(metaPath);
+            var meta = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(raw);
+            if (meta.TryGetProperty("year", out var y) && y.ValueKind == System.Text.Json.JsonValueKind.Number)
+                year = y.GetInt32();
+        }
+        catch { }
+    }
+
+    return Results.Ok(new { book.Id, book.Title, book.Author, book.Narrator, book.Description, Year = year });
+});
+
+app.MapPut("/api/books/{id:int}/meta", [Authorize] async (
+    int id, BookMetaRequest req, AppDbContext db, IWebHostEnvironment env) =>
+{
+    var book = await db.Books.FindAsync(id);
+    if (book is null) return Results.NotFound();
+
+    if (req.Title is not null) book.Title = req.Title;
+    if (req.Author is not null) book.Author = req.Author;
+    book.Narrator = req.Narrator;
+    book.Description = req.Description;
+    if (req.Year.HasValue) book.Year = req.Year;
+
+    await db.SaveChangesAsync();
+
+    // Write meta.json next to the audio files
+    var audioDir = Path.GetDirectoryName(Path.Combine(env.ContentRootPath, "Library", book.FilePath));
+    if (audioDir is not null)
+    {
+        var meta = new
+        {
+            title = book.Title,
+            author = book.Author,
+            narrator = book.Narrator,
+            year = req.Year,
+            description = book.Description
+        };
+        var json = System.Text.Json.JsonSerializer.Serialize(meta,
+            new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(Path.Combine(audioDir, "meta.json"), json);
+    }
+
+    return Results.Ok(new { book.Id, book.Title, book.Author, book.Narrator, book.Description, Year = req.Year });
 });
 
 // Clear wrong cover so it can be re-fetched
@@ -664,6 +725,7 @@ record BookmarkDto(int Id, int BookId, double PositionSeconds, string? Label, Da
 record BookUpdateRequest(string? Title, string? Author, string? Narrator, string? Description);
 record DiagMessage(string Message);
 record BookDto(int Id, string Title, string Author, string? Narrator, double DurationSeconds,
-    bool HasCover, DateTime AddedAt, int ChapterCount = 0, int ListenedCount = 0);
+    bool HasCover, DateTime AddedAt, int ChapterCount = 0, int ListenedCount = 0, int? Year = null);
 record ChapterDto(int Id, int BookId, string Title, int TrackNumber);
+record BookMetaRequest(string? Title, string? Author, string? Narrator, string? Description, int? Year);
 record ChapterProgressRequest(double PositionSeconds, double DurationSeconds);

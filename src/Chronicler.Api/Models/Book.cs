@@ -7,6 +7,7 @@ public class Book
     public string Author { get; set; } = "";
     public string? Narrator { get; set; }
     public string? Description { get; set; }
+    public int? Year { get; set; }
     public string FilePath { get; set; } = "";
     public string? CoverPath { get; set; }
     public double DurationSeconds { get; set; }

@@ -5,7 +5,7 @@ namespace Chronicler.Shared.Services;
 
 public record BookDto(int Id, string Title, string Author, string? Narrator,
     double DurationSeconds, bool HasCover, DateTime AddedAt,
-    int ChapterCount = 0, int ListenedCount = 0)
+    int ChapterCount = 0, int ListenedCount = 0, int? Year = null)
 {
     public bool IsCompleted => ChapterCount > 0 && ListenedCount >= ChapterCount;
     public bool IsInProgress => ListenedCount > 0 && !IsCompleted;
@@ -16,6 +16,7 @@ public record BookmarkDto(int Id, int BookId, double PositionSeconds, string? La
 public record ChapterDto(int Id, int BookId, string Title, int TrackNumber);
 
 public record ChapterProgressDto(double PositionSeconds, bool IsListened);
+public record BookMetaDto(int Id, string Title, string Author, string? Narrator, string? Description, int? Year);
 
 public class ApiClient(HttpClient http, AuthState auth)
 {
@@ -125,6 +126,21 @@ public class ApiClient(HttpClient http, AuthState auth)
     {
         ApplyAuth();
         await http.PostAsync($"/api/books/{bookId}/reset", null);
+    }
+
+    public async Task<BookMetaDto?> GetBookMetaAsync(int bookId)
+    {
+        ApplyAuth();
+        try { return await http.GetFromJsonAsync<BookMetaDto>($"/api/books/{bookId}/meta", JsonOpts); }
+        catch { return null; }
+    }
+
+    public async Task<bool> SaveBookMetaAsync(int bookId, string title, string author, string? narrator, string? description, int? year)
+    {
+        ApplyAuth();
+        var resp = await http.PutAsJsonAsync($"/api/books/{bookId}/meta",
+            new { title, author, narrator, description, year });
+        return resp.IsSuccessStatusCode;
     }
 
     public async Task RefetchCoverAsync(int bookId)
