@@ -72,6 +72,7 @@ builder.Services.AddAuthentication(opt =>
 
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<LibraryScanner>();
+builder.Services.AddHostedService<LibraryScanService>();
 builder.Services.AddCors(opt =>
     opt.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 

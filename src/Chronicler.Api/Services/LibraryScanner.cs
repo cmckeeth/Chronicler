@@ -38,7 +38,8 @@ public class LibraryScanner(AppDbContext db, IWebHostEnvironment env, ILogger<Li
             logger.LogInformation("Removed {Count} missing book(s)", removed);
         }
 
-        // Sync cover + meta for ALL existing books
+        // Sync cover images for ALL existing books (cover.* file may have been added/changed)
+        // Note: meta.json is NOT re-read here — it's only read when a book is first discovered
         var existing = await db.Books.ToListAsync(ct);
         var coverUpdates = 0;
         foreach (var book in existing)
@@ -50,24 +51,12 @@ public class LibraryScanner(AppDbContext db, IWebHostEnvironment env, ILogger<Li
             var newCoverData = coverFile is not null ? await File.ReadAllBytesAsync(coverFile, ct) : null;
             var newMime = coverFile is not null ? GuessMime(coverFile) : null;
 
-            // Update if cover changed (compare lengths as a cheap check)
             if (newCoverData?.Length != book.CoverData?.Length)
             {
                 book.CoverData = newCoverData;
                 book.CoverMimeType = newMime;
                 coverUpdates++;
                 logger.LogInformation("Cover synced for '{Title}' ({Bytes}b)", book.Title, newCoverData?.Length ?? 0);
-            }
-
-            // Sync meta.json
-            var meta = ReadMetaJson(audioDir);
-            if (meta is not null)
-            {
-                if (meta.Title is not null) book.Title = meta.Title;
-                if (meta.Author is not null) book.Author = meta.Author;
-                if (meta.Narrator is not null) book.Narrator = meta.Narrator;
-                if (meta.Year is not null) book.Year = meta.Year;
-                if (meta.Description is not null) book.Description = meta.Description;
             }
         }
         if (coverUpdates > 0)

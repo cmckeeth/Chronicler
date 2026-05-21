@@ -95,12 +95,6 @@ export default function Library() {
         </div>
       )}
 
-      {/* Bottom: admin buttons */}
-      <div className="library-bottom">
-        <button className="btn-secondary" onClick={scan} disabled={scanning}>
-          {scanning ? 'Cataloguing...' : 'Catalogue'}
-        </button>
-      </div>
     </div>
   );
 }
