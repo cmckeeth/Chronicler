@@ -65,7 +65,7 @@
 .landing-corner {
     position: absolute;
     font-size: 1.4rem;
-    color: #b87c20;
+    color: #8fd44a;
     animation: corner-spark 9s ease-in-out infinite;
     pointer-events: none;
     user-select: none;
@@ -82,19 +82,19 @@
 
 /* ── Landing page ─────────────────────────────────────────────────────────── */
 @keyframes border-flicker {
-    0%, 100% { box-shadow: inset 0 0 20px rgba(232,160,16,.3), inset 0 0 40px rgba(232,160,16,.1), 0 0 15px rgba(232,160,16,.4); border-color: #b87c20; }
-    15%  { box-shadow: inset 0 0 40px rgba(255,192,48,.7), inset 0 0 80px rgba(232,160,16,.3), 0 0 30px rgba(255,192,48,.6); border-color: #ffc030; }
-    30%  { box-shadow: inset 0 0 15px rgba(232,160,16,.2), inset 0 0 30px rgba(232,160,16,.08), 0 0 10px rgba(232,160,16,.3); border-color: #9a6820; }
-    55%  { box-shadow: inset 0 0 50px rgba(255,224,96,.8), inset 0 0 100px rgba(232,160,16,.4), 0 0 40px rgba(255,224,96,.7); border-color: #ffe060; }
-    70%  { box-shadow: inset 0 0 25px rgba(232,160,16,.4), inset 0 0 50px rgba(232,160,16,.15), 0 0 20px rgba(232,160,16,.4); border-color: #e8a010; }
-    88%  { box-shadow: inset 0 0 60px rgba(255,192,48,.9), inset 0 0 120px rgba(232,160,16,.5), 0 0 50px rgba(255,192,48,.8); border-color: #ffc030; }
+    0%, 100% { box-shadow: inset 0 0 20px rgba(143,212,74,.25), inset 0 0 40px rgba(143,212,74,.08), 0 0 15px rgba(143,212,74,.35); border-color: #5a8a20; }
+    15%  { box-shadow: inset 0 0 40px rgba(143,212,74,.65), inset 0 0 80px rgba(143,212,74,.25), 0 0 30px rgba(143,212,74,.55); border-color: #8fd44a; }
+    30%  { box-shadow: inset 0 0 15px rgba(143,212,74,.15), inset 0 0 30px rgba(143,212,74,.06), 0 0 10px rgba(143,212,74,.25); border-color: #4a7010; }
+    55%  { box-shadow: inset 0 0 50px rgba(180,240,80,.75), inset 0 0 100px rgba(143,212,74,.35), 0 0 40px rgba(180,240,80,.65); border-color: #b4f050; }
+    70%  { box-shadow: inset 0 0 25px rgba(143,212,74,.35), inset 0 0 50px rgba(143,212,74,.12), 0 0 20px rgba(143,212,74,.35); border-color: #8fd44a; }
+    88%  { box-shadow: inset 0 0 60px rgba(180,240,80,.85), inset 0 0 120px rgba(143,212,74,.45), 0 0 50px rgba(180,240,80,.75); border-color: #b4f050; }
 }
 
 @keyframes corner-spark {
-    0%, 85%, 100% { opacity: .4; text-shadow: 0 0 4px #b87c20; }
-    87% { opacity: 1; text-shadow: 0 0 16px #ffc030, 0 0 32px #e8a010; }
-    92% { opacity: .5; text-shadow: 0 0 6px #e8a010; }
-    96% { opacity: 1; text-shadow: 0 0 20px #ffe060, 0 0 40px #ffc030; }
+    0%, 85%, 100% { opacity: .4; text-shadow: 0 0 4px #4a8a20; }
+    87% { opacity: 1; text-shadow: 0 0 16px #8fd44a, 0 0 32px #b4f050; }
+    92% { opacity: .5; text-shadow: 0 0 6px #8fd44a; }
+    96% { opacity: 1; text-shadow: 0 0 20px #b4f050, 0 0 40px #8fd44a; }
 }
 
 .landing-page {
@@ -154,11 +154,12 @@
 }
 
 .landing-ornament {
-    color: #7a5010;
+    color: #8fd44a;
     font-size: .7rem;
     letter-spacing: 4px;
-    opacity: .7;
+    opacity: .6;
     margin-top: .25rem;
+    text-shadow: 0 0 8px rgba(143,212,74,.5);
 }
 
 .landing-middle {
@@ -172,19 +173,19 @@
     flex-direction: column;
     align-items: center;
     gap: .45rem;
-    background: linear-gradient(145deg, #2a1a0a, #1e1208);
-    border: 2px solid #c8860a;
+    background: linear-gradient(145deg, #1a2208, #141a06);
+    border: 2px solid #8fd44a;
     border-radius: 16px;
     padding: 1.4rem 2.5rem;
     cursor: pointer;
-    box-shadow: 0 0 30px rgba(200,134,10,.4), inset 0 0 30px rgba(200,134,10,.05), 0 8px 32px rgba(0,0,0,.6);
+    box-shadow: 0 0 30px rgba(143,212,74,.35), inset 0 0 20px rgba(143,212,74,.05), 0 8px 32px rgba(0,0,0,.6);
     transition: all .2s;
     min-width: 200px;
 }
 
 .landing-enter-btn:active {
     transform: scale(.96);
-    box-shadow: 0 0 50px rgba(255,220,80,.8), inset 0 0 20px rgba(200,134,10,.15), 0 4px 16px rgba(0,0,0,.6);
+    box-shadow: 0 0 50px rgba(143,212,74,.9), inset 0 0 20px rgba(143,212,74,.15), 0 4px 16px rgba(0,0,0,.6);
     animation: electric-pulse .3s ease-in-out infinite;
 }
 
@@ -199,8 +200,8 @@
     font-family: 'Cinzel', Georgia, serif;
     font-size: 1.1rem;
     font-weight: 700;
-    color: #f0b830;
-    text-shadow: 0 0 10px rgba(200,134,10,.6);
+    color: #8fd44a;
+    text-shadow: 0 0 12px rgba(143,212,74,.8);
     letter-spacing: 2px;
     text-transform: uppercase;
 }

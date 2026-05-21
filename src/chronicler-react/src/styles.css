@@ -455,7 +455,7 @@ select {
 .control-label { font-family: var(--font-serif); font-size: .65rem; color: var(--parchment-dim); text-transform: uppercase; letter-spacing: 1px; }
 .chip { background: var(--surface2); color: var(--parchment-dim); border: 1px solid var(--border); border-radius: 20px; padding: .2rem .7rem; font-family: var(--font-serif); font-size: .7rem; letter-spacing: .5px; cursor: pointer; transition: all .15s; }
 .chip:hover { border-color: var(--brass); color: var(--brass); }
-.chip-active { background: linear-gradient(135deg, var(--border-brass), var(--brass)); color: var(--ink); border-color: var(--brass-light); font-weight: 700; box-shadow: var(--glow-brass); }
+.chip-active { background: linear-gradient(135deg, #3a6010, #5a9020); color: #e8ffd0; border-color: #8fd44a; font-weight: 700; box-shadow: 0 0 10px rgba(143,212,74,.5); }
 .library-bottom { display: flex; gap: .6rem; justify-content: center; position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--border); padding: .5rem 1rem; margin: 0 -1.5rem; }
 .library-bottom .btn-secondary { font-size: .65rem; padding: .25rem .8rem; letter-spacing: .5px; opacity: .55; }
 .library-bottom .btn-secondary:hover { opacity: 1; }

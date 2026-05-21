@@ -400,11 +400,11 @@ select {
 }
 .chip:hover { border-color: var(--brass); color: var(--brass); }
 .chip-active {
-    background: linear-gradient(135deg, var(--brass-dim, var(--border-brass)), var(--brass));
-    color: var(--ink);
-    border-color: var(--brass-light);
+    background: linear-gradient(135deg, #3a6010, #5a9020);
+    color: #e8ffd0;
+    border-color: #8fd44a;
     font-weight: 700;
-    box-shadow: var(--glow-brass);
+    box-shadow: 0 0 10px rgba(143,212,74,.5);
 }
 
 .library-bottom {
