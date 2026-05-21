@@ -38,24 +38,28 @@ public class LibraryScanner(AppDbContext db, IWebHostEnvironment env, ILogger<Li
             logger.LogInformation("Removed {Count} missing book(s)", removed);
         }
 
-        // Refresh cover + meta for ALL existing books on every scan
-        var booksNeedingUpdate = await db.Books.ToListAsync(ct);
+        // Sync cover + meta for ALL existing books
+        var existing = await db.Books.ToListAsync(ct);
         var coverUpdates = 0;
-        foreach (var book in booksNeedingUpdate)
+        foreach (var book in existing)
         {
             var audioDir = Path.GetDirectoryName(Path.Combine(LibraryRoot, book.FilePath));
             if (audioDir is null) continue;
 
-            var cover = FindCoverImage(audioDir);
-            var newCoverPath = cover is not null ? Path.GetRelativePath(LibraryRoot, cover) : null;
-            if (newCoverPath != book.CoverPath)
+            var coverFile = FindCoverImage(audioDir);
+            var newCoverData = coverFile is not null ? await File.ReadAllBytesAsync(coverFile, ct) : null;
+            var newMime = coverFile is not null ? GuessMime(coverFile) : null;
+
+            // Update if cover changed (compare lengths as a cheap check)
+            if (newCoverData?.Length != book.CoverData?.Length)
             {
-                book.CoverPath = newCoverPath;
+                book.CoverData = newCoverData;
+                book.CoverMimeType = newMime;
                 coverUpdates++;
-                logger.LogInformation("Cover updated for '{Title}': {Cover}", book.Title, newCoverPath ?? "(none)");
+                logger.LogInformation("Cover synced for '{Title}' ({Bytes}b)", book.Title, newCoverData?.Length ?? 0);
             }
 
-            // Also update from meta.json if title/author look like defaults
+            // Sync meta.json
             var meta = ReadMetaJson(audioDir);
             if (meta is not null)
             {
@@ -69,9 +73,10 @@ public class LibraryScanner(AppDbContext db, IWebHostEnvironment env, ILogger<Li
         if (coverUpdates > 0)
         {
             await db.SaveChangesAsync(ct);
-            logger.LogInformation("Updated covers for {Count} existing book(s)", coverUpdates);
+            logger.LogInformation("Synced covers for {Count} book(s)", coverUpdates);
         }
 
+        // Add new books
         var existingPaths = await db.Books.Select(b => b.FilePath).ToHashSetAsync(ct);
         var newBooks = new List<Book>();
 
@@ -79,18 +84,16 @@ public class LibraryScanner(AppDbContext db, IWebHostEnvironment env, ILogger<Li
         {
             var audioFiles = Directory.GetFiles(dir)
                 .Where(f => AudioExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
-                .OrderBy(f => f)
-                .ToList();
+                .OrderBy(f => f).ToList();
 
             if (audioFiles.Count == 0) continue;
 
             var firstRelative = Path.GetRelativePath(LibraryRoot, audioFiles[0]);
             if (existingPaths.Contains(firstRelative)) continue;
 
-            var dirName = Path.GetFileName(dir);
-            var (defaultTitle, defaultAuthor) = ParseDirectoryName(dirName);
-            var coverPath = FindCoverImage(dir);
             var meta = ReadMetaJson(dir);
+            var (defaultTitle, defaultAuthor) = ParseDirectoryName(Path.GetFileName(dir));
+            var coverFile = FindCoverImage(dir);
 
             var book = new Book
             {
@@ -100,27 +103,26 @@ public class LibraryScanner(AppDbContext db, IWebHostEnvironment env, ILogger<Li
                 Description = meta?.Description,
                 Year = meta?.Year,
                 FilePath = firstRelative,
-                CoverPath = coverPath is not null ? Path.GetRelativePath(LibraryRoot, coverPath) : null,
+                CoverData = coverFile is not null ? await File.ReadAllBytesAsync(coverFile, ct) : null,
+                CoverMimeType = coverFile is not null ? GuessMime(coverFile) : null,
                 AddedAt = DateTime.UtcNow
             };
 
             int track = 1;
             foreach (var audioFile in audioFiles)
-            {
                 book.Chapters.Add(new Chapter
                 {
                     FilePath = Path.GetRelativePath(LibraryRoot, audioFile),
                     Title = ParseChapterTitle(Path.GetFileNameWithoutExtension(audioFile), track),
                     TrackNumber = track++
                 });
-            }
 
             newBooks.Add(book);
             logger.LogInformation("Found: {Title} by {Author} ({Chapters} chapters, cover={HasCover})",
-                book.Title, book.Author, book.Chapters.Count, book.CoverPath is not null);
+                book.Title, book.Author, book.Chapters.Count, book.CoverData is not null);
         }
 
-        // Flat audio files in library root
+        // Flat audio files in root
         foreach (var file in Directory.GetFiles(LibraryRoot)
             .Where(f => AudioExtensions.Contains(Path.GetExtension(f).ToLowerInvariant())))
         {
@@ -137,12 +139,19 @@ public class LibraryScanner(AppDbContext db, IWebHostEnvironment env, ILogger<Li
         return newBooks.Count;
     }
 
-    // Only match files named "cover.*"
     private static string? FindCoverImage(string dir) =>
         Directory.GetFiles(dir)
             .Where(f => Path.GetFileNameWithoutExtension(f).Equals("cover", StringComparison.OrdinalIgnoreCase)
                         && CoverExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
             .FirstOrDefault();
+
+    private static string GuessMime(string path) => Path.GetExtension(path).ToLower() switch
+    {
+        ".png" => "image/png",
+        ".webp" => "image/webp",
+        ".gif" => "image/gif",
+        _ => "image/jpeg"
+    };
 
     private static readonly JsonSerializerOptions MetaJsonOpts = new(JsonSerializerDefaults.Web);
 

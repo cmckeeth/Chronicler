@@ -9,7 +9,8 @@ public class Book
     public string? Description { get; set; }
     public int? Year { get; set; }
     public string FilePath { get; set; } = "";
-    public string? CoverPath { get; set; }
+    public byte[]? CoverData { get; set; }
+    public string? CoverMimeType { get; set; }
     public double DurationSeconds { get; set; }
     public DateTime AddedAt { get; set; } = DateTime.UtcNow;
 

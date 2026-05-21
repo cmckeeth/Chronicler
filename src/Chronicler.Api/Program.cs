@@ -165,7 +165,7 @@ app.MapGet("/api/books", [Authorize] async (string? q, ClaimsPrincipal principal
         .OrderBy(b => b.Author).ThenBy(b => b.Title)
         .Select(b => new BookDto(
             b.Id, b.Title, b.Author, b.Narrator, b.DurationSeconds,
-            b.CoverPath != null, b.AddedAt,
+            b.CoverData != null, b.AddedAt,
             b.Chapters.Count(),
             b.Chapters.Count(c => c.Progresses.Any(p => p.UserId == userId && p.IsListened)),
             b.Year))
@@ -180,20 +180,15 @@ app.MapGet("/api/books/{id:int}", [Authorize] async (int id, AppDbContext db) =>
     return b is null ? Results.NotFound() : Results.Ok(b);
 });
 
-app.MapGet("/api/books/{id:int}/cover", async (int id, HttpContext ctx, AppDbContext db, IWebHostEnvironment env) =>
+app.MapGet("/api/books/{id:int}/cover", async (int id, HttpContext ctx, AppDbContext db) =>
 {
     var book = await db.Books.FindAsync(id);
-    if (book?.CoverPath is null) return Results.NotFound();
+    if (book?.CoverData is null || book.CoverData.Length == 0) return Results.NotFound();
 
-    var fullPath = Path.Combine(env.ContentRootPath, "Library", book.CoverPath);
-    if (!File.Exists(fullPath)) return Results.NotFound();
-
-    var ext = Path.GetExtension(fullPath).ToLower();
-    var mime = ext == ".png" ? "image/png" : "image/jpeg";
-
+    var mime = book.CoverMimeType ?? "image/jpeg";
     ctx.Response.Headers["Cache-Control"] = "public, max-age=86400";
-    ctx.Response.Headers["ETag"] = $"\"{id}-{File.GetLastWriteTimeUtc(fullPath).Ticks}\"";
-    return Results.File(fullPath, mime);
+    ctx.Response.Headers["ETag"] = $"\"{id}-{book.CoverData.Length}\"";
+    return Results.File(book.CoverData, mime);
 });
 
 app.MapGet("/api/books/{id:int}/audio", async (
@@ -287,18 +282,14 @@ app.MapPut("/api/books/{id:int}/meta", [Authorize] async (
 });
 
 // Clear wrong cover so it can be re-fetched
-app.MapDelete("/api/books/{id:int}/cover", [Authorize] async (int id, AppDbContext db, IWebHostEnvironment env) =>
+app.MapDelete("/api/books/{id:int}/cover", [Authorize] async (int id, AppDbContext db) =>
 {
     var book = await db.Books.FindAsync(id);
     if (book is null) return Results.NotFound();
 
-    if (book.CoverPath is not null)
-    {
-        var fullPath = Path.Combine(env.ContentRootPath, "Library", book.CoverPath);
-        if (File.Exists(fullPath)) File.Delete(fullPath);
-        book.CoverPath = null;
-        await db.SaveChangesAsync();
-    }
+    book.CoverData = null;
+    book.CoverMimeType = null;
+    await db.SaveChangesAsync();
     return Results.Ok();
 });
 
