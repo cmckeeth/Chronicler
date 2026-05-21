@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { booksApi, chaptersApi, bookmarksApi } from '../api';
+import MetaEditor from '../components/MetaEditor';
 
 function fmt(s) {
   const t = Math.floor(s);
@@ -15,6 +16,7 @@ export default function Book() {
 
   const [book, setBook] = useState(null);
   const [coverBust, setCoverBust] = useState('');
+  const [showMetaEditor, setShowMetaEditor] = useState(false);
   const [coverSearching, setCoverSearching] = useState(false);
   const longPressTimer = useRef(null);
   const [chapters, setChapters] = useState([]);
@@ -131,21 +133,6 @@ export default function Book() {
     if (audioRef.current) audioRef.current.playbackRate = s;
   }
 
-  function onCoverPressStart() {
-    longPressTimer.current = setTimeout(async () => {
-      setCoverSearching(true);
-      if (book?.hasCover) await booksApi.clearCover(book.id);
-      await booksApi.refetchCover(book.id);
-      const b = await booksApi.get(id);
-      setBook(b);
-      setCoverBust(`?t=${Date.now()}`);
-      setCoverSearching(false);
-    }, 600);
-  }
-
-  function onCoverPressEnd() {
-    clearTimeout(longPressTimer.current);
-  }
 
   async function resetBook() {
     await booksApi.resetProgress(id);
@@ -173,18 +160,15 @@ export default function Book() {
                 className="book-cover-small"
                 src={`${booksApi.coverUrl(book.id)}${coverBust}`}
                 alt={book.title}
-                onMouseDown={onCoverPressStart} onMouseUp={onCoverPressEnd} onMouseLeave={onCoverPressEnd}
-                onTouchStart={onCoverPressStart} onTouchEnd={onCoverPressEnd} onTouchMove={onCoverPressEnd}
-                title="Long press to replace cover"
+                onContextMenu={e => { e.preventDefault(); setShowMetaEditor(true); }}
+                title="Right-click to edit details"
               />
             : <div
                 className="book-cover-small-placeholder"
-                onMouseDown={onCoverPressStart} onMouseUp={onCoverPressEnd} onMouseLeave={onCoverPressEnd}
-                onTouchStart={onCoverPressStart} onTouchEnd={onCoverPressEnd} onTouchMove={onCoverPressEnd}
-                title="Long press to find cover"
-              >{coverSearching ? '⚙' : '📚'}</div>
+                onContextMenu={e => { e.preventDefault(); setShowMetaEditor(true); }}
+                title="Right-click to edit details"
+              >📚</div>
           }
-          {coverSearching && <div style={{fontSize:'.65rem',color:'var(--parchment-dim)',fontStyle:'italic',marginTop:'.2rem'}}>Searching...</div>}
         </div>
         <div className="book-info">
           <h1>{book.title}</h1>
@@ -272,6 +256,19 @@ export default function Book() {
           <button className="btn-primary" onClick={addBookmark}>Save</button>
           <button className="btn-secondary" onClick={() => setShowBmInput(false)}>Cancel</button>
         </div>
+      )}
+
+      {showMetaEditor && (
+        <MetaEditor
+          book={book}
+          onClose={() => setShowMetaEditor(false)}
+          onSaved={async () => {
+            const b = await booksApi.get(id);
+            setBook(b);
+            setCoverBust(`?t=${Date.now()}`);
+            setShowMetaEditor(false);
+          }}
+        />
       )}
     </div>
   );

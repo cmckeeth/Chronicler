@@ -296,11 +296,29 @@ app.MapDelete("/api/books/{id:int}/cover", [Authorize] async (int id, AppDbConte
 {
     var book = await db.Books.FindAsync(id);
     if (book is null) return Results.NotFound();
-
     book.CoverData = null;
     book.CoverMimeType = null;
     await db.SaveChangesAsync();
     return Results.Ok();
+});
+
+app.MapPut("/api/books/{id:int}/cover/upload", [Authorize] async (int id, HttpRequest request, AppDbContext db) =>
+{
+    var book = await db.Books.FindAsync(id);
+    if (book is null) return Results.NotFound();
+    if (!request.HasFormContentType) return Results.BadRequest("Expected multipart form");
+
+    var form = await request.ReadFormAsync();
+    var file = form.Files.FirstOrDefault();
+    if (file is null || file.Length == 0) return Results.BadRequest("No file provided");
+
+    using var ms = new MemoryStream();
+    await file.CopyToAsync(ms);
+    book.CoverData = ms.ToArray();
+    book.CoverMimeType = file.ContentType.StartsWith("image/") ? file.ContentType : "image/jpeg";
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new { hasCover = true });
 });
 
 

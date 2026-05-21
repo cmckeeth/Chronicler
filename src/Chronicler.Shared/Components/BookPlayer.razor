@@ -1,5 +1,6 @@
 @inject ApiClient Api
 @inject NavigationManager Nav
+@using Microsoft.AspNetCore.Components.Forms
 @inject IServiceProvider Services
 @using Microsoft.Extensions.DependencyInjection
 
@@ -45,8 +46,21 @@ else
                         <input class="form-input" @bind="_editNarrator" placeholder="(optional)" />
                         <label class="meta-label">Year</label>
                         <input class="form-input" type="number" @bind="_editYear" placeholder="(optional)" />
+
+                        <label class="meta-label" style="margin-top:.5rem">
+                            Cover Image @(_book?.HasCover == true ? "(replaces existing)" : "")
+                        </label>
+                        <InputFile OnChange="OnCoverFileSelected" accept="image/*"
+                                   style="color:var(--parchment-dim);font-size:.8rem;width:100%" />
+                        @if (_pendingCoverName is not null)
+                        {
+                            <div style="font-size:.7rem;color:var(--verdigris);margin-top:.2rem">📎 @_pendingCoverName</div>
+                        }
+
                         <div style="display:flex;gap:.5rem;margin-top:.75rem;justify-content:center">
-                            <button class="btn-primary" @onclick="SaveMeta">Save</button>
+                            <button class="btn-primary" @onclick="SaveMeta" disabled="@_savingMeta">
+                                @(_savingMeta ? "⚙ Saving..." : "Save")
+                            </button>
                             <button class="btn-secondary" @onclick="CloseMetaEditor">Cancel</button>
                         </div>
                     </div>
@@ -160,10 +174,14 @@ else
     private BookDto? _book;
     private string? _coverSrc;
     private bool _showMetaEditor;
+    private bool _savingMeta;
     private string _editTitle = "";
     private string _editAuthor = "";
     private string? _editNarrator;
     private int? _editYear;
+    private byte[]? _pendingCoverBytes;
+    private string? _pendingCoverMime;
+    private string? _pendingCoverName;
     private System.Timers.Timer? _longPressTimer;
     private IDownloadService? _downloadSvc;
     private Dictionary<int, DownloadState> _downloadStates = [];
@@ -284,14 +302,44 @@ else
         _longPressTimer = null;
     }
 
-    private void CloseMetaEditor() => _showMetaEditor = false;
+    private void CloseMetaEditor()
+    {
+        _showMetaEditor = false;
+        _pendingCoverBytes = null;
+        _pendingCoverMime = null;
+        _pendingCoverName = null;
+    }
+
+    private async Task OnCoverFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+        _pendingCoverName = file.Name;
+        _pendingCoverMime = file.ContentType;
+        using var ms = new MemoryStream();
+        await file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).CopyToAsync(ms);
+        _pendingCoverBytes = ms.ToArray();
+    }
 
     private async Task SaveMeta()
     {
         if (_book is null) return;
+        _savingMeta = true;
+
         await Api.SaveBookMetaAsync(BookId, _editTitle, _editAuthor, _editNarrator, null, _editYear);
+
+        if (_pendingCoverBytes is not null)
+        {
+            await Api.UploadCoverAsync(BookId, _pendingCoverBytes, _pendingCoverMime ?? "image/jpeg");
+            _coverSrc = null; // force reload
+        }
+
         _book = await Api.GetBookAsync(BookId);
-        _showMetaEditor = false;
+        if (_book?.HasCover == true)
+            _coverSrc = await Api.GetCoverDataUriAsync(_book.Id);
+
+        _savingMeta = false;
+        CloseMetaEditor();
         StateHasChanged();
     }
 

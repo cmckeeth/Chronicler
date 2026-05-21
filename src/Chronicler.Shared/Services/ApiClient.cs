@@ -75,6 +75,17 @@ public class ApiClient(HttpClient http, AuthState auth)
         catch { return null; }
     }
 
+    public async Task<bool> UploadCoverAsync(int bookId, byte[] imageBytes, string mimeType)
+    {
+        ApplyAuth();
+        using var content = new MultipartFormDataContent();
+        using var imgContent = new ByteArrayContent(imageBytes);
+        imgContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mimeType);
+        content.Add(imgContent, "cover", "cover.jpg");
+        var resp = await http.PutAsync($"api/books/{bookId}/cover/upload", content);
+        return resp.IsSuccessStatusCode;
+    }
+
     public static void InvalidateCoverCache(int bookId) { } // no-op, kept for call-site compat
     public string GetAudioUrl(int bookId) => $"{http.BaseAddress}api/books/{bookId}/audio";
     public string GetChapterAudioUrl(int chapterId) => $"{http.BaseAddress}api/chapters/{chapterId}/audio";

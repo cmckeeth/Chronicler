@@ -76,6 +76,12 @@ export const booksApi = {
   },
   async resetProgress(id) {
     await apiFetch(`/api/books/${id}/reset`, { method: 'POST' });
+  },
+  async saveMeta(id, { title, author, narrator, year, description }) {
+    await apiFetch(`/api/books/${id}/meta`, {
+      method: 'PUT',
+      body: JSON.stringify({ title, author, narrator, description, year })
+    });
   }
 };
 

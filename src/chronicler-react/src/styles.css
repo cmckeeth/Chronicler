@@ -814,6 +814,11 @@ select {
     box-shadow: var(--glow-copper);
 }
 
+/* ── Metadata editor ──────────────────────────────────────────────────────── */
+.meta-editor-overlay { position:fixed; inset:0; background:rgba(0,0,0,.75); display:flex; align-items:center; justify-content:center; z-index:500; padding:1.5rem; }
+.meta-editor { background:var(--surface); border:1px solid var(--border-brass); border-radius:8px; padding:1.5rem; width:100%; max-width:360px; display:flex; flex-direction:column; gap:.5rem; box-shadow:var(--glow-brass),0 20px 60px rgba(0,0,0,.8); }
+.meta-label { font-family:var(--font-serif); font-size:.7rem; color:var(--parchment-dim); text-transform:uppercase; letter-spacing:1px; margin-top:.3rem; }
+
 /* ── Blazor errors ────────────────────────────────────────────────────────── */
 .blazor-error-boundary {
     background: var(--rust);
