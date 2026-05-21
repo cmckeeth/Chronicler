@@ -3,9 +3,13 @@
 
 <div class="book-card" @onclick="Navigate">
     <div class="book-cover">
-        @if (Book.HasCover)
+        @if (_coverSrc is not null)
         {
-            <img src="@Api.GetCoverUrl(Book.Id)" alt="@Book.Title" loading="lazy" />
+            <img src="@_coverSrc" alt="@Book.Title" />
+        }
+        else if (Book.HasCover)
+        {
+            <div class="book-cover-placeholder" style="opacity:.15">⚙</div>
         }
         else
         {
@@ -24,5 +28,26 @@
 
 @code {
     [Parameter, EditorRequired] public BookDto Book { get; set; } = null!;
+
+    private int _loadedBookId = -1;
+    private string? _coverSrc;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Book.Id == _loadedBookId) return;
+
+        _loadedBookId = Book.Id;
+        _coverSrc = null;
+
+        if (Book.HasCover)
+        {
+            var bookId = Book.Id;
+            var src = await Api.GetCoverDataUriAsync(bookId);
+            // Discard if the book changed while we were loading
+            if (_loadedBookId == bookId)
+                _coverSrc = src;
+        }
+    }
+
     private void Navigate() => Nav.NavigateTo($"/book/{Book.Id}");
 }

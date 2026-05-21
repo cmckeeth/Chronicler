@@ -1,6 +1,7 @@
 @page "/"
 @inject NavigationManager Nav
 @inject AuthState Auth
+@inject ITokenStorage TokenStorage
 
 @if (!Auth.IsAuthenticated)
 {
@@ -20,6 +21,9 @@ else
             <p class="landing-subtitle">Your Audiobook Library</p>
             <div class="landing-ornament">⚙ ───────── ⚙</div>
         </div>
+        <div style="position:absolute;top:1rem;right:1rem">
+            <button class="btn-secondary" style="font-size:.65rem;opacity:.5" @onclick="SignOut">Sign Out</button>
+        </div>
 
         <div class="landing-middle">
             <button class="landing-enter-btn" @onclick='() => Nav.NavigateTo("/archive")'>
@@ -35,4 +39,13 @@ else
             <UpdateBanner />
         </div>
     </div>
+}
+
+@code {
+    private async Task SignOut()
+    {
+        await TokenStorage.ClearAsync();
+        Auth.Clear();
+        Nav.NavigateTo("/login");
+    }
 }
