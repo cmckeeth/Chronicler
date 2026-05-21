@@ -14,7 +14,7 @@
     --copper:       #d07020;
     --copper-light: #f09040;
     --rust:         #c03010;
-    --verdigris:    #4ab888;
+    --verdigris:    #8fd44a;
     --parchment:    #fff4d8;
     --parchment-mid:#e8c878;
     --parchment-dim:#c8a048;
@@ -874,8 +874,8 @@ select {
 .chapter-item:hover { background: var(--surface2); }
 
 .chapter-active {
-    background: linear-gradient(90deg, rgba(212,146,12,.12) 0%, transparent 100%);
-    border-left: 3px solid var(--brass);
+    background: linear-gradient(90deg, rgba(143,212,74,.1) 0%, transparent 100%);
+    border-left: 3px solid var(--verdigris);
 }
 
 .chapter-listened {
@@ -910,15 +910,18 @@ select {
     color: var(--verdigris);
     font-weight: 700;
     font-size: .9rem;
+    text-shadow: 0 0 6px rgba(143,212,74,.6);
 }
 
 .in-progress-badge {
-    color: var(--brass);
+    color: var(--verdigris);
     font-size: .9rem;
+    opacity: .7;
 }
 
 .playing-badge {
-    color: var(--brass-light);
+    color: var(--verdigris);
+    text-shadow: 0 0 8px rgba(143,212,74,.9);
     font-size: .8rem;
     animation: pulse 1.5s ease-in-out infinite;
 }

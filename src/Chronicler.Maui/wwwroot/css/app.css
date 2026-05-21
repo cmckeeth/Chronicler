@@ -40,7 +40,7 @@
     flex-shrink: 0;
 }
 
-.status-online  { background: #5a9c7a; box-shadow: 0 0 8px #5a9c7a; }
+.status-online  { background: #8fd44a; box-shadow: 0 0 8px #8fd44a; }
 .status-offline { background: #8b3510; box-shadow: 0 0 8px #8b3510; }
 
 .status-version {

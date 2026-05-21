@@ -17,7 +17,7 @@
     --copper:       #d07020;
     --copper-light: #f09040;
     --rust:         #c03010;
-    --verdigris:    #4ab888;
+    --verdigris:    #8fd44a;
     --parchment:    #fff4d8;
     --parchment-mid:#e8c878;
     --parchment-dim:#c8a048;
@@ -864,14 +864,14 @@ select {
 .chapter-item { display:flex; align-items:center; gap:.75rem; padding:.65rem 1rem .65rem 1.2rem; border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; font-size:.85rem; }
 .chapter-item:last-child { border-bottom:none; }
 .chapter-item:hover { background:var(--surface2); }
-.chapter-active { background:linear-gradient(90deg,rgba(212,146,12,.12) 0%,transparent 100%); border-left:3px solid var(--brass); }
+.chapter-active { background:linear-gradient(90deg,rgba(143,212,74,.1) 0%,transparent 100%); border-left:3px solid var(--verdigris); }
 .chapter-listened { opacity:.65; }
 .chapter-number { font-family:var(--font-serif); font-size:.72rem; color:var(--parchment-dim); min-width:1.6rem; text-align:right; }
 .chapter-title { flex:1; color:var(--parchment); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .chapter-status { display:flex; gap:.3rem; align-items:center; flex-shrink:0; }
-.listened-badge { color:var(--verdigris); font-weight:700; }
+.listened-badge { color:var(--verdigris); font-weight:700; text-shadow:0 0 6px rgba(143,212,74,.6); }
 .in-progress-badge { color:var(--brass); }
-.playing-badge { color:var(--brass-light); animation:pulse 1.5s ease-in-out infinite; }
+.playing-badge { color:var(--verdigris); text-shadow:0 0 8px rgba(143,212,74,.9); animation:pulse 1.5s ease-in-out infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 .btn-reset-chapter { background:transparent; color:var(--parchment-dim); border:none; font-size:.9rem; padding:.2rem .4rem; cursor:pointer; border-radius:var(--radius); opacity:0; transition:opacity .15s; }
 .chapter-item:hover .btn-reset-chapter { opacity:1; }
