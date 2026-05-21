@@ -1,18 +1,14 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Chronicler.Api.Data;
 using Chronicler.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Chronicler.Api.Services;
 
-public class LibraryScanner(
-    AppDbContext db,
-    IWebHostEnvironment env,
-    MetadataService metadata,
-    ILogger<LibraryScanner> logger)
+public class LibraryScanner(AppDbContext db, IWebHostEnvironment env, ILogger<LibraryScanner> logger)
 {
     private static readonly string[] AudioExtensions = [".mp3", ".m4b", ".m4a", ".ogg", ".opus", ".flac", ".aac", ".wav"];
+    private static readonly string[] CoverExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tiff"];
 
     public string LibraryRoot => Path.Combine(env.ContentRootPath, "Library");
 
@@ -29,10 +25,9 @@ public class LibraryScanner(
         var removed = 0;
         foreach (var book in allBooks)
         {
-            var fullPath = Path.Combine(LibraryRoot, book.FilePath);
-            if (!File.Exists(fullPath))
+            if (!File.Exists(Path.Combine(LibraryRoot, book.FilePath)))
             {
-                logger.LogInformation("Removing missing book: {Title} ({Path})", book.Title, book.FilePath);
+                logger.LogInformation("Removing missing book: {Title}", book.Title);
                 db.Books.Remove(book);
                 removed++;
             }
@@ -40,7 +35,7 @@ public class LibraryScanner(
         if (removed > 0)
         {
             await db.SaveChangesAsync(ct);
-            logger.LogInformation("Removed {Count} missing book(s) from library", removed);
+            logger.LogInformation("Removed {Count} missing book(s)", removed);
         }
 
         var existingPaths = await db.Books.Select(b => b.FilePath).ToHashSetAsync(ct);
@@ -55,7 +50,6 @@ public class LibraryScanner(
 
             if (audioFiles.Count == 0) continue;
 
-            // Skip if we already have this book (check first file)
             var firstRelative = Path.GetRelativePath(LibraryRoot, audioFiles[0]);
             if (existingPaths.Contains(firstRelative)) continue;
 
@@ -76,7 +70,6 @@ public class LibraryScanner(
                 AddedAt = DateTime.UtcNow
             };
 
-            // Create chapters for each audio file
             int track = 1;
             foreach (var audioFile in audioFiles)
             {
@@ -89,79 +82,33 @@ public class LibraryScanner(
             }
 
             newBooks.Add(book);
-            logger.LogInformation("Found new book: {Title} by {Author} ({Chapters} chapters)",
-                book.Title, book.Author, book.Chapters.Count);
+            logger.LogInformation("Found: {Title} by {Author} ({Chapters} chapters, cover={HasCover})",
+                book.Title, book.Author, book.Chapters.Count, book.CoverPath is not null);
         }
 
-        // Flat audio files in root
+        // Flat audio files in library root
         foreach (var file in Directory.GetFiles(LibraryRoot)
             .Where(f => AudioExtensions.Contains(Path.GetExtension(f).ToLowerInvariant())))
         {
             var relativePath = Path.GetRelativePath(LibraryRoot, file);
             if (existingPaths.Contains(relativePath)) continue;
 
-            var nameWithoutExt = Path.GetFileNameWithoutExtension(file);
-            var (title, author) = ParseDirectoryName(nameWithoutExt);
-
-            newBooks.Add(new Book
-            {
-                Title = title,
-                Author = author,
-                FilePath = relativePath,
-                AddedAt = DateTime.UtcNow
-            });
+            var (title, author) = ParseDirectoryName(Path.GetFileNameWithoutExtension(file));
+            newBooks.Add(new Book { Title = title, Author = author, FilePath = relativePath, AddedAt = DateTime.UtcNow });
         }
 
-        // Fetch metadata for books that don't have covers yet
-        foreach (var book in newBooks)
-        {
-            await metadata.EnrichAsync(book, LibraryRoot, ct);
-            db.Books.Add(book);
-        }
-
-        if (newBooks.Count > 0)
-            await db.SaveChangesAsync(ct);
+        foreach (var book in newBooks) db.Books.Add(book);
+        if (newBooks.Count > 0) await db.SaveChangesAsync(ct);
 
         return newBooks.Count;
     }
 
-    private static string ParseChapterTitle(string fileName, int track)
-    {
-        // Clean up filenames like "01 - Chapter One" or "Chapter_01" → "Chapter One"
-        var clean = fileName
-            .Replace("_", " ")
-            .TrimStart('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ', '-', '.')
-            .Trim();
-
-        return string.IsNullOrWhiteSpace(clean) ? $"Chapter {track}" : clean;
-    }
-
-    private static (string title, string author) ParseDirectoryName(string name)
-    {
-        var parts = name.Split(" - ", 2);
-        return parts.Length == 2
-            ? (parts[1].Trim(), parts[0].Trim())
-            : (name.Trim(), "Unknown");
-    }
-
-    private static readonly string[] ImageExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tiff"];
-
-    private static string? FindCoverImage(string dir)
-    {
-        // Check common named files first
-        string[] preferred = ["cover.jpg", "cover.jpeg", "cover.png", "cover.webp",
-                               "folder.jpg", "folder.jpeg", "folder.png", "thumb.jpg"];
-        foreach (var name in preferred)
-        {
-            var path = Path.Combine(dir, name);
-            if (File.Exists(path)) return path;
-        }
-
-        // Fall back to any image file in the directory
-        return Directory.GetFiles(dir)
-            .Where(f => ImageExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+    // Only match files named "cover.*"
+    private static string? FindCoverImage(string dir) =>
+        Directory.GetFiles(dir)
+            .Where(f => Path.GetFileNameWithoutExtension(f).Equals("cover", StringComparison.OrdinalIgnoreCase)
+                        && CoverExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
             .FirstOrDefault();
-    }
 
     private static readonly JsonSerializerOptions MetaJsonOpts = new(JsonSerializerDefaults.Web);
 
@@ -169,15 +116,22 @@ public class LibraryScanner(
     {
         var path = Path.Combine(dir, "meta.json");
         if (!File.Exists(path)) return null;
-        try
-        {
-            var json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize<BookMetaFile>(json, MetaJsonOpts);
-        }
+        try { return JsonSerializer.Deserialize<BookMetaFile>(File.ReadAllText(path), MetaJsonOpts); }
         catch { return null; }
     }
 
-    public record BookMetaFile(
-        string? Title, string? Author, string? Narrator,
-        int? Year, string? Description);
+    private static string ParseChapterTitle(string fileName, int track)
+    {
+        var clean = fileName.Replace("_", " ")
+            .TrimStart('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ', '-', '.').Trim();
+        return string.IsNullOrWhiteSpace(clean) ? $"Chapter {track}" : clean;
+    }
+
+    private static (string title, string author) ParseDirectoryName(string name)
+    {
+        var parts = name.Split(" - ", 2);
+        return parts.Length == 2 ? (parts[1].Trim(), parts[0].Trim()) : (name.Trim(), "Unknown");
+    }
+
+    public record BookMetaFile(string? Title, string? Author, string? Narrator, int? Year, string? Description);
 }

@@ -19,14 +19,14 @@ else
                     <img class="book-cover-small" src="@_coverSrc" alt="@_book.Title"
                          @ontouchstart="OnCoverTouchStart" @ontouchend="OnCoverTouchEnd" @ontouchmove="OnCoverTouchEnd"
                          @onmousedown="OnCoverTouchStart" @onmouseup="OnCoverTouchEnd" @onmouseleave="OnCoverTouchEnd"
-                         title="Long press to edit details" />
+                         title="Long press to edit metadata" />
                 }
                 else
                 {
                     <div class="book-cover-small-placeholder"
                          @ontouchstart="OnCoverTouchStart" @ontouchend="OnCoverTouchEnd" @ontouchmove="OnCoverTouchEnd"
                          @onmousedown="OnCoverTouchStart" @onmouseup="OnCoverTouchEnd" @onmouseleave="OnCoverTouchEnd"
-                         title="Long press to edit details">
+                         title="Long press to edit metadata">
                         📚
                     </div>
                 }
@@ -47,9 +47,6 @@ else
                         <input class="form-input" type="number" @bind="_editYear" placeholder="(optional)" />
                         <div style="display:flex;gap:.5rem;margin-top:.75rem;justify-content:center">
                             <button class="btn-primary" @onclick="SaveMeta">Save</button>
-                            <button class="btn-secondary" @onclick="RefetchCover" disabled="@_coverSearching">
-                                @(_coverSearching ? "⚙ Searching..." : "⚙ Find Cover")
-                            </button>
                             <button class="btn-secondary" @onclick="CloseMetaEditor">Cancel</button>
                         </div>
                     </div>
@@ -162,7 +159,6 @@ else
 
     private BookDto? _book;
     private string? _coverSrc;
-    private bool _coverSearching;
     private bool _showMetaEditor;
     private string _editTitle = "";
     private string _editAuthor = "";
@@ -300,22 +296,6 @@ else
         StateHasChanged();
     }
 
-    private async Task WrongCover()
-    {
-        _coverSrc = null;
-        ApiClient.InvalidateCoverCache(BookId);
-        await Api.ClearCoverAsync(BookId);
-        _book = await Api.GetBookAsync(BookId);
-    }
-
-    private async Task RefetchCover()
-    {
-        ApiClient.InvalidateCoverCache(BookId);
-        await Api.RefetchCoverAsync(BookId);
-        _book = await Api.GetBookAsync(BookId);
-        if (_book?.HasCover == true)
-            _coverSrc = await Api.GetCoverDataUriAsync(BookId);
-    }
 
     private void AddBookmark() { _showBookmarkInput = true; _bookmarkLabel = ""; }
 

@@ -10,7 +10,6 @@ export default function Library() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [scanning, setScanning] = useState(false);
-  const [enriching, setEnriching] = useState(false);
 
   const loadBooks = useCallback(async (q) => {
     setLoading(true);
@@ -48,7 +47,6 @@ export default function Library() {
   );
 
   async function scan() { setScanning(true); await booksApi.scan(); await loadBooks(search); setScanning(false); }
-  async function enrich() { setEnriching(true); await booksApi.enrich(); await loadBooks(search); setEnriching(false); }
 
   return (
     <div className="library-browser">
@@ -95,9 +93,6 @@ export default function Library() {
       <div className="library-bottom">
         <button className="btn-secondary" onClick={scan} disabled={scanning}>
           {scanning ? 'Cataloguing...' : 'Catalogue'}
-        </button>
-        <button className="btn-secondary" onClick={enrich} disabled={enriching}>
-          {enriching ? 'Fetching...' : 'Fetch Covers'}
         </button>
       </div>
     </div>

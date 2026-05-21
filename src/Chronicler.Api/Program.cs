@@ -71,7 +71,6 @@ builder.Services.AddAuthentication(opt =>
 });
 
 builder.Services.AddAuthorization();
-builder.Services.AddScoped<MetadataService>();
 builder.Services.AddScoped<LibraryScanner>();
 builder.Services.AddCors(opt =>
     opt.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
@@ -303,20 +302,6 @@ app.MapDelete("/api/books/{id:int}/cover", [Authorize] async (int id, AppDbConte
     return Results.Ok();
 });
 
-// Re-fetch cover from OpenLibrary for a specific book
-app.MapPost("/api/books/{id:int}/refetch-cover", [Authorize] async (
-    int id, AppDbContext db, MetadataService metadata, IWebHostEnvironment env) =>
-{
-    var book = await db.Books.FindAsync(id);
-    if (book is null) return Results.NotFound();
-
-    book.CoverPath = null; // force re-fetch
-    var libraryRoot = Path.Combine(env.ContentRootPath, "Library");
-    await metadata.EnrichAsync(book, libraryRoot);
-    await db.SaveChangesAsync();
-
-    return Results.Ok(new { hasCover = book.CoverPath != null });
-});
 
 // ── Chapters ──────────────────────────────────────────────────────────────────
 
@@ -418,20 +403,6 @@ app.MapPost("/api/library/scan", async (LibraryScanner scanner) =>
     return Results.Ok(new { added });
 });
 
-app.MapPost("/api/library/enrich", async (AppDbContext db, MetadataService metadata, IWebHostEnvironment env) =>
-{
-    var books = await db.Books.Where(b => b.CoverPath == null || b.Description == null).ToListAsync();
-    var libraryRoot = Path.Combine(env.ContentRootPath, "Library");
-    int enriched = 0;
-    foreach (var book in books)
-    {
-        var coverBefore = book.CoverPath;
-        await metadata.EnrichAsync(book, libraryRoot);
-        if (book.CoverPath != coverBefore || book.Description != null) enriched++;
-    }
-    await db.SaveChangesAsync();
-    return Results.Ok(new { enriched });
-});
 
 app.MapPut("/api/books/{id:int}", async (int id, BookUpdateRequest req, AppDbContext db) =>
 {

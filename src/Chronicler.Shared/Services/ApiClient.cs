@@ -21,8 +21,6 @@ public record BookMetaDto(int Id, string Title, string Author, string? Narrator,
 public class ApiClient(HttpClient http, AuthState auth)
 {
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
-    private static readonly Dictionary<int, string> CoverCache = [];
-    private static readonly SemaphoreSlim CoverLock = new(1, 1);
 
     private void ApplyAuth()
     {
@@ -68,32 +66,16 @@ public class ApiClient(HttpClient http, AuthState auth)
 
     public async Task<string?> GetCoverDataUriAsync(int bookId)
     {
-        await CoverLock.WaitAsync();
-        try
-        {
-            if (CoverCache.TryGetValue(bookId, out var cached)) return cached;
-        }
-        finally { CoverLock.Release(); }
-
         try
         {
             var bytes = await http.GetByteArrayAsync($"api/books/{bookId}/cover");
             if (bytes.Length < 100) return null;
-            var dataUri = $"data:image/jpeg;base64,{Convert.ToBase64String(bytes)}";
-            await CoverLock.WaitAsync();
-            try { CoverCache[bookId] = dataUri; }
-            finally { CoverLock.Release(); }
-            return dataUri;
+            return $"data:image/jpeg;base64,{Convert.ToBase64String(bytes)}";
         }
         catch { return null; }
     }
 
-    public static void InvalidateCoverCache(int bookId)
-    {
-        CoverLock.Wait();
-        try { CoverCache.Remove(bookId); }
-        finally { CoverLock.Release(); }
-    }
+    public static void InvalidateCoverCache(int bookId) { } // no-op, kept for call-site compat
     public string GetAudioUrl(int bookId) => $"{http.BaseAddress}api/books/{bookId}/audio";
     public string GetChapterAudioUrl(int chapterId) => $"{http.BaseAddress}api/chapters/{chapterId}/audio";
 
@@ -143,17 +125,6 @@ public class ApiClient(HttpClient http, AuthState auth)
         return resp.IsSuccessStatusCode;
     }
 
-    public async Task RefetchCoverAsync(int bookId)
-    {
-        ApplyAuth();
-        await http.PostAsync($"/api/books/{bookId}/refetch-cover", null);
-    }
-
-    public async Task ClearCoverAsync(int bookId)
-    {
-        ApplyAuth();
-        await http.DeleteAsync($"/api/books/{bookId}/cover");
-    }
 
     public async Task<int> ScanLibraryAsync()
     {
@@ -163,13 +134,6 @@ public class ApiClient(HttpClient http, AuthState auth)
         return result?.Added ?? 0;
     }
 
-    public async Task<int> EnrichLibraryAsync()
-    {
-        ApplyAuth();
-        var resp = await http.PostAsync("/api/library/enrich", null);
-        var result = await resp.Content.ReadFromJsonAsync<EnrichResult>(JsonOpts);
-        return result?.Enriched ?? 0;
-    }
 
     // ── Progress ──────────────────────────────────────────────────────────────
 
@@ -230,6 +194,5 @@ public class ApiClient(HttpClient http, AuthState auth)
     private record TokenResponse(string Token);
     private record ProgressResult(double PositionSeconds);
     private record ScanResult(int Added);
-    private record EnrichResult(int Enriched);
     private record VersionResult(string Version);
 }
