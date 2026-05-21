@@ -180,7 +180,9 @@ app.MapGet("/api/books", [Authorize] async (string? q, ClaimsPrincipal principal
 app.MapGet("/api/books/{id:int}", [Authorize] async (int id, AppDbContext db) =>
 {
     var b = await db.Books.FindAsync(id);
-    return b is null ? Results.NotFound() : Results.Ok(b);
+    if (b is null) return Results.NotFound();
+    return Results.Ok(new BookDto(b.Id, b.Title, b.Author, b.Narrator, b.DurationSeconds,
+        b.CoverData != null, b.AddedAt, 0, 0, b.Year));
 });
 
 app.MapGet("/api/books/{id:int}/cover", async (int id, HttpContext ctx, AppDbContext db) =>
