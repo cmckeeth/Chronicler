@@ -17,6 +17,7 @@ public record ChapterDto(int Id, int BookId, string Title, int TrackNumber);
 
 public record ChapterProgressDto(double PositionSeconds, bool IsListened);
 public record BookMetaDto(int Id, string Title, string Author, string? Narrator, string? Description, int? Year);
+public record ScanPreviewDto(List<string> NewBooks, List<string> RemovedBooks, int CoverUpdates, bool HasChanges);
 
 public class ApiClient(HttpClient http, AuthState auth)
 {
@@ -136,6 +137,12 @@ public class ApiClient(HttpClient http, AuthState auth)
         return resp.IsSuccessStatusCode;
     }
 
+
+    public async Task<ScanPreviewDto?> PreviewScanAsync()
+    {
+        ApplyAuth();
+        return await http.GetFromJsonAsync<ScanPreviewDto>("/api/library/scan/preview", JsonOpts);
+    }
 
     public async Task<int> ScanLibraryAsync()
     {

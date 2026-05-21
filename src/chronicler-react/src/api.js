@@ -74,6 +74,14 @@ export const booksApi = {
     const res = await apiFetch(`/api/books/${id}/refetch-cover`, { method: 'POST' });
     return res.json();
   },
+  async scanPreview() {
+    const res = await apiFetch('/api/library/scan/preview');
+    return res.json();
+  },
+  async scan() {
+    const res = await apiFetch('/api/library/scan', { method: 'POST' });
+    return res.json();
+  },
   async resetProgress(id) {
     await apiFetch(`/api/books/${id}/reset`, { method: 'POST' });
   },

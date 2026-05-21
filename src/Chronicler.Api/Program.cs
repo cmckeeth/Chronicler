@@ -417,7 +417,13 @@ app.MapPost("/api/books/{bookId:int}/reset", [Authorize] async (int bookId, Clai
     return Results.Ok();
 });
 
-app.MapPost("/api/library/scan", async (LibraryScanner scanner) =>
+app.MapGet("/api/library/scan/preview", [Authorize] async (LibraryScanner scanner) =>
+{
+    var preview = await scanner.PreviewAsync();
+    return Results.Ok(preview);
+});
+
+app.MapPost("/api/library/scan", [Authorize] async (LibraryScanner scanner) =>
 {
     var added = await scanner.ScanAsync();
     return Results.Ok(new { added });

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { booksApi, auth } from '../api';
 import BookCard from '../components/BookCard';
+import ScanPreview from '../components/ScanPreview';
 
 export default function Library() {
   const [books, setBooks] = useState([]);
@@ -10,6 +11,7 @@ export default function Library() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [scanning, setScanning] = useState(false);
+  const [showScan, setShowScan] = useState(false);
 
   const loadBooks = useCallback(async (q) => {
     setLoading(true);
@@ -62,6 +64,7 @@ export default function Library() {
         <div style={{display:'flex',alignItems:'center',gap:'.6rem',marginBottom:'.6rem'}}>
           <input type="search" placeholder="Query the archive..." className="search-input"
             value={search} onChange={e => setSearch(e.target.value)} />
+          <button className="btn-secondary" style={{fontSize:'.8rem',whiteSpace:'nowrap'}} onClick={() => setShowScan(true)}>⊕ Scan</button>
           <button className="btn-secondary" style={{fontSize:'.8rem',whiteSpace:'nowrap'}} onClick={auth.logout}>Sign Out</button>
         </div>
         <div className="library-controls">
@@ -95,6 +98,12 @@ export default function Library() {
         </div>
       )}
 
+      {showScan && (
+        <ScanPreview
+          onClose={() => setShowScan(false)}
+          onScanned={() => { loadBooks(); setShowScan(false); }}
+        />
+      )}
     </div>
   );
 }

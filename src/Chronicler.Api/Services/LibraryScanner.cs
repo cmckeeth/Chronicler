@@ -12,6 +12,50 @@ public class LibraryScanner(AppDbContext db, IWebHostEnvironment env, ILogger<Li
 
     public string LibraryRoot => Path.Combine(env.ContentRootPath, "Library");
 
+    public record ScanPreview(List<string> NewBooks, List<string> RemovedBooks, int CoverUpdates)
+    {
+        public ScanPreview() : this([], [], 0) { }
+        public bool HasChanges => NewBooks.Count > 0 || RemovedBooks.Count > 0 || CoverUpdates > 0;
+    }
+
+    public async Task<ScanPreview> PreviewAsync(CancellationToken ct = default)
+    {
+        if (!Directory.Exists(LibraryRoot)) return new ScanPreview();
+
+        var allBooks = await db.Books.Include(b => b.Chapters).ToListAsync(ct);
+
+        var removed = allBooks
+            .Where(b => !File.Exists(Path.Combine(LibraryRoot, b.FilePath)))
+            .Select(b => b.Title).ToList();
+
+        var existingPaths = await db.Books.Select(b => b.FilePath).ToHashSetAsync(ct);
+        var added = new List<string>();
+        foreach (var dir in Directory.GetDirectories(LibraryRoot))
+        {
+            var audioFiles = Directory.GetFiles(dir)
+                .Where(f => AudioExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                .OrderBy(f => f).ToList();
+            if (audioFiles.Count == 0) continue;
+            var firstRelative = Path.GetRelativePath(LibraryRoot, audioFiles[0]);
+            if (existingPaths.Contains(firstRelative)) continue;
+            var meta = ReadMetaJson(dir);
+            var (defaultTitle, _) = ParseDirectoryName(Path.GetFileName(dir));
+            added.Add(meta?.Title ?? defaultTitle);
+        }
+
+        var coverUpdates = 0;
+        foreach (var book in allBooks.Where(b => File.Exists(Path.Combine(LibraryRoot, b.FilePath))))
+        {
+            var audioDir = Path.GetDirectoryName(Path.Combine(LibraryRoot, book.FilePath));
+            if (audioDir is null) continue;
+            var coverFile = FindCoverImage(audioDir);
+            var diskSize = coverFile is not null ? new FileInfo(coverFile).Length : 0L;
+            if (diskSize != (book.CoverData?.LongLength ?? 0L)) coverUpdates++;
+        }
+
+        return new ScanPreview(added, removed, coverUpdates);
+    }
+
     public async Task<int> ScanAsync(CancellationToken ct = default)
     {
         if (!Directory.Exists(LibraryRoot))
