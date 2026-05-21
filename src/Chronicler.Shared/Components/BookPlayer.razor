@@ -14,14 +14,14 @@ else
 
         <div class="book-header">
             <div class="cover-container">
-                @if (_coverSrc is not null)
+                @if (_book.HasCover)
                 {
-                    <img class="book-cover-small" src="@_coverSrc" alt="@_book.Title"
+                    <img class="book-cover-small" src="@Api.GetCoverUrl(_book.Id)" alt="@_book.Title"
                          @ontouchstart="OnCoverTouchStart" @ontouchend="OnCoverTouchEnd" @ontouchmove="OnCoverTouchEnd"
                          @onmousedown="OnCoverTouchStart" @onmouseup="OnCoverTouchEnd" @onmouseleave="OnCoverTouchEnd"
                          title="Long press to edit metadata" />
                 }
-                else
+                else if (!_book.HasCover)
                 {
                     <div class="book-cover-small-placeholder"
                          @ontouchstart="OnCoverTouchStart" @ontouchend="OnCoverTouchEnd" @ontouchmove="OnCoverTouchEnd"
@@ -158,7 +158,6 @@ else
     private enum DownloadState { None, Downloading, Downloaded }
 
     private BookDto? _book;
-    private string? _coverSrc;
     private bool _showMetaEditor;
     private string _editTitle = "";
     private string _editAuthor = "";
@@ -182,8 +181,6 @@ else
         _book = await Api.GetBookAsync(BookId);
         if (_book is null) return;
 
-        if (_book.HasCover)
-            _coverSrc = await Api.GetCoverDataUriAsync(BookId);
 
         _chapters = await Api.GetChaptersAsync(BookId);
         _chapterProgresses = await Task.WhenAll(_chapters.Select(c => Api.GetChapterProgressAsync(c.Id)))

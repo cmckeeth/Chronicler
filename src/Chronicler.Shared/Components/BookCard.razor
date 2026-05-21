@@ -3,13 +3,9 @@
 
 <div class="book-card" @onclick="Navigate">
     <div class="book-cover">
-        @if (_coverSrc is not null)
+        @if (Book.HasCover)
         {
-            <img src="@_coverSrc" alt="@Book.Title cover" />
-        }
-        else if (Book.HasCover && _loading)
-        {
-            <div class="book-cover-placeholder" style="opacity:.1">⚙</div>
+            <img src="@Api.GetCoverUrl(Book.Id)" alt="@Book.Title" loading="lazy" />
         }
         else
         {
@@ -21,26 +17,12 @@
         <span class="book-author">@Book.Author</span>
         @if (Book.Narrator is not null)
         {
-            <span class="book-narrator">Narrated by @Book.Narrator</span>
+            <span class="book-narrator">@Book.Narrator</span>
         }
     </div>
 </div>
 
 @code {
     [Parameter, EditorRequired] public BookDto Book { get; set; } = null!;
-
-    private string? _coverSrc;
-    private bool _loading;
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (Book.HasCover && _coverSrc is null)
-        {
-            _loading = true;
-            _coverSrc = await Api.GetCoverDataUriAsync(Book.Id);
-            _loading = false;
-        }
-    }
-
     private void Navigate() => Nav.NavigateTo($"/book/{Book.Id}");
 }
