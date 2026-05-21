@@ -73,7 +73,6 @@
     private bool _scanning;
 
     private bool _hasDownloads;
-    private System.Timers.Timer? _debounce;
 
     private string ChipClass(string current, string value) =>
         $"chip{(current == value ? " chip-active" : "")}";
@@ -85,12 +84,25 @@
     {
         get
         {
-            var q = _filter switch
+            var q = _books.AsEnumerable();
+
+            // Client-side search
+            if (!string.IsNullOrWhiteSpace(_search))
             {
-                "inprogress" => _books.Where(b => b.IsInProgress),
-                "completed"  => _books.Where(b => b.IsCompleted),
-                _            => _books.AsEnumerable()
+                var s = _search.ToLowerInvariant();
+                q = q.Where(b =>
+                    b.Title.ToLowerInvariant().Contains(s) ||
+                    b.Author.ToLowerInvariant().Contains(s) ||
+                    (b.Narrator?.ToLowerInvariant().Contains(s) ?? false));
+            }
+
+            q = _filter switch
+            {
+                "inprogress" => q.Where(b => b.IsInProgress),
+                "completed"  => q.Where(b => b.IsCompleted),
+                _            => q
             };
+
             return _sort switch
             {
                 "date"     => q.OrderByDescending(b => b.AddedAt),
@@ -110,34 +122,23 @@
             _hasDownloads = (await dl.GetTotalSizeAsync()) > 0;
     }
 
-    private async Task LoadBooks(string? search = null)
+    private async Task LoadBooks()
     {
         _loading = true;
         _error = null;
-        try { _books = await Api.GetBooksAsync(search); }
+        try { _books = await Api.GetBooksAsync(); }
         catch (Exception ex) { _error = ex.Message; }
         _loading = false;
     }
 
-    private void OnSearch(ChangeEventArgs e)
-    {
+    private void OnSearch(ChangeEventArgs e) =>
         _search = e.Value?.ToString() ?? "";
-        _debounce?.Dispose();
-        _debounce = new System.Timers.Timer(300);
-        _debounce.Elapsed += async (_, _) =>
-        {
-            _debounce?.Dispose();
-            await InvokeAsync(async () => { await LoadBooks(_search); StateHasChanged(); });
-        };
-        _debounce.AutoReset = false;
-        _debounce.Start();
-    }
 
     private async Task ScanLibrary()
     {
         _scanning = true;
         await Api.ScanLibraryAsync();
-        await LoadBooks(_search);
+        await LoadBooks();
         _scanning = false;
     }
 

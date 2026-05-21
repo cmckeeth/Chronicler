@@ -21,13 +21,19 @@ export default function Library() {
 
   useEffect(() => { loadBooks(); }, [loadBooks]);
 
-  useEffect(() => {
-    const t = setTimeout(() => loadBooks(search), 300);
-    return () => clearTimeout(t);
-  }, [search, loadBooks]);
 
   const filtered = useMemo(() => {
     let q = books;
+
+    // Client-side search filter
+    if (search.trim()) {
+      const s = search.toLowerCase();
+      q = q.filter(b =>
+        b.title.toLowerCase().includes(s) ||
+        b.author.toLowerCase().includes(s) ||
+        (b.narrator || '').toLowerCase().includes(s));
+    }
+
     if (filter === 'inprogress') q = q.filter(b => b.listenedCount > 0 && b.listenedCount < b.chapterCount);
     else if (filter === 'completed') q = q.filter(b => b.chapterCount > 0 && b.listenedCount >= b.chapterCount);
 
