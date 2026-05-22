@@ -28,7 +28,6 @@
             <option value="2">2×</option>
         </select>
 
-        <button class="btn-icon" @onclick="AddBookmark">🔖</button>
     </div>
 
     @if (Duration > 0)
@@ -54,7 +53,6 @@
     [Parameter] public double StartPosition { get; set; }
     [Parameter] public EventCallback<double> OnProgressChanged { get; set; }
     [Parameter] public EventCallback OnChapterEnded { get; set; }
-    [Parameter] public EventCallback OnBookmarkRequested { get; set; }
 
     private ElementReference _audioRef;
     private DotNetObjectReference<AudioPlayer>? _dotnetRef;
@@ -211,7 +209,6 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task AddBookmark() => await OnBookmarkRequested.InvokeAsync();
 
     private static string FormatTime(double s)
     {

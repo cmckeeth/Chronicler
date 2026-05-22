@@ -83,8 +83,7 @@ else
                          BookTitle="@_currentChapter.Title"
                          StartPosition="@_startPosition"
                          OnProgressChanged="SaveChapterProgress"
-                         OnChapterEnded="AdvanceChapter"
-                         OnBookmarkRequested="AddBookmark" />
+                         OnChapterEnded="AdvanceChapter" />
         }
 
         @if (_chapters.Count > 0)
@@ -139,29 +138,6 @@ else
             </div>
         }
 
-        @if (_bookmarks.Count > 0)
-        {
-            <div class="bookmarks">
-                <h3>Bookmarks</h3>
-                @foreach (var bm in _bookmarks)
-                {
-                    <div class="bookmark-item">
-                        <span>@FormatTime(bm.PositionSeconds) — @(bm.Label ?? "Bookmark")</span>
-                        <button class="btn-icon" @onclick="() => DeleteBookmark(bm.Id)">✕</button>
-                    </div>
-                }
-            </div>
-        }
-
-        @if (_showBookmarkInput)
-        {
-            <div class="bookmark-input">
-                <input @bind="_bookmarkLabel" placeholder="Label (optional)" />
-                <button class="btn-primary" @onclick="ConfirmBookmark">Save</button>
-                <button class="btn-secondary" @onclick="() => _showBookmarkInput = false">Cancel</button>
-            </div>
-        }
-
         <div style="display:flex;justify-content:center;padding:.75rem 0 .25rem;border-top:1px solid var(--border);margin-top:.5rem">
             <button class="btn-secondary" style="font-size:.7rem;opacity:.5" @onclick="ResetBook">⚙ Reset All Progress</button>
         </div>
@@ -191,9 +167,6 @@ else
     private List<ChapterProgressDto> _chapterProgresses = [];
     private ChapterDto? _currentChapter;
     private double _startPosition;
-    private List<BookmarkDto> _bookmarks = [];
-    private bool _showBookmarkInput;
-    private string _bookmarkLabel = "";
     private double _currentPosition;
 
     protected override async Task OnParametersSetAsync()
@@ -207,7 +180,6 @@ else
         _chapters = await Api.GetChaptersAsync(BookId);
         _chapterProgresses = await Task.WhenAll(_chapters.Select(c => Api.GetChapterProgressAsync(c.Id)))
             .ContinueWith(t => t.Result.ToList());
-        _bookmarks = await Api.GetBookmarksAsync(BookId);
 
         // Load download states
         if (_downloadSvc is not null)
@@ -346,21 +318,8 @@ else
     }
 
 
-    private void AddBookmark() { _showBookmarkInput = true; _bookmarkLabel = ""; }
 
-    private async Task ConfirmBookmark()
-    {
-        var bm = await Api.AddBookmarkAsync(BookId, _currentPosition,
-            string.IsNullOrWhiteSpace(_bookmarkLabel) ? null : _bookmarkLabel);
-        if (bm is not null) _bookmarks.Add(bm);
-        _showBookmarkInput = false;
-    }
 
-    private async Task DeleteBookmark(int id)
-    {
-        await Api.DeleteBookmarkAsync(id);
-        _bookmarks.RemoveAll(b => b.Id == id);
-    }
 
     private async Task DownloadChapter(ChapterDto chapter)
     {

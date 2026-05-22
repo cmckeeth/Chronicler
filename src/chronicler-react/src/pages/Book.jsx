@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { booksApi, chaptersApi, bookmarksApi } from '../api';
+import { booksApi, chaptersApi } from '../api';
 import MetaEditor from '../components/MetaEditor';
 
 function fmt(s) {
@@ -21,27 +21,22 @@ export default function Book() {
   const longPressTimer = useRef(null);
   const [chapters, setChapters] = useState([]);
   const [progresses, setProgresses] = useState([]);
-  const [bookmarks, setBookmarks] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [speed, setSpeed] = useState(1);
-  const [bookmarkLabel, setBookmarkLabel] = useState('');
-  const [showBmInput, setShowBmInput] = useState(false);
   const lastSave = useRef(Date.now() - 15000);
   const started = useRef(false);
 
   useEffect(() => {
     async function load() {
-      const [b, chs, bms] = await Promise.all([
+      const [b, chs] = await Promise.all([
         booksApi.get(id),
         booksApi.chapters(id),
-        bookmarksApi.list(id)
       ]);
       setBook(b);
-      setBookmarks(bms);
-
+  
       const progs = await Promise.all(chs.map(c => chaptersApi.getProgress(c.id)));
       setChapters(chs);
       setProgresses(progs);
@@ -139,13 +134,6 @@ export default function Book() {
     setProgresses(prev => prev.map(() => ({ positionSeconds: 0, isListened: false })));
   }
 
-  async function addBookmark() {
-    const pos = audioRef.current?.currentTime ?? position;
-    const bm = await bookmarksApi.add(id, pos, bookmarkLabel || null);
-    setBookmarks(prev => [...prev, bm]);
-    setShowBmInput(false);
-    setBookmarkLabel('');
-  }
 
   if (!book) return <div className="loading">Consulting the archive...</div>;
 
@@ -233,29 +221,7 @@ export default function Book() {
         </div>
       )}
 
-      {/* Bookmarks */}
-      {bookmarks.length > 0 && (
-        <div className="bookmarks">
-          <h3>Bookmarks</h3>
-          {bookmarks.map(bm => (
-            <div key={bm.id} className="bookmark-item">
-              <span>{fmt(bm.positionSeconds)} — {bm.label || 'Bookmark'}</span>
-              <button className="btn-icon" onClick={async () => {
-                await bookmarksApi.remove(bm.id);
-                setBookmarks(prev => prev.filter(b => b.id !== bm.id));
-              }}>✕</button>
-            </div>
-          ))}
-        </div>
-      )}
 
-      {showBmInput && (
-        <div className="bookmark-input">
-          <input value={bookmarkLabel} onChange={e => setBookmarkLabel(e.target.value)} placeholder="Label (optional)" />
-          <button className="btn-primary" onClick={addBookmark}>Save</button>
-          <button className="btn-secondary" onClick={() => setShowBmInput(false)}>Cancel</button>
-        </div>
-      )}
 
       <div style={{display:'flex',justifyContent:'center',padding:'.75rem 0 .25rem',borderTop:'1px solid var(--border)',marginTop:'.5rem'}}>
         <button className="btn-secondary" style={{fontSize:'.7rem',opacity:.5}} onClick={resetBook}>⚙ Reset All Progress</button>
