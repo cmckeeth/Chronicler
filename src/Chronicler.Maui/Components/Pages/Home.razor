@@ -2,6 +2,7 @@
 @inject NavigationManager Nav
 @inject AuthState Auth
 @inject ITokenStorage TokenStorage
+@inject ApiClient Api
 
 @if (!Auth.IsAuthenticated)
 {
@@ -26,7 +27,7 @@ else
         </div>
 
         <div class="landing-middle">
-            <button class="landing-enter-btn" @onclick='() => Nav.NavigateTo("/archive")'>
+            <button class="landing-enter-btn" @onclick="EnterArchive">
                 <img src="logo.png" class="landing-enter-logo" alt="" />
                 <span class="landing-enter-text">Enter the Archive</span>
                 <span class="landing-enter-sub">Browse your collection</span>
@@ -42,6 +43,16 @@ else
 }
 
 @code {
+    private async Task EnterArchive()
+    {
+        // If server is unreachable, go straight to downloads
+        var version = await Api.GetLatestVersionAsync();
+        if (version is null)
+            Nav.NavigateTo("/downloads");
+        else
+            Nav.NavigateTo("/archive");
+    }
+
     private async Task SignOut()
     {
         await TokenStorage.ClearAsync();
