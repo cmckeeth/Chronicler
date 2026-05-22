@@ -53,7 +53,7 @@
         <div class="book-grid">
             @foreach (var book in FilteredBooks)
             {
-                <BookCard Book="book" />
+                <BookCard Book="book" OnFavoriteChanged="LoadBooks" />
             }
         </div>
     }

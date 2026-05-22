@@ -1,11 +1,11 @@
 @inject NavigationManager Nav
 @inject ApiClient Api
 
-<div class="book-card @(Book.IsFavorite ? "book-card-favorite" : "")"
+<div class="book-card @(_isFavorite ? "book-card-favorite" : "")"
      @onclick="OnClick"
      @ontouchstart="OnTouchStart" @ontouchend="OnTouchEnd" @ontouchmove="OnTouchEnd"
      @onmousedown="OnTouchStart" @onmouseup="OnTouchEnd" @onmouseleave="OnTouchEnd">
-    @if (Book.IsFavorite)
+    @if (_isFavorite)
     {
         <span class="book-favorite-badge">★</span>
     }
@@ -39,7 +39,7 @@
         <div class="book-card-menu" @onclick:stopPropagation="true">
             <div class="book-card-menu-title">@Book.Title</div>
             <button class="book-card-menu-item" @onclick="ToggleFavorite">
-                @(Book.IsFavorite ? "★ Remove from Favorites" : "☆ Add to Favorites")
+                @(_isFavorite ? "★ Remove from Favorites" : "☆ Add to Favorites")
             </button>
             <button class="book-card-menu-item" @onclick="NavigateFromMenu">
                 ▶ Open Book
@@ -50,9 +50,11 @@
 
 @code {
     [Parameter, EditorRequired] public BookDto Book { get; set; } = null!;
+    [Parameter] public EventCallback OnFavoriteChanged { get; set; }
 
     private int _loadedBookId = -1;
     private string? _coverSrc;
+    private bool _isFavorite;
     private bool _showMenu;
     private System.Timers.Timer? _longPress;
     private bool _longPressTriggered;
@@ -63,6 +65,7 @@
 
         _loadedBookId = Book.Id;
         _coverSrc = null;
+        _isFavorite = Book.IsFavorite;
 
         if (Book.HasCover)
         {
@@ -109,9 +112,15 @@
 
     private async Task ToggleFavorite()
     {
-        var newVal = await Api.ToggleFavoriteAsync(Book.Id);
-        Book = Book with { IsFavorite = newVal };
+        // Close menu and optimistically update UI immediately
+        _isFavorite = !_isFavorite;
         _showMenu = false;
         StateHasChanged();
+        try
+        {
+            await Api.ToggleFavoriteAsync(Book.Id);
+            await OnFavoriteChanged.InvokeAsync();
+        }
+        catch { _isFavorite = !_isFavorite; StateHasChanged(); }
     }
 }
