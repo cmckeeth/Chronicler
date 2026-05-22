@@ -66,7 +66,7 @@
 @* HTML5 audio element — only used when native service is not available *@
 @if (_nativePlayer is null)
 {
-    <audio id="chronicler-audio" @ref="_audioRef" preload="auto" playsinline></audio>
+    <audio id="chronicler-audio" @ref="_audioRef" src="@Src" preload="auto" playsinline></audio>
 }
 
 @code {
@@ -101,11 +101,14 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || _nativePlayer is not null) return;
+        if (_nativePlayer is not null) return;
 
-        // Web path: use JS + HTML5 audio
-        _dotnetRef = DotNetObjectReference.Create(this);
-        await JS.InvokeVoidAsync("chroniclerAudio.registerEvents", _audioRef, _dotnetRef);
+        if (firstRender)
+        {
+            _dotnetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("chroniclerAudio.registerEvents", _audioRef, _dotnetRef);
+        }
+
         if (StartPosition > 0)
             await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, StartPosition);
     }
