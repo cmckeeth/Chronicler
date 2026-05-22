@@ -5,7 +5,7 @@ namespace Chronicler.Shared.Services;
 
 public record BookDto(int Id, string Title, string Author, string? Narrator,
     double DurationSeconds, bool HasCover, DateTime AddedAt,
-    int ChapterCount = 0, int ListenedCount = 0, int? Year = null)
+    int ChapterCount = 0, int ListenedCount = 0, int? Year = null, bool IsFavorite = false)
 {
     public bool IsCompleted => ChapterCount > 0 && ListenedCount >= ChapterCount;
     public bool IsInProgress => ListenedCount > 0 && !IsCompleted;
@@ -122,6 +122,15 @@ public class ApiClient(HttpClient http, AuthState auth)
         await http.PostAsync($"/api/books/{bookId}/reset", null);
     }
 
+    public async Task<bool> ToggleFavoriteAsync(int bookId)
+    {
+        ApplyAuth();
+        var resp = await http.PostAsync($"/api/books/{bookId}/favorite", null);
+        if (!resp.IsSuccessStatusCode) return false;
+        var result = await resp.Content.ReadFromJsonAsync<FavoriteResult>(JsonOpts);
+        return result?.IsFavorite ?? false;
+    }
+
     public async Task<BookMetaDto?> GetBookMetaAsync(int bookId)
     {
         ApplyAuth();
@@ -213,4 +222,5 @@ public class ApiClient(HttpClient http, AuthState auth)
     private record ProgressResult(double PositionSeconds);
     private record ScanResult(int Added);
     private record VersionResult(string Version);
+    private record FavoriteResult(bool IsFavorite);
 }

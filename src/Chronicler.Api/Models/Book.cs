@@ -13,6 +13,7 @@ public class Book
     public string? CoverMimeType { get; set; }
     public double DurationSeconds { get; set; }
     public DateTime AddedAt { get; set; } = DateTime.UtcNow;
+    public bool IsFavorite { get; set; }
 
     public ICollection<Chapter> Chapters { get; set; } = [];
 }

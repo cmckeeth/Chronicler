@@ -1,7 +1,9 @@
 @inject NavigationManager Nav
 @inject ApiClient Api
 
-<div class="book-card" @onclick="Navigate">
+<div class="book-card @(Book.IsFavorite ? "book-card-favorite" : "")" @onclick="Navigate">
+    <button class="btn-favorite @(Book.IsFavorite ? "btn-favorite-active" : "")"
+            @onclick:stopPropagation="true" @onclick="ToggleFavorite">★</button>
     <div class="book-cover">
         @if (_coverSrc is not null)
         {
@@ -50,4 +52,11 @@
     }
 
     private void Navigate() => Nav.NavigateTo($"/book/{Book.Id}");
+
+    private async Task ToggleFavorite()
+    {
+        var newVal = await Api.ToggleFavoriteAsync(Book.Id);
+        Book = Book with { IsFavorite = newVal };
+        StateHasChanged();
+    }
 }

@@ -110,6 +110,9 @@ namespace Chronicler.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsFavorite")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Narrator")
                         .HasColumnType("TEXT");
 

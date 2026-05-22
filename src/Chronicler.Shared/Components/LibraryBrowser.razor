@@ -28,7 +28,7 @@
                 <span class="control-label">Show</span>
                 <button class="@ChipClass(_filter,"all")"        @onclick='() => SetFilter("all")'>All</button>
                 <button class="@ChipClass(_filter,"inprogress")" @onclick='() => SetFilter("inprogress")'>In Progress</button>
-                <button class="@ChipClass(_filter,"completed")"  @onclick='() => SetFilter("completed")'>Done</button>
+                <button class="@ChipClass(_filter,"favorites")"  @onclick='() => SetFilter("favorites")'>★ Favorites</button>
             </div>
         </div>
     </div>
@@ -98,7 +98,7 @@
             q = _filter switch
             {
                 "inprogress" => q.Where(b => b.IsInProgress),
-                "completed"  => q.Where(b => b.IsCompleted),
+                "favorites"  => q.Where(b => b.IsFavorite),
                 _            => q
             };
 

@@ -172,7 +172,7 @@ app.MapGet("/api/books", [Authorize] async (string? q, ClaimsPrincipal principal
             b.CoverData != null, b.AddedAt,
             b.Chapters.Count(),
             b.Chapters.Count(c => c.Progresses.Any(p => p.UserId == userId && p.IsListened)),
-            b.Year))
+            b.Year, b.IsFavorite))
         .ToListAsync();
 
     return Results.Ok(books);
@@ -183,7 +183,7 @@ app.MapGet("/api/books/{id:int}", [Authorize] async (int id, AppDbContext db) =>
     var b = await db.Books.FindAsync(id);
     if (b is null) return Results.NotFound();
     return Results.Ok(new BookDto(b.Id, b.Title, b.Author, b.Narrator, b.DurationSeconds,
-        b.CoverData != null, b.AddedAt, 0, 0, b.Year));
+        b.CoverData != null, b.AddedAt, 0, 0, b.Year, b.IsFavorite));
 });
 
 app.MapGet("/api/books/{id:int}/cover", async (int id, HttpContext ctx, AppDbContext db) =>
@@ -448,6 +448,15 @@ app.MapPut("/api/books/{id:int}", [Authorize] async (int id, BookUpdateRequest r
     return Results.Ok(book);
 });
 
+app.MapPost("/api/books/{id:int}/favorite", [Authorize] async (int id, AppDbContext db) =>
+{
+    var book = await db.Books.FindAsync(id);
+    if (book is null) return Results.NotFound();
+    book.IsFavorite = !book.IsFavorite;
+    await db.SaveChangesAsync();
+    return Results.Ok(new { book.IsFavorite });
+});
+
 // ── Updates (mirrors CommandCenter pattern) ───────────────────────────────────
 
 app.MapGet("/api/update/version", (IWebHostEnvironment env) =>
@@ -665,7 +674,7 @@ record LoginRequest(string Email, string Password);
 record BookUpdateRequest(string? Title, string? Author, string? Narrator, string? Description);
 record DiagMessage(string Message);
 record BookDto(int Id, string Title, string Author, string? Narrator, double DurationSeconds,
-    bool HasCover, DateTime AddedAt, int ChapterCount = 0, int ListenedCount = 0, int? Year = null);
+    bool HasCover, DateTime AddedAt, int ChapterCount = 0, int ListenedCount = 0, int? Year = null, bool IsFavorite = false);
 record ChapterDto(int Id, int BookId, string Title, int TrackNumber);
 record BookMetaRequest(string? Title, string? Author, string? Narrator, string? Description, int? Year);
 record ChapterProgressRequest(double PositionSeconds, double DurationSeconds);
