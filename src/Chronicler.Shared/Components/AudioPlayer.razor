@@ -101,14 +101,10 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_nativePlayer is not null) return;
+        if (!firstRender || _nativePlayer is not null) return;
 
-        if (firstRender)
-        {
-            _dotnetRef = DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("chroniclerAudio.registerEvents", _audioRef, _dotnetRef);
-        }
-
+        _dotnetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("chroniclerAudio.registerEvents", _audioRef, _dotnetRef);
         if (StartPosition > 0)
             await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, StartPosition);
     }

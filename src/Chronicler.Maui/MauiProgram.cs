@@ -18,7 +18,7 @@ public static class MauiProgram
             })
             .ConfigureMauiHandlers(handlers =>
             {
-#if ANDROID || IOS
+#if ANDROID
                 handlers.AddHandler<Microsoft.AspNetCore.Components.WebView.Maui.BlazorWebView, ChroniclerWebViewHandler>();
 #endif
             });
