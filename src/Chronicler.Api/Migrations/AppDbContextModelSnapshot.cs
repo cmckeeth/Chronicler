@@ -110,9 +110,6 @@ namespace Chronicler.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("IsFavorite")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Narrator")
                         .HasColumnType("TEXT");
 
@@ -224,6 +221,19 @@ namespace Chronicler.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("ChapterProgresses");
+                });
+
+            modelBuilder.Entity("Chronicler.Api.Models.UserBookFavorite", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("UserId", "BookId");
+
+                    b.ToTable("UserBookFavorites");
                 });
 
             modelBuilder.Entity("Chronicler.Api.Models.UserProgress", b =>

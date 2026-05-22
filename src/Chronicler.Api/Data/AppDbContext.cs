@@ -9,6 +9,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<Book> Books => Set<Book>();
     public DbSet<Chapter> Chapters => Set<Chapter>();
     public DbSet<ChapterProgress> ChapterProgresses => Set<ChapterProgress>();
+    public DbSet<UserBookFavorite> UserBookFavorites => Set<UserBookFavorite>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -33,5 +34,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             .HasOne(p => p.Chapter)
             .WithMany(c => c.Progresses)
             .HasForeignKey(p => p.ChapterId);
+
+        builder.Entity<UserBookFavorite>()
+            .HasKey(f => new { f.UserId, f.BookId });
     }
 }
