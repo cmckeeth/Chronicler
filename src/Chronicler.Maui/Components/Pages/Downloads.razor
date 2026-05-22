@@ -35,16 +35,17 @@
         {
             <div class="chapter-list" style="margin-bottom:1rem">
                 <div class="chapter-list-header" style="display:flex;justify-content:space-between;align-items:center">
-                    <h3>@group.Key</h3>
+                    <h3 class="chapter-book-link" @onclick="() => Nav.NavigateTo($"/book/{group.First().BookId}")">@group.Key</h3>
                     <button class="btn-secondary" style="font-size:.65rem" @onclick="() => DeleteBook(group.First().BookId)">✕ Remove book</button>
                 </div>
                 @foreach (var ch in group.OrderBy(c => c.TrackNumber))
                 {
-                    <div class="chapter-item">
+                    var bookId = ch.BookId;
+                    <div class="chapter-item" @onclick="() => Nav.NavigateTo($"/book/{bookId}")">
                         <span class="chapter-number">@ch.TrackNumber</span>
                         <span class="chapter-title">@ch.ChapterTitle</span>
                         <span style="font-size:.65rem;color:var(--parchment-dim);margin-left:auto;margin-right:.5rem">@FormatSize(ch.FileSize)</span>
-                        <button class="btn-reset-chapter" style="opacity:1" @onclick="() => DeleteChapter(ch.ChapterId)">✕</button>
+                        <button class="btn-reset-chapter" style="opacity:1" @onclick:stopPropagation="true" @onclick="() => DeleteChapter(ch.ChapterId)">✕</button>
                     </div>
                 }
                 <div style="padding:.4rem 1.2rem;font-size:.65rem;color:var(--parchment-dim);font-style:italic;border-top:1px solid var(--border)">

@@ -20,6 +20,8 @@ public class NativeAudioPlayerService(IServiceProvider services) : IAudioPlayerS
     }
 
     public bool IsPlaying => _player?.IsPlaying ?? false;
+    public bool IsPlayingLocally => !string.IsNullOrEmpty(_currentUrl) &&
+        !_currentUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase);
     public double CurrentPosition => (_player?.CurrentPosition ?? 0) / 1000.0;
     public double Duration => (_player?.Duration ?? 0) / 1000.0;
 

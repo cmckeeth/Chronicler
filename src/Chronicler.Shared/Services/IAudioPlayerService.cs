@@ -3,6 +3,7 @@ namespace Chronicler.Shared.Services;
 public interface IAudioPlayerService
 {
     bool IsPlaying { get; }
+    bool IsPlayingLocally { get; }
     double CurrentPosition { get; }
     double Duration { get; }
 
