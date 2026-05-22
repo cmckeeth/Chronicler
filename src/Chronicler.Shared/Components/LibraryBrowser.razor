@@ -11,6 +11,7 @@
             <button class="btn-icon" @onclick='() => Nav.NavigateTo("/")' title="Home" style="font-size:1.3rem;padding:.3rem .5rem">⌂</button>
             <input type="search" placeholder="Query the archive..." class="search-input"
                    value="@_search" @oninput="OnSearch" />
+            <button class="btn-icon" @onclick='() => Nav.NavigateTo("/downloads")' title="Downloads" style="font-size:1.1rem;padding:.3rem .5rem;flex-shrink:0">⬇</button>
         </div>
 
         <div class="library-controls">
@@ -121,8 +122,21 @@
     {
         _loading = true;
         _error = null;
-        try { _books = await Api.GetBooksAsync(); }
-        catch (Exception ex) { _error = ex.Message; }
+        try
+        {
+            _books = await Api.GetBooksAsync();
+        }
+        catch (Exception ex)
+        {
+            // If server unreachable, go to downloads
+            var dl = Services?.GetService<IDownloadService>();
+            if (dl is not null && (await dl.GetTotalSizeAsync()) > 0)
+            {
+                Nav.NavigateTo("/downloads");
+                return;
+            }
+            _error = ex.Message;
+        }
         _loading = false;
     }
 
