@@ -136,10 +136,14 @@
 
 .landing-title {
     font-family: 'Cinzel Decorative', 'Palatino Linotype', serif;
-    font-size: 1.7rem;
+    font-size: clamp(1.1rem, 7vw, 1.7rem);
     color: #f0b830;
     text-shadow: 0 0 20px rgba(200,134,10,.8), 0 0 40px rgba(200,134,10,.4);
-    letter-spacing: 4px;
+    letter-spacing: clamp(1px, 1vw, 4px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
     animation: electric-text 4s ease-in-out infinite;
     margin: 0;
 }

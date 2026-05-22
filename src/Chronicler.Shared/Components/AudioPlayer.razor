@@ -67,7 +67,7 @@
 @* HTML5 audio element — only used when native service is not available *@
 @if (_nativePlayer is null)
 {
-    <audio id="chronicler-audio" @ref="_audioRef" preload="auto"></audio>
+    <audio id="chronicler-audio" @ref="_audioRef" preload="auto" playsinline></audio>
 }
 
 @code {
