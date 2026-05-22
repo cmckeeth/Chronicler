@@ -40,15 +40,14 @@
               title="Long press to change speed">@(_speed)×</span>
     </div>
 
-    <div class="player-footer">
-        <span class="player-position-big">@FormatTime(CurrentPosition)</span>
-        @if (_nativePlayer is not null)
-        {
+    @if (_nativePlayer is not null)
+    {
+        <div class="player-footer">
             <span class="player-source-badge @(_nativePlayer.IsPlayingLocally ? "source-local" : "source-stream")">
                 @(_nativePlayer.IsPlayingLocally ? "📱 Local" : "📡 Streaming")
             </span>
-        }
-    </div>
+        </div>
+    }
 
     @if (_showSpeedPicker)
     {

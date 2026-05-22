@@ -24,7 +24,15 @@ window.chroniclerAudio = {
         el.addEventListener('play',           () => dotnetRef.invokeMethodAsync('OnJsPlay'));
         el.addEventListener('pause',          () => dotnetRef.invokeMethodAsync('OnJsPause'));
         el.addEventListener('ended',          () => dotnetRef.invokeMethodAsync('OnJsEnded'));
-        el.addEventListener('timeupdate',     () => dotnetRef.invokeMethodAsync('OnJsTimeUpdate', el.currentTime));
         el.addEventListener('loadedmetadata', () => dotnetRef.invokeMethodAsync('OnJsMetadata', el.duration));
+        // Throttle timeupdate to 1/sec — iOS WKWebView bridge can't keep up at 4/sec
+        let lastUpdate = 0;
+        el.addEventListener('timeupdate', () => {
+            const now = Date.now();
+            if (now - lastUpdate >= 250) {
+                lastUpdate = now;
+                dotnetRef.invokeMethodAsync('OnJsTimeUpdate', el.currentTime);
+            }
+        });
     }
 };
