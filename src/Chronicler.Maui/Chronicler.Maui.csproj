@@ -26,8 +26,8 @@
         <ApplicationId>com.corbin.chronicler</ApplicationId>
 
         <!-- Versions -->
-        <ApplicationDisplayVersion>2.0.3</ApplicationDisplayVersion>
-        <ApplicationVersion>203</ApplicationVersion>
+        <ApplicationDisplayVersion>2.0.5</ApplicationDisplayVersion>
+        <ApplicationVersion>205</ApplicationVersion>
 
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">17.0</SupportedOSPlatformVersion>
