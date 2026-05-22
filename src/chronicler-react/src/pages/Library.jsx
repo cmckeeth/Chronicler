@@ -65,6 +65,7 @@ export default function Library() {
           <input type="search" placeholder="Query the archive..." className="search-input"
             value={search} onChange={e => setSearch(e.target.value)} />
           <button className="btn-secondary" style={{fontSize:'.8rem',whiteSpace:'nowrap'}} onClick={() => setShowScan(true)}>⊕ Scan</button>
+          <button className="btn-secondary" style={{fontSize:'.8rem',whiteSpace:'nowrap'}} onClick={() => nav('/downloads')}>⬇ Downloads</button>
           <button className="btn-secondary" style={{fontSize:'.8rem',whiteSpace:'nowrap'}} onClick={auth.logout}>Sign Out</button>
         </div>
         <div className="library-controls">

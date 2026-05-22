@@ -3,6 +3,7 @@ import { isLoggedIn } from './api';
 import Login from './pages/Login';
 import Library from './pages/Library';
 import Book from './pages/Book';
+import Downloads from './pages/Downloads';
 
 function Protected({ children }) {
   return isLoggedIn() ? children : <Navigate to="/login" replace />;
@@ -15,6 +16,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Protected><Library /></Protected>} />
         <Route path="/book/:id" element={<Protected><Book /></Protected>} />
+        <Route path="/downloads" element={<Protected><Downloads /></Protected>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
