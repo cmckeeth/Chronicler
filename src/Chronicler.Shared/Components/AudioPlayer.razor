@@ -4,7 +4,7 @@
 @using Microsoft.Extensions.DependencyInjection
 @implements IAsyncDisposable
 
-<div class="audio-player">
+<div class="audio-player @(_playing ? "audio-player-playing" : "")">
     <span class="player-title">@BookTitle</span>
 
     @if (Duration > 0)
@@ -34,14 +34,24 @@
 
     <div class="player-speed-row">
         <span class="player-speed-label">Speed</span>
-        <select class="speed-select" @onchange="OnSpeedChange" value="@_speed">
-            <option value="0.75">0.75×</option>
-            <option value="1">1×</option>
-            <option value="1.25">1.25×</option>
-            <option value="1.5">1.5×</option>
-            <option value="2">2×</option>
-        </select>
+        <span class="speed-display"
+              @ontouchstart="OnSpeedTouchStart" @ontouchend="OnSpeedTouchEnd" @ontouchmove="OnSpeedTouchEnd"
+              @onmousedown="OnSpeedTouchStart" @onmouseup="OnSpeedTouchEnd" @onmouseleave="OnSpeedTouchEnd"
+              title="Long press to change speed">@(_speed)×</span>
     </div>
+
+    @if (_showSpeedPicker)
+    {
+        <div class="speed-picker-overlay" @onclick="() => _showSpeedPicker = false">
+            <div class="speed-picker" @onclick:stopPropagation="true">
+                @foreach (var s in new[] { 0.75, 1.0, 1.25, 1.5, 2.0 })
+                {
+                    <button class="speed-option @(Math.Abs(_speed - s) < 0.01 ? "speed-option-active" : "")"
+                            @onclick="() => SetSpeed(s)">@s×</button>
+                }
+            </div>
+        </div>
+    }
 </div>
 
 @* HTML5 audio element — only used when native service is not available *@
@@ -62,6 +72,8 @@
     private IAudioPlayerService? _nativePlayer;
     private bool _playing;
     private double _speed = 1.0;
+    private bool _showSpeedPicker;
+    private System.Timers.Timer? _speedLongPress;
     private DateTime _lastSave = DateTime.MinValue;
 
     public double CurrentPosition { get; private set; }
@@ -212,6 +224,28 @@
         await InvokeAsync(StateHasChanged);
     }
 
+
+    private void OnSpeedTouchStart(EventArgs e)
+    {
+        _speedLongPress?.Dispose();
+        _speedLongPress = new System.Timers.Timer(600) { AutoReset = false };
+        _speedLongPress.Elapsed += (_, _) => InvokeAsync(() => { _showSpeedPicker = true; StateHasChanged(); });
+        _speedLongPress.Start();
+    }
+
+    private void OnSpeedTouchEnd(EventArgs e)
+    {
+        _speedLongPress?.Dispose();
+        _speedLongPress = null;
+    }
+
+    private async Task SetSpeed(double speed)
+    {
+        _speed = speed;
+        _showSpeedPicker = false;
+        if (_nativePlayer is not null) await _nativePlayer.SetRateAsync(speed);
+        else await JS.InvokeVoidAsync("chroniclerAudio.setRate", _audioRef, speed);
+    }
 
     private static string FormatTime(double s)
     {

@@ -680,6 +680,11 @@ select {
 }
 
 /* ── Audio Player ─────────────────────────────────────────────────────────── */
+@keyframes playing-pulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(143,212,74,.3), var(--shadow-deep); border-color: #5a8a20; }
+    50%       { box-shadow: 0 0 24px rgba(143,212,74,.6), 0 0 48px rgba(143,212,74,.2), var(--shadow-deep); border-color: #8fd44a; }
+}
+
 .audio-player {
     background: var(--surface);
     background-image:
@@ -697,6 +702,18 @@ select {
     gap: 1rem;
     box-shadow: var(--glow-brass), var(--shadow-deep), inset 0 1px 0 rgba(255,200,80,.1);
     position: relative;
+    transition: border-color .5s, box-shadow .5s;
+}
+
+.audio-player-playing {
+    animation: playing-pulse 3s ease-in-out infinite;
+    background-image:
+        linear-gradient(180deg, rgba(143,212,74,.06) 0%, transparent 30%),
+        repeating-linear-gradient(
+            90deg,
+            rgba(143,212,74,.015) 0px, rgba(143,212,74,.015) 1px,
+            transparent 1px, transparent 24px
+        );
 }
 
 /* Panel label */
@@ -842,6 +859,63 @@ select {
     color: var(--parchment-dim);
     text-transform: uppercase;
     letter-spacing: 1px;
+}
+
+.speed-display {
+    font-family: var(--font-serif);
+    font-size: .82rem;
+    font-weight: 700;
+    color: var(--brass);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: .15rem .5rem;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.speed-picker-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.6);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 200;
+    padding-bottom: 2rem;
+}
+
+.speed-picker {
+    background: var(--surface);
+    border: 1px solid var(--border-brass);
+    border-radius: 12px;
+    padding: .75rem;
+    display: flex;
+    gap: .5rem;
+    box-shadow: var(--glow-brass), 0 -8px 32px rgba(0,0,0,.5);
+}
+
+.speed-option {
+    background: var(--surface2);
+    color: var(--parchment-dim);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .6rem 1rem;
+    font-family: var(--font-serif);
+    font-size: .9rem;
+    cursor: pointer;
+    transition: all .15s;
+    min-width: 54px;
+    text-align: center;
+}
+
+.speed-option:active { transform: scale(.95); }
+
+.speed-option-active {
+    background: linear-gradient(135deg, #3a6010, #5a9020);
+    color: #e8ffd0;
+    border-color: #8fd44a;
+    box-shadow: 0 0 8px rgba(143,212,74,.4);
 }
 
 .player-progress { width: 100%; }
