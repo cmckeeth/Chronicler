@@ -1023,8 +1023,7 @@ select {
     body::before { display: none; }
     .library-header { flex-direction: column; align-items: stretch; }
     .library-toolbar { max-width: 100%; }
-    .book-header { flex-direction: column; }
-    .book-cover-large { width: 100%; height: auto; max-height: 250px; }
+    .book-cover-large { width: 80px; height: 120px; }
     .audio-player { padding: 1.2rem 1rem; }
 
     /* Exactly 3 cards per row on phones */
