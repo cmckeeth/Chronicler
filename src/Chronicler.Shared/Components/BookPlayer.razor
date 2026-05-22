@@ -73,8 +73,6 @@ else
                 {
                     <p class="narrator">@_book.Narrator</p>
                 }
-                <button class="btn-secondary" style="margin-top:.5rem;font-size:.7rem"
-                        @onclick="ResetBook" title="Reset all chapters">⚙ Reset All</button>
             </div>
         </div>
 
@@ -163,6 +161,10 @@ else
                 <button class="btn-secondary" @onclick="() => _showBookmarkInput = false">Cancel</button>
             </div>
         }
+
+        <div style="display:flex;justify-content:center;padding:.75rem 0 .25rem;border-top:1px solid var(--border);margin-top:.5rem">
+            <button class="btn-secondary" style="font-size:.7rem;opacity:.5" @onclick="ResetBook">⚙ Reset All Progress</button>
+        </div>
     </div>
 }
 

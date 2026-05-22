@@ -174,7 +174,6 @@ export default function Book() {
           <h1>{book.title}</h1>
           <h2>{book.author}</h2>
           {book.narrator && <p className="narrator">{book.narrator}</p>}
-          <button className="btn-secondary" style={{fontSize:'.7rem',marginTop:'.5rem'}} onClick={resetBook}>⚙ Reset All</button>
         </div>
       </div>
 
@@ -257,6 +256,10 @@ export default function Book() {
           <button className="btn-secondary" onClick={() => setShowBmInput(false)}>Cancel</button>
         </div>
       )}
+
+      <div style={{display:'flex',justifyContent:'center',padding:'.75rem 0 .25rem',borderTop:'1px solid var(--border)',marginTop:'.5rem'}}>
+        <button className="btn-secondary" style={{fontSize:'.7rem',opacity:.5}} onClick={resetBook}>⚙ Reset All Progress</button>
+      </div>
 
       {showMetaEditor && (
         <MetaEditor
