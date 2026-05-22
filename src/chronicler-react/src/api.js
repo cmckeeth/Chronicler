@@ -110,19 +110,3 @@ export const chaptersApi = {
   }
 };
 
-export const bookmarksApi = {
-  async list(bookId) {
-    const res = await apiFetch(`/api/bookmarks/${bookId}`);
-    return res.json();
-  },
-  async add(bookId, positionSeconds, label) {
-    const res = await apiFetch(`/api/bookmarks/${bookId}`, {
-      method: 'POST',
-      body: JSON.stringify({ positionSeconds, label })
-    });
-    return res.json();
-  },
-  async remove(id) {
-    await apiFetch(`/api/bookmarks/${id}`, { method: 'DELETE' });
-  }
-};
