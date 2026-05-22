@@ -10,7 +10,7 @@ API_UPDATES_DIR="updates"
 LAST_VER=$(ls "$API_UPDATES_DIR"/Chronicler-v*.apk 2>/dev/null \
     | sed 's/.*Chronicler-v\(.*\)\.apk/\1/' \
     | sort -t. -k1,1n -k2,2n -k3,3n \
-    | tail -n1)
+    | tail -n1) || true
 
 if [[ -z "$LAST_VER" ]]; then
     LAST_VER=$(grep '<ApplicationDisplayVersion>' "$APP_CSPROJ" | sed 's/.*>\(.*\)<.*/\1/' | head -n1)
