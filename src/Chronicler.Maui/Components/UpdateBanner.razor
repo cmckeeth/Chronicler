@@ -4,7 +4,7 @@
 <div class="status-bar">
     <span class="status-indicator @(_connected ? "status-online" : "status-offline")"></span>
     <span class="status-version">v@(AppInfo.VersionString)</span>
-    @if (_updateAvailable)
+    @if (_updateAvailable && _isAndroid)
     {
         <span class="status-update" @onclick="DownloadUpdate">
             ⚡ v@_latestVersion available — tap to install
@@ -25,6 +25,7 @@
     private bool _updateAvailable;
     private string? _latestVersion;
     private PeriodicTimer? _timer;
+    private static readonly bool _isAndroid = DeviceInfo.Platform == DevicePlatform.Android;
 
     protected override async Task OnInitializedAsync()
     {
