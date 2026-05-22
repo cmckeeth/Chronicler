@@ -593,20 +593,21 @@ select {
     letter-spacing: .5px;
 }
 
-.book-author-row {
+.book-meta-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: .35rem .8rem;
+    margin-top: .4rem;
     font-size: .82rem;
-    color: var(--parchment-dim);
     font-style: italic;
-    margin-top: .3rem;
-    padding: 0 1.4rem .6rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.book-author-row .book-author-label {
-    color: var(--brass);
-}
+.book-author-label { color: var(--brass); }
+.book-narrator-label { color: var(--parchment-dim); }
 
 .narrator {
     color: var(--copper-light);

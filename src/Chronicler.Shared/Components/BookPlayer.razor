@@ -70,11 +70,11 @@ else
                 <div class="book-title-main">@_book.Title</div>
             </div>
         </div>
-        <div class="book-author-row">
+        <div class="book-meta-box">
             <span class="book-author-label">@_book.Author</span>
             @if (_book.Narrator is not null)
             {
-                <span class="narrator"> · @_book.Narrator</span>
+                <span class="book-narrator-label"> · @_book.Narrator</span>
             }
         </div>
 
