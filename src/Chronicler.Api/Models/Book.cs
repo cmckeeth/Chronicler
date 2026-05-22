@@ -14,7 +14,5 @@ public class Book
     public double DurationSeconds { get; set; }
     public DateTime AddedAt { get; set; } = DateTime.UtcNow;
 
-    public ICollection<UserProgress> Progresses { get; set; } = [];
-    public ICollection<Bookmark> Bookmarks { get; set; } = [];
     public ICollection<Chapter> Chapters { get; set; } = [];
 }
