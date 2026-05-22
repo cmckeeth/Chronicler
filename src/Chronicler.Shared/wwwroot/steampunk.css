@@ -448,30 +448,69 @@ select {
     position: relative;
 }
 
-/* Favorite star */
-.btn-favorite {
+/* Favorite badge (shown on favorited cards) */
+.book-favorite-badge {
     position: absolute;
     top: .3rem; left: .4rem;
-    background: none;
-    border: none;
-    color: var(--border-brass);
-    font-size: .85rem;
-    opacity: .4;
-    cursor: pointer;
-    z-index: 2;
-    padding: 0;
-    line-height: 1;
-    transition: opacity .15s, color .15s, text-shadow .15s;
-}
-.btn-favorite:hover { opacity: 1; }
-.btn-favorite-active {
     color: #f0b830;
-    opacity: 1;
+    font-size: 1.1rem;
     text-shadow: 0 0 8px rgba(240,184,48,.7);
+    pointer-events: none;
+    z-index: 2;
+    line-height: 1;
 }
+
 .book-card-favorite {
     border-color: rgba(240,184,48,.4);
     box-shadow: 0 0 12px rgba(240,184,48,.15);
+}
+
+/* Long-press context menu */
+.book-card-menu-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.6);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.book-card-menu {
+    background: var(--surface);
+    border: 1px solid var(--border-brass);
+    border-radius: var(--radius);
+    padding: .5rem 0;
+    min-width: 220px;
+    box-shadow: 0 0 30px rgba(184,138,66,.3), 0 8px 32px rgba(0,0,0,.7);
+}
+
+.book-card-menu-title {
+    padding: .5rem 1.2rem .75rem;
+    font-family: var(--font-serif);
+    font-size: .85rem;
+    color: var(--brass);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: .25rem;
+    font-style: italic;
+}
+
+.book-card-menu-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: .75rem 1.2rem;
+    color: var(--parchment);
+    font-family: var(--font-serif);
+    font-size: .9rem;
+    cursor: pointer;
+    transition: background .15s;
+}
+.book-card-menu-item:hover, .book-card-menu-item:active {
+    background: var(--surface2);
+    color: var(--brass);
 }
 
 /* Corner rivets */

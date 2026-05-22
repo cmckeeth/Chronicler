@@ -1,9 +1,14 @@
 @inject NavigationManager Nav
 @inject ApiClient Api
 
-<div class="book-card @(Book.IsFavorite ? "book-card-favorite" : "")" @onclick="Navigate">
-    <button class="btn-favorite @(Book.IsFavorite ? "btn-favorite-active" : "")"
-            @onclick:stopPropagation="true" @onclick="ToggleFavorite">★</button>
+<div class="book-card @(Book.IsFavorite ? "book-card-favorite" : "")"
+     @onclick="OnClick"
+     @ontouchstart="OnTouchStart" @ontouchend="OnTouchEnd" @ontouchmove="OnTouchEnd"
+     @onmousedown="OnTouchStart" @onmouseup="OnTouchEnd" @onmouseleave="OnTouchEnd">
+    @if (Book.IsFavorite)
+    {
+        <span class="book-favorite-badge">★</span>
+    }
     <div class="book-cover">
         @if (_coverSrc is not null)
         {
@@ -28,11 +33,29 @@
     </div>
 </div>
 
+@if (_showMenu)
+{
+    <div class="book-card-menu-overlay" @onclick="CloseMenu">
+        <div class="book-card-menu" @onclick:stopPropagation="true">
+            <div class="book-card-menu-title">@Book.Title</div>
+            <button class="book-card-menu-item" @onclick="ToggleFavorite">
+                @(Book.IsFavorite ? "★ Remove from Favorites" : "☆ Add to Favorites")
+            </button>
+            <button class="book-card-menu-item" @onclick="NavigateFromMenu">
+                ▶ Open Book
+            </button>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter, EditorRequired] public BookDto Book { get; set; } = null!;
 
     private int _loadedBookId = -1;
     private string? _coverSrc;
+    private bool _showMenu;
+    private System.Timers.Timer? _longPress;
+    private bool _longPressTriggered;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -45,18 +68,50 @@
         {
             var bookId = Book.Id;
             var src = await Api.GetCoverDataUriAsync(bookId);
-            // Discard if the book changed while we were loading
             if (_loadedBookId == bookId)
                 _coverSrc = src;
         }
     }
 
-    private void Navigate() => Nav.NavigateTo($"/book/{Book.Id}");
+    private void OnTouchStart(EventArgs e)
+    {
+        _longPressTriggered = false;
+        _longPress?.Dispose();
+        _longPress = new System.Timers.Timer(600) { AutoReset = false };
+        _longPress.Elapsed += (_, _) => InvokeAsync(() =>
+        {
+            _longPressTriggered = true;
+            _showMenu = true;
+            StateHasChanged();
+        });
+        _longPress.Start();
+    }
+
+    private void OnTouchEnd(EventArgs e)
+    {
+        _longPress?.Dispose();
+        _longPress = null;
+    }
+
+    private void OnClick()
+    {
+        if (_longPressTriggered) return;
+        Nav.NavigateTo($"/book/{Book.Id}");
+    }
+
+    private void CloseMenu() => _showMenu = false;
+
+    private void NavigateFromMenu()
+    {
+        _showMenu = false;
+        Nav.NavigateTo($"/book/{Book.Id}");
+    }
 
     private async Task ToggleFavorite()
     {
         var newVal = await Api.ToggleFavoriteAsync(Book.Id);
         Book = Book with { IsFavorite = newVal };
+        _showMenu = false;
         StateHasChanged();
     }
 }
