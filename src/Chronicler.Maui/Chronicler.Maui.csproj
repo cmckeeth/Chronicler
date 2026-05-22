@@ -25,7 +25,7 @@
         <!-- App Identifier -->
         <ApplicationId>com.corbin.chronicler</ApplicationId>
 
-        <!-- Versions -->
+        <!-- Versions — auto-synced from server on macOS builds via SyncVersionFromServer target below -->
         <ApplicationDisplayVersion>2.0.5</ApplicationDisplayVersion>
         <ApplicationVersion>205</ApplicationVersion>
 
@@ -61,5 +61,6 @@
     <ItemGroup>
       <ProjectReference Include="..\Chronicler.Shared\Chronicler.Shared.csproj" />
     </ItemGroup>
+
 
 </Project>
