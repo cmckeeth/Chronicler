@@ -30,7 +30,7 @@ public class iOSAudioPlayerService(IServiceProvider services) : IAudioPlayerServ
         if (_sessionConfigured) return;
         _sessionConfigured = true;
         var session = AVAudioSession.SharedInstance();
-        session.SetCategory(AVAudioSession.CategoryPlayback, out _);
+        session.SetCategory(AVAudioSessionCategory.Playback, AVAudioSessionCategoryOptions.DefaultToSpeaker, out _);
         session.SetActive(true, out _);
     }
 
