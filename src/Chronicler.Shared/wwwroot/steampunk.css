@@ -560,8 +560,8 @@ select {
 .book-header::after  { content: '✦'; position: absolute; bottom: .6rem; right: .8rem; color: var(--border-brass); font-size: .9rem; opacity: .5; }
 
 .book-cover-large {
-    width: 130px;
-    height: 195px;
+    width: 90px;
+    height: 135px;
     object-fit: cover;
     border-radius: var(--radius);
     flex-shrink: 0;
@@ -572,14 +572,41 @@ select {
 
 .book-info {
     flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: .6rem;
-    padding-top: .3rem;
+    justify-content: center;
 }
 
-.book-info h1 { font-size: 1.2rem; }
-.book-info h2 { font-size: .85rem; }
+.book-title-main {
+    font-family: var(--font-serif);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--parchment);
+    text-shadow: var(--glow-brass);
+    /* max 3 lines, then truncate */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.3;
+    letter-spacing: .5px;
+}
+
+.book-author-row {
+    font-size: .82rem;
+    color: var(--parchment-dim);
+    font-style: italic;
+    margin-top: .3rem;
+    padding: 0 1.4rem .6rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.book-author-row .book-author-label {
+    color: var(--brass);
+}
 
 .narrator {
     color: var(--copper-light);

@@ -67,13 +67,15 @@ else
                 </div>
             }
             <div class="book-info">
-                <h1>@_book.Title</h1>
-                <h2>@_book.Author</h2>
-                @if (_book.Narrator is not null)
-                {
-                    <p class="narrator">@_book.Narrator</p>
-                }
+                <div class="book-title-main">@_book.Title</div>
             </div>
+        </div>
+        <div class="book-author-row">
+            <span class="book-author-label">@_book.Author</span>
+            @if (_book.Narrator is not null)
+            {
+                <span class="narrator"> · @_book.Narrator</span>
+            }
         </div>
 
         @if (_currentChapter is not null)
