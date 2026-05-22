@@ -5,29 +5,23 @@
 @implements IAsyncDisposable
 
 <div class="audio-player">
-    <div class="player-info">
-        <span class="player-title">@BookTitle</span>
-        @if (Duration > 0)
-        {
-            <span class="player-time">@FormatTime(CurrentPosition) / @FormatTime(Duration)</span>
-        }
-    </div>
+    <span class="player-title">@BookTitle</span>
+
+    @if (Duration > 0)
+    {
+        <div class="player-time-display">
+            <span class="player-time-current">@FormatTime(CurrentPosition)</span>
+            <span class="player-time-sep">/</span>
+            <span class="player-time-total">@FormatTime(Duration)</span>
+        </div>
+    }
 
     <div class="player-controls">
-        <button class="btn-icon" @onclick="SkipBack">⏮ 30s</button>
+        <button class="btn-skip" @onclick="SkipBack">⏮<span>30</span></button>
         <button class="btn-play" @onclick="TogglePlay">
             @(_playing ? "⏸" : "▶")
         </button>
-        <button class="btn-icon" @onclick="SkipForward">30s ⏭</button>
-
-        <select class="speed-select" @onchange="OnSpeedChange" value="@_speed">
-            <option value="0.75">0.75×</option>
-            <option value="1">1×</option>
-            <option value="1.25">1.25×</option>
-            <option value="1.5">1.5×</option>
-            <option value="2">2×</option>
-        </select>
-
+        <button class="btn-skip" @onclick="SkipForward"><span>30</span>⏭</button>
     </div>
 
     @if (Duration > 0)
@@ -37,14 +31,23 @@
                    @onchange="OnSeek" class="progress-bar" />
         </div>
     }
+
+    <div class="player-speed-row">
+        <span class="player-speed-label">Speed</span>
+        <select class="speed-select" @onchange="OnSpeedChange" value="@_speed">
+            <option value="0.75">0.75×</option>
+            <option value="1">1×</option>
+            <option value="1.25">1.25×</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2×</option>
+        </select>
+    </div>
 </div>
 
 @* HTML5 audio element — only used when native service is not available *@
 @if (_nativePlayer is null)
 {
-    <audio id="chronicler-audio" @ref="_audioRef" preload="auto">
-        <source src="@Src" />
-    </audio>
+    <audio id="chronicler-audio" @ref="_audioRef" preload="auto"></audio>
 }
 
 @code {
