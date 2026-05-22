@@ -23,8 +23,21 @@ public class iOSAudioPlayerService(IServiceProvider services) : IAudioPlayerServ
     public event Action<double>? PositionChanged;
     public event Action? Ended;
 
+    private static bool _sessionConfigured;
+
+    private static void ConfigureAudioSession()
+    {
+        if (_sessionConfigured) return;
+        _sessionConfigured = true;
+        var session = AVAudioSession.SharedInstance();
+        session.SetCategory(AVAudioSession.CategoryPlayback, out _);
+        session.SetActive(true, out _);
+    }
+
     public async Task PlayAsync(string url)
     {
+        ConfigureAudioSession();
+
         // Check for local downloaded file first
         if (Downloads is not null &&
             Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
