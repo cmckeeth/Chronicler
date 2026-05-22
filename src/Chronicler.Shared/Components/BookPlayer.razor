@@ -91,8 +91,25 @@ else
         @if (_chapters.Count > 0)
         {
             <div class="chapter-list">
-                <div class="chapter-list-header">
+                <div class="chapter-list-header" style="display:flex;justify-content:space-between;align-items:center">
                     <h3>Chapters</h3>
+                    @if (_downloadSvc is not null)
+                    {
+                        var allDownloaded = _downloadStates.Values.All(s => s == DownloadState.Downloaded);
+                        var anyDownloaded = _downloadStates.Values.Any(s => s == DownloadState.Downloaded);
+                        @if (!allDownloaded && !_downloadingAll)
+                        {
+                            <button class="btn-secondary" style="font-size:.65rem" @onclick="DownloadAll">⬇ All</button>
+                        }
+                        else if (_downloadingAll)
+                        {
+                            <span style="font-size:.65rem;color:var(--brass);font-style:italic">⚙ Downloading...</span>
+                        }
+                        else if (anyDownloaded)
+                        {
+                            <button class="btn-secondary" style="font-size:.65rem" @onclick="DeleteAllDownloads">✕ Remove all</button>
+                        }
+                    }
                 </div>
                 @foreach (var (chapter, progress) in _chapters.Zip(_chapterProgresses))
                 {
@@ -165,6 +182,7 @@ else
     private System.Timers.Timer? _longPressTimer;
     private IDownloadService? _downloadSvc;
     private Dictionary<int, DownloadState> _downloadStates = [];
+    private bool _downloadingAll;
     private List<ChapterDto> _chapters = [];
     private List<ChapterProgressDto> _chapterProgresses = [];
     private ChapterDto? _currentChapter;
@@ -322,6 +340,39 @@ else
 
 
 
+
+    private async Task DownloadAll()
+    {
+        if (_downloadSvc is null || _book is null) return;
+        _downloadingAll = true;
+        StateHasChanged();
+        foreach (var chapter in _chapters)
+        {
+            if (_downloadStates.GetValueOrDefault(chapter.Id) == DownloadState.Downloaded) continue;
+            _downloadStates[chapter.Id] = DownloadState.Downloading;
+            StateHasChanged();
+            try
+            {
+                await _downloadSvc.DownloadAsync(
+                    chapter.Id, _book.Id, _book.Title, chapter.Title,
+                    chapter.TrackNumber, Api.GetChapterAudioUrl(chapter.Id));
+                _downloadStates[chapter.Id] = DownloadState.Downloaded;
+            }
+            catch { _downloadStates[chapter.Id] = DownloadState.None; }
+            StateHasChanged();
+        }
+        _downloadingAll = false;
+        StateHasChanged();
+    }
+
+    private async Task DeleteAllDownloads()
+    {
+        if (_downloadSvc is null || _book is null) return;
+        await _downloadSvc.DeleteBookAsync(_book.Id);
+        foreach (var ch in _chapters)
+            _downloadStates[ch.Id] = DownloadState.None;
+        StateHasChanged();
+    }
 
     private async Task DownloadChapter(ChapterDto chapter)
     {
