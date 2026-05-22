@@ -69,7 +69,6 @@
     private string _filter = "all";
     private string? _error;
     private bool _loading = true;
-    private bool _scanning;
 
     private bool _hasDownloads;
 
@@ -148,10 +147,8 @@
 
     private async Task ScanLibrary()
     {
-        _scanning = true;
         await Api.ScanLibraryAsync();
         await LoadBooks();
-        _scanning = false;
     }
 
 }
