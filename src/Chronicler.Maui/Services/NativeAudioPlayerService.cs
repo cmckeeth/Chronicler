@@ -1,3 +1,4 @@
+#if ANDROID
 using Android.Media;
 using Android.Util;
 using Chronicler.Shared.Services;
@@ -135,3 +136,4 @@ public class NativeAudioPlayerService(IServiceProvider services) : IAudioPlayerS
         _player = null;
     }
 }
+#endif

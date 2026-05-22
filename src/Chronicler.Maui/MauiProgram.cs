@@ -35,7 +35,9 @@ public static class MauiProgram
         catch { /* SecureStorage unavailable — start unauthenticated */ }
 
         builder.Services.AddMauiBlazorWebView();
+#if ANDROID
         builder.Services.AddSingleton<IAudioPlayerService, NativeAudioPlayerService>();
+#endif
         builder.Services.AddSingleton<IDownloadService, MauiDownloadService>();
         builder.Services.AddSingleton<ITokenStorage>(tokenStorage);
         builder.Services.AddSingleton(authState);
