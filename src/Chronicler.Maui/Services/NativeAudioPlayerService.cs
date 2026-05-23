@@ -13,6 +13,7 @@ public class NativeAudioPlayerService(IServiceProvider services) : IAudioPlayerS
     private MediaPlayer? _player;
     private System.Timers.Timer? _positionTimer;
     private string _currentUrl = "";
+    private bool _intendedPlaying; // tracks our intended state, not MediaPlayer.IsPlaying
 
     private static void Dbg(string msg)
     {
@@ -20,7 +21,7 @@ public class NativeAudioPlayerService(IServiceProvider services) : IAudioPlayerS
         System.Diagnostics.Debug.WriteLine($"[ChroniclerAudio] {msg}");
     }
 
-    public bool IsPlaying => _player?.IsPlaying ?? false;
+    public bool IsPlaying => _intendedPlaying;
     public bool IsPlayingLocally => !string.IsNullOrEmpty(_currentUrl) &&
         !_currentUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase);
     public double CurrentPosition => (_player?.CurrentPosition ?? 0) / 1000.0;
@@ -53,6 +54,7 @@ public class NativeAudioPlayerService(IServiceProvider services) : IAudioPlayerS
             _player?.Release();
             _player = null;
             _currentUrl = url;
+            _intendedPlaying = false;
         }
 
         if (_player is null)
@@ -71,8 +73,20 @@ public class NativeAudioPlayerService(IServiceProvider services) : IAudioPlayerS
             else
                 await _player.SetDataSourceAsync(Android.App.Application.Context, Android.Net.Uri.Parse(url)!);
 
-            _player.Completion += (_, _) => { Dbg("Completion"); StopTimer(); StateChanged?.Invoke(); Ended?.Invoke(); };
-            _player.Error += (_, e) => { Dbg($"Error: what={e.What} extra={e.Extra}"); StateChanged?.Invoke(); };
+            _player.Completion += (_, _) =>
+            {
+                Dbg("Completion");
+                _intendedPlaying = false;
+                StopTimer();
+                StateChanged?.Invoke();
+                Ended?.Invoke();
+            };
+            _player.Error += (_, e) =>
+            {
+                Dbg($"Error: what={e.What} extra={e.Extra}");
+                _intendedPlaying = false;
+                StateChanged?.Invoke();
+            };
 
             Dbg("Prepare()");
             _player.Prepare();
@@ -81,6 +95,7 @@ public class NativeAudioPlayerService(IServiceProvider services) : IAudioPlayerS
 
         Dbg("Start()");
         _player.Start();
+        _intendedPlaying = true;
         StartTimer();
         StateChanged?.Invoke();
         Dbg($"Playing — isPlaying={_player.IsPlaying}");
@@ -88,9 +103,9 @@ public class NativeAudioPlayerService(IServiceProvider services) : IAudioPlayerS
 
     public Task PauseAsync()
     {
-        Dbg($"PauseAsync — player={_player is not null} isPlaying={_player?.IsPlaying}");
+        Dbg($"PauseAsync — intendedPlaying={_intendedPlaying}");
         _player?.Pause();
-        Dbg($"PauseAsync after Pause() — isPlaying={_player?.IsPlaying}");
+        _intendedPlaying = false;
         StopTimer();
         StateChanged?.Invoke();
         return Task.CompletedTask;

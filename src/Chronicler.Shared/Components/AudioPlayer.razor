@@ -128,13 +128,11 @@
     {
         if (_nativePlayer is not null)
         {
-            await Api.DiagAsync($"TogglePlay: _playing={_playing} IsPlaying={_nativePlayer.IsPlaying}");
             if (_playing)
             {
                 _playing = false;
                 StateHasChanged();
                 await _nativePlayer.PauseAsync();
-                await Api.DiagAsync($"After PauseAsync: IsPlaying={_nativePlayer.IsPlaying}");
                 // Save immediately on pause
                 await OnProgressChanged.InvokeAsync(CurrentPosition);
             }
