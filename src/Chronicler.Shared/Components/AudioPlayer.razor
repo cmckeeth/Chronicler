@@ -109,14 +109,16 @@
             await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, StartPosition);
     }
 
+    private string _lastSrc = "";
+
     protected override async Task OnParametersSetAsync()
     {
-        // Native path: load the new URL when Src changes
-        if (_nativePlayer is not null && !string.IsNullOrEmpty(Src))
+        // Native path: only reset state when the chapter actually changes
+        if (_nativePlayer is not null && !string.IsNullOrEmpty(Src) && Src != _lastSrc)
         {
+            _lastSrc = Src;
             _playing = false;
             CurrentPosition = StartPosition;
-            // Don't auto-play on load — wait for play button
         }
     }
 
