@@ -138,6 +138,8 @@
             }
             else
             {
+                _playing = true;
+                StateHasChanged();
                 await _nativePlayer.PlayAsync(Src);
                 // Seek to saved position on first play
                 if (!_hasStartedOnce && StartPosition > 1)
