@@ -89,13 +89,10 @@ public class NativeAudioPlayerService(IServiceProvider services) : IAudioPlayerS
     public Task PauseAsync()
     {
         Dbg($"PauseAsync — player={_player is not null} isPlaying={_player?.IsPlaying}");
-        MainThread.BeginInvokeOnMainThread(() =>
-        {
-            _player?.Pause();
-            Dbg($"PauseAsync after Pause() — isPlaying={_player?.IsPlaying}");
-            StopTimer();
-            StateChanged?.Invoke();
-        });
+        _player?.Pause();
+        Dbg($"PauseAsync after Pause() — isPlaying={_player?.IsPlaying}");
+        StopTimer();
+        StateChanged?.Invoke();
         return Task.CompletedTask;
     }
 

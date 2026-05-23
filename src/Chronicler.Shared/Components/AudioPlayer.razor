@@ -134,6 +134,7 @@
                 _playing = false;
                 StateHasChanged();
                 await _nativePlayer.PauseAsync();
+                await Api.DiagAsync($"After PauseAsync: IsPlaying={_nativePlayer.IsPlaying}");
                 // Save immediately on pause
                 await OnProgressChanged.InvokeAsync(CurrentPosition);
             }
