@@ -1,10 +1,29 @@
+using System.Text.Json;
+
 namespace Chronicler.Maui;
 
 public static class ApiConfig
 {
-    public const string BaseUrl = "http://192.168.1.71:5160";
+    private static string? _baseUrl;
 
-    public const string HealthUrl = BaseUrl + "/api/health";
-    public const string UpdateVersionUrl = BaseUrl + "/api/update/version";
-    public const string UpdateApkUrl = BaseUrl + "/api/update/apk";
+    public static string BaseUrl => _baseUrl ??= LoadBaseUrl();
+
+    public static string HealthUrl => BaseUrl + "/api/health";
+    public static string UpdateVersionUrl => BaseUrl + "/api/update/version";
+    public static string UpdateApkUrl => BaseUrl + "/api/update/apk";
+
+    private static string LoadBaseUrl()
+    {
+        try
+        {
+            using var stream = FileSystem.OpenAppPackageFileAsync("appsettings.json").GetAwaiter().GetResult();
+            using var reader = new StreamReader(stream);
+            var json = reader.ReadToEnd();
+            var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("ApiBaseUrl", out var val))
+                return val.GetString()!.TrimEnd('/');
+        }
+        catch { }
+        return "http://192.168.1.71:5160"; // fallback
+    }
 }
