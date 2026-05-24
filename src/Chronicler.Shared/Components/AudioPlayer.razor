@@ -4,7 +4,7 @@
 @using Microsoft.Extensions.DependencyInjection
 @implements IAsyncDisposable
 
-<div class="audio-player @(_playing ? "audio-player-playing" : "")">
+<div class="audio-player @(_nativePlayer?.IsPlaying == true || _jsPlaying ? "audio-player-playing" : "")">
     <span class="player-title">@BookTitle</span>
 
     @if (Duration > 0)
@@ -19,7 +19,7 @@
     <div class="player-controls">
         <button class="btn-skip" @onclick="SkipBack">⏮<span>30</span></button>
         <button class="btn-play" @onclick="TogglePlay">
-            @(_playing ? "⏸" : "▶")
+            @(_nativePlayer?.IsPlaying == true || _jsPlaying ? "⏸" : "▶")
         </button>
         <button class="btn-skip" @onclick="SkipForward"><span>30</span>⏭</button>
     </div>
@@ -40,15 +40,6 @@
               title="Long press to change speed">@(_speed)×</span>
     </div>
 
-    @if (_nativePlayer is not null)
-    {
-        <div class="player-footer">
-            <span class="player-source-badge @(_nativePlayer.IsPlayingLocally ? "source-local" : "source-stream")">
-                @(_nativePlayer.IsPlayingLocally ? "📱 Local" : "📡 Streaming")
-            </span>
-        </div>
-    }
-
     @if (_showSpeedPicker)
     {
         <div class="speed-picker-overlay" @onclick="() => _showSpeedPicker = false">
@@ -59,6 +50,15 @@
                             @onclick="() => SetSpeed(s)">@s×</button>
                 }
             </div>
+        </div>
+    }
+
+    @if (_nativePlayer is not null)
+    {
+        <div class="player-footer">
+            <span class="player-source-badge @(_nativePlayer.IsPlayingLocally ? "source-local" : "source-stream")">
+                @(_nativePlayer.IsPlayingLocally ? "📱 Local" : "📡 Streaming")
+            </span>
         </div>
     }
 </div>
@@ -79,12 +79,14 @@
     private ElementReference _audioRef;
     private DotNetObjectReference<AudioPlayer>? _dotnetRef;
     private IAudioPlayerService? _nativePlayer;
-    private bool _jsPlaying; // only used for web/JS path
-    private bool _playing => _nativePlayer?.IsPlaying ?? _jsPlaying;
+    private bool _jsPlaying;
     private double _speed = 1.0;
     private bool _showSpeedPicker;
     private System.Timers.Timer? _speedLongPress;
     private DateTime _lastSave = DateTime.MinValue;
+    private CancellationTokenSource? _pollCts;
+    private string _lastSrc = "";
+    private bool _hasStartedOnce;
 
     public double CurrentPosition { get; private set; }
     public double Duration { get; private set; }
@@ -94,49 +96,64 @@
         _nativePlayer = Services.GetService<IAudioPlayerService>();
         if (_nativePlayer is not null)
         {
-            _nativePlayer.StateChanged += OnNativeStateChanged;
-            _nativePlayer.PositionChanged += OnNativePositionChanged;
             _nativePlayer.Ended += OnNativeEnded;
+            _pollCts = new CancellationTokenSource();
+            _ = PollLoop(_pollCts.Token);
+        }
+    }
+
+    // Poll player state every 250ms on the Blazor sync context
+    private async Task PollLoop(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            try { await Task.Delay(250, ct); } catch { break; }
+            await InvokeAsync(async () =>
+            {
+                if (_nativePlayer is null) return;
+                CurrentPosition = _nativePlayer.CurrentPosition;
+                Duration = _nativePlayer.Duration;
+                if (_nativePlayer.IsPlaying && (DateTime.UtcNow - _lastSave).TotalSeconds >= 10)
+                {
+                    _lastSave = DateTime.UtcNow;
+                    await OnProgressChanged.InvokeAsync(CurrentPosition);
+                }
+                StateHasChanged();
+            });
         }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender || _nativePlayer is not null) return;
-
         _dotnetRef = DotNetObjectReference.Create(this);
         await JS.InvokeVoidAsync("chroniclerAudio.registerEvents", _audioRef, _dotnetRef);
         if (StartPosition > 0)
             await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, StartPosition);
     }
 
-    private string _lastSrc = "";
-
     protected override async Task OnParametersSetAsync()
     {
-        if (_nativePlayer is not null && !string.IsNullOrEmpty(Src) && Src != _lastSrc)
+        if (!string.IsNullOrEmpty(Src) && Src != _lastSrc)
         {
             _lastSrc = Src;
+            _hasStartedOnce = false;
             CurrentPosition = StartPosition;
         }
     }
-
-    private bool _hasStartedOnce;
 
     private async Task TogglePlay()
     {
         if (_nativePlayer is not null)
         {
-            if (_playing)
+            if (_nativePlayer.IsPlaying)
             {
                 await _nativePlayer.PauseAsync();
-                // Save immediately on pause
                 await OnProgressChanged.InvokeAsync(CurrentPosition);
             }
             else
             {
                 await _nativePlayer.PlayAsync(Src);
-                // Seek to saved position on first play
                 if (!_hasStartedOnce && StartPosition > 1)
                 {
                     await Api.DiagAsync($"Resuming chapter at {StartPosition:F1}s — {Src}");
@@ -179,33 +196,6 @@
         else await JS.InvokeVoidAsync("chroniclerAudio.seek", _audioRef, pos);
     }
 
-    private async Task OnSpeedChange(ChangeEventArgs e)
-    {
-        if (!double.TryParse(e.Value?.ToString(), out var speed)) return;
-        _speed = speed;
-        if (_nativePlayer is not null) await _nativePlayer.SetRateAsync(speed);
-        else await JS.InvokeVoidAsync("chroniclerAudio.setRate", _audioRef, speed);
-    }
-
-    // ── Native callbacks ──────────────────────────────────────────────────────
-
-    private void OnNativeStateChanged()
-    {
-        Duration = _nativePlayer?.Duration ?? 0;
-        InvokeAsync(StateHasChanged);
-    }
-
-    private void OnNativePositionChanged(double position)
-    {
-        CurrentPosition = position;
-        if ((DateTime.UtcNow - _lastSave).TotalSeconds >= 10)
-        {
-            _lastSave = DateTime.UtcNow;
-            InvokeAsync(() => OnProgressChanged.InvokeAsync(CurrentPosition));
-        }
-        InvokeAsync(StateHasChanged);
-    }
-
     private void OnNativeEnded()
     {
         InvokeAsync(async () => { StateHasChanged(); await OnChapterEnded.InvokeAsync(); });
@@ -229,7 +219,6 @@
         }
         await InvokeAsync(StateHasChanged);
     }
-
 
     private void OnSpeedTouchStart(EventArgs e)
     {
@@ -261,12 +250,12 @@
 
     public async ValueTask DisposeAsync()
     {
+        _pollCts?.Cancel();
+        _pollCts?.Dispose();
         if (_nativePlayer is not null)
         {
-            _nativePlayer.StateChanged -= OnNativeStateChanged;
-            _nativePlayer.PositionChanged -= OnNativePositionChanged;
             _nativePlayer.Ended -= OnNativeEnded;
-            if (_playing) await _nativePlayer.PauseAsync();
+            if (_nativePlayer.IsPlaying) await _nativePlayer.PauseAsync();
         }
         else
         {
