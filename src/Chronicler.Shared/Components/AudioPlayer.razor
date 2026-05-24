@@ -112,18 +112,18 @@
         while (!ct.IsCancellationRequested)
         {
             try { await Task.Delay(250, ct); } catch { break; }
-            try { await InvokeAsync(async () =>
+            await InvokeAsync(async () =>
             {
                 if (_nativePlayer is null) return;
-                CurrentPosition = _nativePlayer.CurrentPosition;
-                Duration = _nativePlayer.Duration;
+                try { CurrentPosition = _nativePlayer.CurrentPosition; } catch { }
+                try { Duration = _nativePlayer.Duration; } catch { }
                 if (_playing && (DateTime.UtcNow - _lastSave).TotalSeconds >= 10)
                 {
                     _lastSave = DateTime.UtcNow;
                     try { await OnProgressChanged.InvokeAsync(CurrentPosition); } catch { }
                 }
                 StateHasChanged();
-            }); } catch { }
+            });
         }
     }
 
