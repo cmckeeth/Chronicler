@@ -13,7 +13,8 @@ public class NativeAudioPlayerService(IServiceProvider services) : IAudioPlayerS
     private MediaPlayer? _player;
     private System.Timers.Timer? _positionTimer;
     private string _currentUrl = "";
-    private bool _intendedPlaying; // tracks our intended state, not MediaPlayer.IsPlaying
+    private bool _intendedPlaying;
+    private float _playbackSpeed = 1.0f;
 
     private static void Dbg(string msg)
     {
@@ -94,7 +95,17 @@ public class NativeAudioPlayerService(IServiceProvider services) : IAudioPlayerS
         }
 
         Dbg("Start()");
-        _player.Start();
+        if (_intendedPlaying && OperatingSystem.IsAndroidVersionAtLeast(23))
+        {
+            // Resume from speed=0 pause rather than Start() to avoid state machine issues
+            var pp = new PlaybackParams();
+            pp.SetSpeed(_playbackSpeed);
+            _player.PlaybackParams = pp;
+        }
+        else
+        {
+            _player.Start();
+        }
         _intendedPlaying = true;
         StartTimer();
         StateChanged?.Invoke();
@@ -104,7 +115,17 @@ public class NativeAudioPlayerService(IServiceProvider services) : IAudioPlayerS
     public Task PauseAsync()
     {
         Dbg($"PauseAsync — intendedPlaying={_intendedPlaying}");
-        _player?.Pause();
+        if (_player is not null && OperatingSystem.IsAndroidVersionAtLeast(23))
+        {
+            // Use speed=0 instead of Pause() — more reliable for streaming on Android
+            var pp = new PlaybackParams();
+            pp.SetSpeed(0.0f);
+            _player.PlaybackParams = pp;
+        }
+        else
+        {
+            _player?.Pause();
+        }
         _intendedPlaying = false;
         StopTimer();
         StateChanged?.Invoke();
@@ -119,10 +140,11 @@ public class NativeAudioPlayerService(IServiceProvider services) : IAudioPlayerS
 
     public Task SetRateAsync(double rate)
     {
-        if (_player is not null && OperatingSystem.IsAndroidVersionAtLeast(23))
+        _playbackSpeed = (float)rate;
+        if (_player is not null && _intendedPlaying && OperatingSystem.IsAndroidVersionAtLeast(23))
         {
             var pp = new PlaybackParams();
-            pp.SetSpeed((float)rate);
+            pp.SetSpeed(_playbackSpeed);
             _player.PlaybackParams = pp;
         }
         return Task.CompletedTask;
