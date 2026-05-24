@@ -126,6 +126,7 @@
 
     private async Task TogglePlay()
     {
+        await Api.DiagAsync($"TogglePlay: native={_nativePlayer is not null} _playing={_playing}");
         if (_nativePlayer is not null)
         {
             if (_playing)
