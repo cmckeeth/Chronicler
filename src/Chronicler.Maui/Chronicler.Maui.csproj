@@ -26,8 +26,8 @@
         <ApplicationId>com.corbin.chronicler</ApplicationId>
 
         <!-- Versions — auto-synced from server on macOS builds via SyncVersionFromServer target below -->
-        <ApplicationDisplayVersion>2.0.5</ApplicationDisplayVersion>
-        <ApplicationVersion>205</ApplicationVersion>
+        <ApplicationDisplayVersion>2.1.0</ApplicationDisplayVersion>
+        <ApplicationVersion>210</ApplicationVersion>
 
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">17.0</SupportedOSPlatformVersion>
