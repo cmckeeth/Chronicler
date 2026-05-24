@@ -4,7 +4,7 @@
 @using Microsoft.Extensions.DependencyInjection
 @implements IAsyncDisposable
 
-<div class="audio-player @(_nativePlayer?.IsPlaying == true || _jsPlaying ? "audio-player-playing" : "")">
+<div class="audio-player @(_playing ? "audio-player-playing" : "")">
     <span class="player-title">@BookTitle</span>
 
     @if (Duration > 0)
@@ -19,7 +19,7 @@
     <div class="player-controls">
         <button class="btn-skip" @onclick="SkipBack">⏮<span>30</span></button>
         <button class="btn-play" @onclick="TogglePlay">
-            @(_nativePlayer?.IsPlaying == true || _jsPlaying ? "⏸" : "▶")
+            @(_playing ? "⏸" : "▶")
         </button>
         <button class="btn-skip" @onclick="SkipForward"><span>30</span>⏭</button>
     </div>
@@ -79,6 +79,7 @@
     private ElementReference _audioRef;
     private DotNetObjectReference<AudioPlayer>? _dotnetRef;
     private IAudioPlayerService? _nativePlayer;
+    private bool _playing;
     private bool _jsPlaying;
     private double _speed = 1.0;
     private bool _showSpeedPicker;
@@ -108,18 +109,18 @@
         while (!ct.IsCancellationRequested)
         {
             try { await Task.Delay(250, ct); } catch { break; }
-            await InvokeAsync(async () =>
+            try { await InvokeAsync(async () =>
             {
                 if (_nativePlayer is null) return;
                 CurrentPosition = _nativePlayer.CurrentPosition;
                 Duration = _nativePlayer.Duration;
-                if (_nativePlayer.IsPlaying && (DateTime.UtcNow - _lastSave).TotalSeconds >= 10)
+                if (_playing && (DateTime.UtcNow - _lastSave).TotalSeconds >= 10)
                 {
                     _lastSave = DateTime.UtcNow;
-                    await OnProgressChanged.InvokeAsync(CurrentPosition);
+                    try { await OnProgressChanged.InvokeAsync(CurrentPosition); } catch { }
                 }
                 StateHasChanged();
-            });
+            }); } catch { }
         }
     }
 
@@ -137,6 +138,7 @@
         if (!string.IsNullOrEmpty(Src) && Src != _lastSrc)
         {
             _lastSrc = Src;
+            _playing = false;
             _hasStartedOnce = false;
             CurrentPosition = StartPosition;
         }
@@ -146,13 +148,15 @@
     {
         if (_nativePlayer is not null)
         {
-            if (_nativePlayer.IsPlaying)
+            if (_playing)
             {
+                _playing = false;
                 await _nativePlayer.PauseAsync();
                 await OnProgressChanged.InvokeAsync(CurrentPosition);
             }
             else
             {
+                _playing = true;
                 await _nativePlayer.PlayAsync(Src);
                 if (!_hasStartedOnce && StartPosition > 1)
                 {
@@ -198,15 +202,16 @@
 
     private void OnNativeEnded()
     {
+        _playing = false;
         InvokeAsync(async () => { StateHasChanged(); await OnChapterEnded.InvokeAsync(); });
     }
 
     // ── JS callbacks ──────────────────────────────────────────────────────────
 
-    [JSInvokable] public void OnJsPlay()  { _jsPlaying = true;  InvokeAsync(StateHasChanged); }
-    [JSInvokable] public void OnJsPause() { _jsPlaying = false; InvokeAsync(StateHasChanged); }
+    [JSInvokable] public void OnJsPlay()  { _playing = true;  _jsPlaying = true;  InvokeAsync(StateHasChanged); }
+    [JSInvokable] public void OnJsPause() { _playing = false; _jsPlaying = false; InvokeAsync(StateHasChanged); }
     [JSInvokable] public void OnJsMetadata(double duration) { Duration = duration; InvokeAsync(StateHasChanged); }
-    [JSInvokable] public void OnJsEnded() { _jsPlaying = false; InvokeAsync(async () => { StateHasChanged(); await OnChapterEnded.InvokeAsync(); }); }
+    [JSInvokable] public void OnJsEnded() { _playing = false; _jsPlaying = false; InvokeAsync(async () => { StateHasChanged(); await OnChapterEnded.InvokeAsync(); }); }
 
     [JSInvokable]
     public async Task OnJsTimeUpdate(double currentTime)
@@ -255,7 +260,7 @@
         if (_nativePlayer is not null)
         {
             _nativePlayer.Ended -= OnNativeEnded;
-            if (_nativePlayer.IsPlaying) await _nativePlayer.PauseAsync();
+            if (_playing) await _nativePlayer.PauseAsync();
         }
         else
         {

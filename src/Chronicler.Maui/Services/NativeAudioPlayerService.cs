@@ -95,16 +95,13 @@ public class NativeAudioPlayerService(IServiceProvider services) : IAudioPlayerS
         }
 
         Dbg("Start()");
-        if (_intendedPlaying && OperatingSystem.IsAndroidVersionAtLeast(23))
+        _player.Start();
+        // Restore speed (also resumes from speed=0 pause)
+        if (OperatingSystem.IsAndroidVersionAtLeast(23))
         {
-            // Resume from speed=0 pause rather than Start() to avoid state machine issues
             var pp = new PlaybackParams();
             pp.SetSpeed(_playbackSpeed);
-            _player.PlaybackParams = pp;
-        }
-        else
-        {
-            _player.Start();
+            try { _player.PlaybackParams = pp; } catch { }
         }
         _intendedPlaying = true;
         StartTimer();
