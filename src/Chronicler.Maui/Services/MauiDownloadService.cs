@@ -77,10 +77,26 @@ public class MauiDownloadService : IDownloadService
         Directory.CreateDirectory(DownloadsDir);
         var ext = Path.GetExtension(audioUrl.Split('?')[0]);
         if (string.IsNullOrEmpty(ext)) ext = ".mp3";
-        var localPath = Path.Combine(DownloadsDir, $"{chapterId}{ext}");
+        var localPath = Path.Combine(DownloadsDir, $"{chapterId}{ext}"); // may be updated after Content-Type check
 
         using var resp = await Http.GetAsync(audioUrl, HttpCompletionOption.ResponseHeadersRead, ct);
         resp.EnsureSuccessStatusCode();
+
+        // Determine extension from Content-Type if URL has none
+        if (string.IsNullOrEmpty(ext) || ext == ".mp3")
+        {
+            var ct2 = resp.Content.Headers.ContentType?.MediaType;
+            ext = ct2 switch
+            {
+                "audio/ogg" or "audio/opus" => ".opus",
+                "audio/mp4" or "audio/x-m4a" or "audio/m4a" => ".m4a",
+                "audio/aac" => ".aac",
+                "audio/flac" => ".flac",
+                "audio/wav" => ".wav",
+                _ => ext
+            };
+            localPath = Path.Combine(DownloadsDir, $"{chapterId}{ext}");
+        }
 
         var total = resp.Content.Headers.ContentLength ?? -1;
         long downloaded = 0;
