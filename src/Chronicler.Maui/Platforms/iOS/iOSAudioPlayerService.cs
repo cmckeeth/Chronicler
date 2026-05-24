@@ -41,7 +41,7 @@ public class iOSAudioPlayerService(IServiceProvider services) : IAudioPlayerServ
         // Check for local downloaded file first
         if (Downloads is not null &&
             Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
-            int.TryParse(uri.Segments.Last(), out var chapterId))
+            int.TryParse(uri.Segments.FirstOrDefault(s => int.TryParse(s.TrimEnd('/'), out _))?.TrimEnd('/'), out var chapterId))
         {
             var localPath = await Downloads.GetLocalPathAsync(chapterId);
             if (localPath is not null) { url = localPath; }

@@ -39,7 +39,7 @@ public class NativeAudioPlayerService(IServiceProvider services) : IAudioPlayerS
         {
             if (Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
                 uri.Segments.Length >= 2 &&
-                int.TryParse(uri.Segments.Last(), out var chapterId))
+                int.TryParse(uri.Segments.FirstOrDefault(s => int.TryParse(s.TrimEnd('/'), out _))?.TrimEnd('/'), out var chapterId))
             {
                 var localPath = await Downloads.GetLocalPathAsync(chapterId);
                 if (localPath is not null) { url = localPath; Dbg($"Using local file: {url}"); }
