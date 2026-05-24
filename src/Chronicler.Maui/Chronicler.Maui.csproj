@@ -50,6 +50,8 @@
 
         <!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
         <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+        <!-- appsettings.json lives in Platforms/Android to avoid iOS bundle conflicts -->
+        <MauiAsset Include="Platforms\Android\appsettings.json" LogicalName="appsettings.json" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'" />
     </ItemGroup>
 
     <ItemGroup>
