@@ -79,7 +79,8 @@
     private ElementReference _audioRef;
     private DotNetObjectReference<AudioPlayer>? _dotnetRef;
     private IAudioPlayerService? _nativePlayer;
-    private bool _playing;
+    private bool _jsPlaying; // only used for web/JS path
+    private bool _playing => _nativePlayer?.IsPlaying ?? _jsPlaying;
     private double _speed = 1.0;
     private bool _showSpeedPicker;
     private System.Timers.Timer? _speedLongPress;
@@ -113,11 +114,9 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        // Native path: only reset state when the chapter actually changes
         if (_nativePlayer is not null && !string.IsNullOrEmpty(Src) && Src != _lastSrc)
         {
             _lastSrc = Src;
-            _playing = false;
             CurrentPosition = StartPosition;
         }
     }
@@ -126,21 +125,16 @@
 
     private async Task TogglePlay()
     {
-        await Api.DiagAsync($"TogglePlay: native={_nativePlayer is not null} _playing={_playing}");
         if (_nativePlayer is not null)
         {
             if (_playing)
             {
-                _playing = false;
-                StateHasChanged();
                 await _nativePlayer.PauseAsync();
                 // Save immediately on pause
                 await OnProgressChanged.InvokeAsync(CurrentPosition);
             }
             else
             {
-                _playing = true;
-                StateHasChanged();
                 await _nativePlayer.PlayAsync(Src);
                 // Seek to saved position on first play
                 if (!_hasStartedOnce && StartPosition > 1)
@@ -157,7 +151,7 @@
         }
         else
         {
-            if (_playing)
+            if (_jsPlaying)
                 await JS.InvokeVoidAsync("chroniclerAudio.pause", _audioRef);
             else
                 await JS.InvokeVoidAsync("chroniclerAudio.play", _audioRef);
@@ -197,7 +191,6 @@
 
     private void OnNativeStateChanged()
     {
-        _playing = _nativePlayer?.IsPlaying ?? false;
         Duration = _nativePlayer?.Duration ?? 0;
         InvokeAsync(StateHasChanged);
     }
@@ -215,16 +208,15 @@
 
     private void OnNativeEnded()
     {
-        _playing = false;
         InvokeAsync(async () => { StateHasChanged(); await OnChapterEnded.InvokeAsync(); });
     }
 
     // ── JS callbacks ──────────────────────────────────────────────────────────
 
-    [JSInvokable] public void OnJsPlay()  { _playing = true;  InvokeAsync(StateHasChanged); }
-    [JSInvokable] public void OnJsPause() { _playing = false; InvokeAsync(StateHasChanged); }
+    [JSInvokable] public void OnJsPlay()  { _jsPlaying = true;  InvokeAsync(StateHasChanged); }
+    [JSInvokable] public void OnJsPause() { _jsPlaying = false; InvokeAsync(StateHasChanged); }
     [JSInvokable] public void OnJsMetadata(double duration) { Duration = duration; InvokeAsync(StateHasChanged); }
-    [JSInvokable] public void OnJsEnded() { _playing = false; InvokeAsync(async () => { StateHasChanged(); await OnChapterEnded.InvokeAsync(); }); }
+    [JSInvokable] public void OnJsEnded() { _jsPlaying = false; InvokeAsync(async () => { StateHasChanged(); await OnChapterEnded.InvokeAsync(); }); }
 
     [JSInvokable]
     public async Task OnJsTimeUpdate(double currentTime)
