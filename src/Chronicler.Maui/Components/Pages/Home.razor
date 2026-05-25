@@ -3,6 +3,9 @@
 @inject AuthState Auth
 @inject ITokenStorage TokenStorage
 @inject ApiClient Api
+@inject IServiceProvider Services
+@using Microsoft.Extensions.DependencyInjection
+@using Chronicler.Maui.Services
 
 @if (!Auth.IsAuthenticated)
 {
@@ -43,6 +46,12 @@ else
 }
 
 @code {
+    protected override void OnInitialized()
+    {
+        var sound = Services.GetService<IStartupSoundService>();
+        _ = sound?.PlayAsync();
+    }
+
     private async Task EnterArchive()
     {
         // If server is unreachable, go straight to downloads

@@ -37,8 +37,10 @@ public static class MauiProgram
         builder.Services.AddMauiBlazorWebView();
 #if ANDROID
         builder.Services.AddSingleton<IAudioPlayerService, NativeAudioPlayerService>();
+        builder.Services.AddSingleton<IStartupSoundService, Chronicler.Maui.Platforms.Android.StartupSoundService>();
 #elif IOS
         builder.Services.AddSingleton<IAudioPlayerService, iOSAudioPlayerService>();
+        builder.Services.AddSingleton<IStartupSoundService, Chronicler.Maui.Platforms.iOS.StartupSoundService>();
 #endif
         builder.Services.AddSingleton<IDownloadService, MauiDownloadService>();
         builder.Services.AddSingleton<ITokenStorage>(tokenStorage);
