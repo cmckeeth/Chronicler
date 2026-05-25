@@ -115,7 +115,7 @@
             await InvokeAsync(async () =>
             {
                 if (_nativePlayer is null) return;
-                try { CurrentPosition = _nativePlayer.CurrentPosition; } catch { }
+                if (_playing) { try { CurrentPosition = _nativePlayer.CurrentPosition; } catch { } }
                 try { Duration = _nativePlayer.Duration; } catch { }
                 if (_playing && (DateTime.UtcNow - _lastSave).TotalSeconds >= 10)
                 {
