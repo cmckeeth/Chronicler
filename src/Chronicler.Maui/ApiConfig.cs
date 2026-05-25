@@ -24,6 +24,6 @@ public static class ApiConfig
                 return val.GetString()!.TrimEnd('/');
         }
         catch { }
-        return "http://192.168.1.71:5160"; // fallback
+        return "https://chronicler.mckeeth.app"; // fallback
     }
 }
