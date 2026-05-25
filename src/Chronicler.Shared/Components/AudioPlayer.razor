@@ -5,19 +5,21 @@
 @implements IAsyncDisposable
 
 <div class="audio-player @(_playing ? "audio-player-playing" : "")">
-    <span class="player-title">@BookTitle</span>
 
-    @if (!string.IsNullOrEmpty(Src))
-    {
-        <div class="player-time-display">
-            <span class="player-time-current">@FormatTime(CurrentPosition)</span>
-            @if (Duration > 0)
-            {
-                <span class="player-time-sep">/</span>
-                <span class="player-time-total">@FormatTime(Duration)</span>
-            }
-        </div>
-    }
+    <div class="player-top-row">
+        <span class="player-title">@BookTitle</span>
+        @if (!string.IsNullOrEmpty(Src))
+        {
+            <div class="player-time-display">
+                <span class="player-time-current">@FormatTime(CurrentPosition)</span>
+                @if (Duration > 0)
+                {
+                    <span class="player-time-sep">/</span>
+                    <span class="player-time-total">@FormatTime(Duration)</span>
+                }
+            </div>
+        }
+    </div>
 
     <div class="player-controls">
         <button class="btn-skip" @onclick="SkipBack">⏮<span>30</span></button>
@@ -25,6 +27,10 @@
             @(_playing ? "⏸" : "▶")
         </button>
         <button class="btn-skip" @onclick="SkipForward"><span>30</span>⏭</button>
+        <span class="speed-display"
+              @ontouchstart="OnSpeedTouchStart" @ontouchend="OnSpeedTouchEnd" @ontouchmove="OnSpeedTouchEnd"
+              @onmousedown="OnSpeedTouchStart" @onmouseup="OnSpeedTouchEnd" @onmouseleave="OnSpeedTouchEnd"
+              title="Long press to change speed">@(_speed)×</span>
     </div>
 
     @if (Duration > 0)
@@ -34,14 +40,6 @@
                    @onchange="OnSeek" class="progress-bar" />
         </div>
     }
-
-    <div class="player-speed-row">
-        <span class="player-speed-label">Speed</span>
-        <span class="speed-display"
-              @ontouchstart="OnSpeedTouchStart" @ontouchend="OnSpeedTouchEnd" @ontouchmove="OnSpeedTouchEnd"
-              @onmousedown="OnSpeedTouchStart" @onmouseup="OnSpeedTouchEnd" @onmouseleave="OnSpeedTouchEnd"
-              title="Long press to change speed">@(_speed)×</span>
-    </div>
 
     @if (_showSpeedPicker)
     {
