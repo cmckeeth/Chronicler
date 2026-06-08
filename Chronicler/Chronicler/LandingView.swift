@@ -26,6 +26,8 @@ struct LandingView: View {
                 Text("Chronicler")
                     .font(Theme.display(40))
                     .foregroundStyle(Theme.brassGradient)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.4)
                     .glowVerdigris()
                 Text("Your Audiobook Library")
                     .font(Theme.serif(15)).foregroundColor(Theme.parchmentDim)

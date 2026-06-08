@@ -16,6 +16,8 @@ struct LoginView: View {
                 Text("Chronicler")
                     .font(Theme.display(34))
                     .foregroundStyle(Theme.brassGradient)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.4)
                     .glowVerdigris()
                 Text("Your audiobook library")
                     .font(Theme.serif(14)).foregroundColor(Theme.parchmentDim)
