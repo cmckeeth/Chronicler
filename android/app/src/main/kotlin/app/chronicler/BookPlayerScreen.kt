@@ -102,17 +102,9 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
             chapters.map { ch -> async { api.getChapterProgress(ch.id) } }.awaitAll()
         }
         if (chapters.isNotEmpty()) {
-            // Resume at the latest chapter that isn't completed:
-            //  1) the furthest-along chapter that's started but unfinished,
-            //  2) else the chapter right after the last finished one,
-            //  3) else the first unfinished chapter, 4) else the first.
-            val lastInProgress = progresses.indexOfLast { !it.isListened && it.positionSeconds > 0 }
-            val lastListened = progresses.indexOfLast { it.isListened }
-            var idx = when {
-                lastInProgress >= 0 -> lastInProgress
-                lastListened in 0 until chapters.size - 1 -> lastListened + 1
-                else -> progresses.indexOfFirst { !it.isListened }
-            }
+            // Resume at the FIRST chapter that isn't completed (earliest unfinished),
+            // picking up at its saved position. Falls back to the first chapter.
+            var idx = progresses.indexOfFirst { !it.isListened }
             if (idx < 0) idx = 0
             loadChapter(chapters[idx], progresses[idx].positionSeconds)
         }
