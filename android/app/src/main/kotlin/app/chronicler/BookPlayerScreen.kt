@@ -17,6 +17,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -90,8 +93,17 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
             chapters.map { ch -> async { api.getChapterProgress(ch.id) } }.awaitAll()
         }
         if (chapters.isNotEmpty()) {
-            var idx = progresses.indexOfFirst { !it.isListened && it.positionSeconds > 0 }
-            if (idx < 0) idx = progresses.indexOfFirst { !it.isListened }
+            // Resume at the latest chapter that isn't completed:
+            //  1) the furthest-along chapter that's started but unfinished,
+            //  2) else the chapter right after the last finished one,
+            //  3) else the first unfinished chapter, 4) else the first.
+            val lastInProgress = progresses.indexOfLast { !it.isListened && it.positionSeconds > 0 }
+            val lastListened = progresses.indexOfLast { it.isListened }
+            var idx = when {
+                lastInProgress >= 0 -> lastInProgress
+                lastListened in 0 until chapters.size - 1 -> lastListened + 1
+                else -> progresses.indexOfFirst { !it.isListened }
+            }
             if (idx < 0) idx = 0
             loadChapter(chapters[idx], progresses[idx].positionSeconds)
         }
@@ -211,7 +223,6 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
 private fun AudioPlayerBar(audio: AudioController) {
     var showSpeed by remember { mutableStateOf(false) }
     val speeds = listOf(0.75, 1.0, 1.25, 1.5, 2.0)
-    val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     // Pulsing green-electric glow, livelier while playing.
     val pulse = rememberInfiniteTransition(label = "glow")
@@ -240,15 +251,14 @@ private fun AudioPlayerBar(audio: AudioController) {
             }
             // Big circular play/pause — tap to play/pause, long-press to set speed.
             Box(
-                Modifier.size(76.dp)
-                    .shadow(22.dp, CircleShape, spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
+                Modifier.size(104.dp)
+                    .shadow(24.dp, CircleShape, spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
                     .clip(CircleShape)
                     .background(Theme.brassGradient)
-                    .border((3 * glow).dp, Theme.verdigris.copy(alpha = glow), CircleShape)
+                    .border((3.5 * glow).dp, Theme.verdigris.copy(alpha = glow), CircleShape)
                     .combinedClickable(
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            ZapSound.play(context)
                             audio.togglePlay()
                         },
                         onLongClick = {
@@ -257,7 +267,11 @@ private fun AudioPlayerBar(audio: AudioController) {
                         }),
                 contentAlignment = Alignment.Center
             ) {
-                Text(if (audio.isPlaying) "⏸" else "▶", color = Theme.ink, fontSize = 38.sp)
+                Icon(
+                    imageVector = if (audio.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = if (audio.isPlaying) "Pause" else "Play",
+                    tint = Theme.ink,
+                    modifier = Modifier.size(56.dp))
             }
             TextButton(onClick = { audio.skipForward() }) {
                 Text("30⏭", color = Theme.brass, fontSize = 20.sp)
