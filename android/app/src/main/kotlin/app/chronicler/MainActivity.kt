@@ -38,8 +38,8 @@ fun App(auth: AuthStore) {
     MaterialTheme {
         val base = LocalDensity.current
         CompositionLocalProvider(
-            // Bump all text ~10% larger app-wide.
-            LocalDensity provides Density(base.density, base.fontScale * 1.1f),
+            // Bump all text ~20% larger app-wide.
+            LocalDensity provides Density(base.density, base.fontScale * 1.2f),
             LocalTextStyle provides TextStyle(fontFamily = Theme.body, color = Theme.parchment)
         ) {
         Surface(modifier = Modifier.fillMaxSize().background(Theme.bg), color = Theme.bg) {
