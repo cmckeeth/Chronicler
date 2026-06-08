@@ -338,9 +338,11 @@ private fun DrawScope.drawGearButton(glow: Float, angle: Float) {
     val cy = size.height / 2f
     val outer = size.minDimension / 2f
     val rFace = outer * 0.74f
-    val toothW = outer * 0.38f
     val toothH = outer * 0.24f
     val teeth = 10
+    // Tooth width == gap width: each tooth spans half its angular slot at the pitch radius.
+    val pitch = outer - toothH / 2f
+    val toothW = pitch * (Math.PI.toFloat() / teeth)
     val toothCorner = outer * 0.03f
 
     // Gear teeth around the rim (rotating): wide, squared off with a slight corner.
