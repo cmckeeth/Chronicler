@@ -341,9 +341,9 @@ private fun DrawScope.drawGearButton(glow: Float, angle: Float) {
     val toothW = outer * 0.38f
     val toothH = outer * 0.24f
     val teeth = 10
-    val toothCorner = toothW * 0.42f
+    val toothCorner = outer * 0.03f
 
-    // Gear teeth around the rim (rotating), wider with rounded edges.
+    // Gear teeth around the rim (rotating): wide, squared off with a slight corner.
     for (i in 0 until teeth) {
         rotate(angle + i * 360f / teeth, pivot = Offset(cx, cy)) {
             drawRoundRect(
