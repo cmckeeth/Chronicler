@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -66,7 +67,7 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
     Column(Modifier.fillMaxSize().background(Theme.bg).padding(horizontal = 18.dp, vertical = 14.dp)) {
         Text("The Archive", color = Theme.brass, fontSize = 24.sp, fontWeight = FontWeight.Bold,
             fontFamily = Theme.serif, letterSpacing = 2.sp,
-            style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowBrass),
+            style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris),
             modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 6.dp))
         Spacer(Modifier.height(16.dp))
         OutlinedTextField(value = search, onValueChange = { search = it },
@@ -75,7 +76,9 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Theme.parchment, unfocusedTextColor = Theme.parchment,
                 focusedContainerColor = Theme.surface2, unfocusedContainerColor = Theme.surface2,
-                focusedBorderColor = Theme.borderBrass, unfocusedBorderColor = Theme.border))
+                focusedBorderColor = Theme.verdigris,
+                unfocusedBorderColor = Theme.verdigris.copy(alpha = 0.4f),
+                cursorColor = Theme.verdigris))
         Spacer(Modifier.height(14.dp))
         chipRow("Sort", listOf("Name" to "name", "Added" to "date", "Progress" to "progress"),
             sort) { sort = it }
@@ -123,9 +126,13 @@ private fun chipRow(label: String, options: List<Pair<String, String>>, selected
             val active = selected == value
             Surface(color = if (active) Theme.brass else Theme.surface2,
                 shape = RoundedCornerShape(50),
-                modifier = Modifier.combinedClickableSafe { onSelect(value) }) {
+                border = if (active) androidx.compose.foundation.BorderStroke(1.dp, Theme.verdigris) else null,
+                modifier = Modifier
+                    .then(if (active) Modifier.shadow(8.dp, RoundedCornerShape(50),
+                        spotColor = Theme.verdigris, ambientColor = Theme.verdigris) else Modifier)
+                    .combinedClickableSafe { onSelect(value) }) {
                 Text(title, color = if (active) Theme.ink else Theme.parchmentMid, fontSize = 12.sp,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
             }
         }
     }
@@ -137,7 +144,9 @@ private fun BookCard(book: Book, api: ApiClient, onOpen: () -> Unit, onToggleFav
     Column(
         Modifier
             .combinedClickable(onClick = onOpen, onLongClick = onToggleFavorite)
-            .background(Theme.surface, RoundedCornerShape(4.dp))
+            .electricPanel(Theme.surface, corner = 4.dp,
+                alpha = if (book.isFavorite) 0.9f else 0.5f,
+                elevation = if (book.isFavorite) 18.dp else 10.dp)
             .padding(10.dp)
     ) {
         Box {

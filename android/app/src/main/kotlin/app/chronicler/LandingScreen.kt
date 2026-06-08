@@ -47,7 +47,7 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
         ) {
             Text("Chronicler", color = Theme.brass, fontSize = 40.sp, fontWeight = FontWeight.Bold,
                 fontFamily = Theme.display,
-                style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowBrass))
+                style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
             Text("Your Audiobook Library", color = Theme.parchmentDim, fontSize = 15.sp,
                 fontFamily = Theme.serif)
             Spacer(Modifier.height(8.dp))
@@ -57,15 +57,15 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
             Column(
                 Modifier
                     .clickable { nav.navigate("archive") }
-                    .background(Theme.surface, RoundedCornerShape(6.dp))
-                    .padding(24.dp),
+                    .electricPanel(Theme.surface, corner = 6.dp, alpha = 0.8f, elevation = 20.dp)
+                    .padding(28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Image(painterResource(R.drawable.logo), contentDescription = null,
                     modifier = Modifier.size(90.dp))
                 Text("Enter the Archive", color = Theme.brassPale, fontSize = 20.sp,
                     fontFamily = Theme.serif,
-                    style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowBrass))
+                    style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
                 Text("Browse your collection", color = Theme.parchmentDim, fontSize = 13.sp)
             }
         }
@@ -115,7 +115,7 @@ fun UpdateBanner(api: ApiClient, modifier: Modifier = Modifier) {
         if (updateAvailable) {
             Text("⚡ v$latestVer available — tap to install",
                 color = Theme.brassPale, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowBrass),
+                style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris),
                 modifier = Modifier.clickable {
                     val url = "${ApiClient.BASE_URL}/api/update/apk/Chronicler-v$latestVer.apk"
                     context.startActivity(

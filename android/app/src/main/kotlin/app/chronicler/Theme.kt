@@ -1,5 +1,10 @@
 package app.chronicler
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -7,6 +12,8 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 
 // Steampunk palette ported from steampunk.css :root
 object Theme {
@@ -42,7 +49,22 @@ object Theme {
 
     // --glow-brass: 0 0 20px #e8a010 — the "electric" brass glow on headings/titles.
     val glowBrass = Shadow(color = brass.copy(alpha = 0.85f), offset = Offset.Zero, blurRadius = 24f)
-    val glowVerdigris = Shadow(color = verdigris.copy(alpha = 0.6f), offset = Offset.Zero, blurRadius = 12f)
+    val glowVerdigris = Shadow(color = verdigris.copy(alpha = 0.9f), offset = Offset.Zero, blurRadius = 16f)
+}
+
+// Green-electric panel: verdigris drop-glow + filled background + verdigris border,
+// in the right draw order. Slap it on containers for that old-MAUI electric rizz.
+fun Modifier.electricPanel(
+    bg: Color = Theme.surface,
+    corner: Dp = 4.dp,
+    alpha: Float = 0.6f,
+    elevation: Dp = 14.dp,
+): Modifier {
+    val shape = RoundedCornerShape(corner)
+    return this
+        .shadow(elevation, shape, spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
+        .background(bg, shape)
+        .border(1.5.dp, Theme.verdigris.copy(alpha = alpha), shape)
 }
 
 fun formatTime(seconds: Double): String {

@@ -151,7 +151,7 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
 
             Spacer(Modifier.height(24.dp))
             Text("Chapters", color = Theme.brass, fontSize = 16.sp, fontFamily = Theme.serif,
-                style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowBrass))
+                style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
             Spacer(Modifier.height(8.dp))
             chapters.forEachIndexed { idx, ch ->
                 val pr = progresses.getOrElse(idx) { ChapterProgress() }
@@ -160,7 +160,9 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
                     Row(
                         Modifier.fillMaxWidth()
                             .padding(vertical = 3.dp)
-                            .background(if (isCurrent) Theme.surface2 else Color.Transparent, RoundedCornerShape(4.dp))
+                            .then(if (isCurrent)
+                                Modifier.electricPanel(Theme.surface2, corner = 4.dp, alpha = 0.8f, elevation = 8.dp)
+                            else Modifier)
                             .combinedClickable(
                                 onClick = { loadChapter(ch, progresses[idx].positionSeconds) },
                                 onLongClick = {
@@ -255,7 +257,9 @@ private fun AudioPlayerBar(audio: AudioController) {
     }
 
     Column(
-        Modifier.fillMaxWidth().background(Theme.surface, RoundedCornerShape(4.dp)).padding(12.dp),
+        Modifier.fillMaxWidth()
+            .electricPanel(Theme.surface, corner = 6.dp, alpha = 0.7f, elevation = 18.dp)
+            .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -322,7 +326,7 @@ private fun AudioPlayerBar(audio: AudioController) {
                                 fontSize = 18.sp,
                                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                                 style = if (selected)
-                                    androidx.compose.ui.text.TextStyle(shadow = Theme.glowBrass)
+                                    androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris)
                                 else androidx.compose.ui.text.TextStyle())
                         }
                     }
