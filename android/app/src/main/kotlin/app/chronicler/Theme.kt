@@ -1,7 +1,12 @@
 package app.chronicler
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 
 // Steampunk palette ported from steampunk.css :root
 object Theme {
@@ -25,6 +30,19 @@ object Theme {
     val ink = Color(0xFF1A0C02)
 
     val brassGradient = Brush.verticalGradient(listOf(brassLight, brass, borderBrass))
+
+    // Fonts ported from steampunk.css: Cinzel Decorative (display), Cinzel (serif), Lora (body).
+    val display = FontFamily(
+        Font(R.font.cinzel_decorative_regular, FontWeight.Normal),
+        Font(R.font.cinzel_decorative_bold, FontWeight.Bold),
+        Font(R.font.cinzel_decorative_black, FontWeight.Black),
+    )
+    val serif = FontFamily(Font(R.font.cinzel))
+    val body = FontFamily(Font(R.font.lora))
+
+    // --glow-brass: 0 0 20px #e8a010 — the "electric" brass glow on headings/titles.
+    val glowBrass = Shadow(color = brass.copy(alpha = 0.85f), offset = Offset.Zero, blurRadius = 24f)
+    val glowVerdigris = Shadow(color = verdigris.copy(alpha = 0.6f), offset = Offset.Zero, blurRadius = 12f)
 }
 
 fun formatTime(seconds: Double): String {

@@ -32,8 +32,11 @@ fun LoginScreen(auth: AuthStore) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text("Chronicler", color = Theme.brass, fontSize = 34.sp, fontWeight = FontWeight.Bold)
-            Text("Your audiobook library", color = Theme.parchmentDim, fontSize = 14.sp)
+            Text("Chronicler", color = Theme.brass, fontSize = 34.sp, fontWeight = FontWeight.Bold,
+                fontFamily = Theme.display,
+                style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowBrass))
+            Text("Your audiobook library", color = Theme.parchmentDim, fontSize = 14.sp,
+                fontFamily = Theme.serif)
 
             Row(Modifier.fillMaxWidth().background(Theme.surface2, RoundedCornerShape(4.dp)).padding(4.dp)) {
                 tab("Sign In", mode == "login", Modifier.weight(1f)) { mode = "login" }

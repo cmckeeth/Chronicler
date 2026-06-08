@@ -65,6 +65,8 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
 
     Column(Modifier.fillMaxSize().background(Theme.bg).padding(12.dp)) {
         Text("The Archive", color = Theme.brass, fontSize = 22.sp, fontWeight = FontWeight.Bold,
+            fontFamily = Theme.display,
+            style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowBrass),
             modifier = Modifier.align(Alignment.CenterHorizontally))
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(value = search, onValueChange = { search = it },

@@ -2,8 +2,10 @@ package app.chronicler
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
     val context = LocalContext.current
@@ -34,6 +37,7 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
     var progresses by remember { mutableStateOf<List<ChapterProgress>>(emptyList()) }
     var current by remember { mutableStateOf<Chapter?>(null) }
     var showMeta by remember { mutableStateOf(false) }
+    var menuChapterId by remember { mutableStateOf<Int?>(null) }
 
     fun loadChapter(ch: Chapter, start: Double) {
         current = ch
@@ -44,10 +48,16 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
         audio.onProgress = { pos ->
             scope.launch {
                 current?.let { cur ->
-                    api.saveChapterProgress(cur.id, pos, 0.0)
+                    val dur = audio.duration
+                    api.saveChapterProgress(cur.id, pos, dur)        // send real duration so server marks finished
                     val idx = chapters.indexOfFirst { it.id == cur.id }
-                    if (idx >= 0) progresses = progresses.toMutableList()
-                        .also { it[idx] = it[idx].copy(positionSeconds = pos) }
+                    if (idx >= 0) {
+                        val finished = dur > 0 && pos / dur >= 0.95   // 95% = finished
+                        progresses = progresses.toMutableList().also {
+                            it[idx] = it[idx].copy(positionSeconds = pos,
+                                isListened = it[idx].isListened || finished)
+                        }
+                    }
                 }
             }
         }
@@ -73,62 +83,83 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
 
     DisposableEffect(Unit) { onDispose { audio.release() } }
 
-    Column(Modifier.fillMaxSize().background(Theme.bg).verticalScroll(rememberScrollState()).padding(12.dp)) {
-        TextButton(onClick = { nav.popBackStack() }) {
+    Column(Modifier.fillMaxSize().background(Theme.bg).verticalScroll(rememberScrollState())
+        .padding(horizontal = 20.dp, vertical = 12.dp)) {
+        TextButton(onClick = { nav.popBackStack() }, contentPadding = PaddingValues(0.dp)) {
             Text("‹ Library", color = Theme.brass)
         }
+        Spacer(Modifier.height(8.dp))
         val b = book
         if (b == null) {
             Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
                 Text("Consulting the archive...", color = Theme.parchmentDim)
             }
         } else {
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                CoverImage(b, api, Modifier.size(120.dp).clip(RoundedCornerShape(4.dp))
+            Column(Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                CoverImage(b, api, Modifier.size(132.dp).clip(RoundedCornerShape(4.dp))
                     .clickable { scope.launch { showMeta = true } })
-                Text(b.title, color = Theme.parchment, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(14.dp))
+                Text(b.title, color = Theme.parchment, fontSize = 20.sp, fontWeight = FontWeight.Bold,
+                    fontFamily = Theme.display,
+                    style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowBrass))
+                Spacer(Modifier.height(6.dp))
                 Row {
                     Text(b.author, color = Theme.parchmentMid, fontSize = 14.sp)
                     b.narrator?.let { Text(" · $it", color = Theme.parchmentDim, fontSize = 14.sp) }
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(20.dp))
             if (current != null) AudioPlayerBar(audio)
 
-            Spacer(Modifier.height(12.dp))
-            Text("Chapters", color = Theme.brass, fontSize = 16.sp)
+            Spacer(Modifier.height(24.dp))
+            Text("Chapters", color = Theme.brass, fontSize = 16.sp, fontFamily = Theme.serif,
+                style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowBrass))
+            Spacer(Modifier.height(8.dp))
             chapters.forEachIndexed { idx, ch ->
                 val pr = progresses.getOrElse(idx) { ChapterProgress() }
                 val isCurrent = ch.id == current?.id
-                Row(
-                    Modifier.fillMaxWidth()
-                        .background(if (isCurrent) Theme.surface2 else Color.Transparent, RoundedCornerShape(3.dp))
-                        .clickable { loadChapter(ch, progresses[idx].positionSeconds) }
-                        .padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("${ch.trackNumber}", color = Theme.parchmentDim, fontSize = 12.sp,
-                        modifier = Modifier.width(24.dp))
-                    Text(ch.title, color = if (pr.isListened) Theme.parchmentDim else Theme.parchment,
-                        fontSize = 14.sp,
-                        textDecoration = if (pr.isListened) TextDecoration.LineThrough else null,
-                        modifier = Modifier.weight(1f))
-                    when {
-                        pr.isListened -> Text("✓", color = Theme.verdigris)
-                        pr.positionSeconds > 0 -> Text("…", color = Theme.brass)
-                    }
-                    if (isCurrent) Text(" ▶", color = Theme.brassPale)
-                    TextButton(onClick = {
-                        scope.launch {
-                            api.resetChapter(ch.id)
-                            progresses = progresses.toMutableList().also { it[idx] = ChapterProgress() }
+                Box {
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .padding(vertical = 3.dp)
+                            .background(if (isCurrent) Theme.surface2 else Color.Transparent, RoundedCornerShape(4.dp))
+                            .combinedClickable(
+                                onClick = { loadChapter(ch, progresses[idx].positionSeconds) },
+                                onLongClick = { menuChapterId = ch.id })
+                            .padding(horizontal = 12.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("${ch.trackNumber}", color = Theme.parchmentDim, fontSize = 12.sp,
+                            modifier = Modifier.width(28.dp))
+                        Text(ch.title, color = if (pr.isListened) Theme.parchmentDim else Theme.parchment,
+                            fontSize = 14.sp,
+                            textDecoration = if (pr.isListened) TextDecoration.LineThrough else null,
+                            modifier = Modifier.weight(1f).padding(end = 8.dp))
+                        when {
+                            pr.isListened -> Text("✓", color = Theme.verdigris,
+                                style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
+                            pr.positionSeconds > 0 -> Text("…", color = Theme.brass)
                         }
-                    }) { Text("↺", color = Theme.parchmentDim) }
+                        if (isCurrent) Text("  ▶", color = Theme.brassPale)
+                    }
+                    DropdownMenu(expanded = menuChapterId == ch.id,
+                        onDismissRequest = { menuChapterId = null }) {
+                        DropdownMenuItem(
+                            text = { Text(if (pr.isListened) "↺ Reset chapter (finished)" else "↺ Reset chapter") },
+                            onClick = {
+                                menuChapterId = null
+                                scope.launch {
+                                    api.resetChapter(ch.id)
+                                    progresses = progresses.toMutableList().also { it[idx] = ChapterProgress() }
+                                }
+                            })
+                    }
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(20.dp))
             TextButton(onClick = {
                 scope.launch {
                     api.resetBook(bookId)
@@ -137,6 +168,7 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
             }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
                 Text("⚙ Reset All Progress", color = Theme.parchmentDim, fontSize = 12.sp)
             }
+            Spacer(Modifier.height(16.dp))
         }
     }
 

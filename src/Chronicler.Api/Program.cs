@@ -391,8 +391,8 @@ app.MapPut("/api/chapters/{chapterId:int}/progress", [Authorize] async (
     p.PositionSeconds = req.PositionSeconds;
     p.UpdatedAt = DateTime.UtcNow;
 
-    // Mark as listened if > 90% complete (requires duration from client)
-    if (req.DurationSeconds > 0 && req.PositionSeconds / req.DurationSeconds >= 0.9)
+    // Mark as listened if >= 95% complete (requires duration from client)
+    if (req.DurationSeconds > 0 && req.PositionSeconds / req.DurationSeconds >= 0.95)
         p.IsListened = true;
 
     await db.SaveChangesAsync();

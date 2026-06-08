@@ -40,8 +40,11 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("Chronicler", color = Theme.brass, fontSize = 40.sp, fontWeight = FontWeight.Bold)
-            Text("Your Audiobook Library", color = Theme.parchmentDim, fontSize = 15.sp)
+            Text("Chronicler", color = Theme.brass, fontSize = 40.sp, fontWeight = FontWeight.Bold,
+                fontFamily = Theme.display,
+                style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowBrass))
+            Text("Your Audiobook Library", color = Theme.parchmentDim, fontSize = 15.sp,
+                fontFamily = Theme.serif)
             Spacer(Modifier.height(8.dp))
             Text("⚙ ───────── ⚙", color = Theme.borderBrass, fontSize = 14.sp)
             Spacer(Modifier.height(40.dp))
@@ -55,7 +58,9 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
             ) {
                 Image(painterResource(R.drawable.logo), contentDescription = null,
                     modifier = Modifier.size(90.dp))
-                Text("Enter the Archive", color = Theme.brassPale, fontSize = 20.sp)
+                Text("Enter the Archive", color = Theme.brassPale, fontSize = 20.sp,
+                    fontFamily = Theme.serif,
+                    style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowBrass))
                 Text("Browse your collection", color = Theme.parchmentDim, fontSize = 13.sp)
             }
         }
