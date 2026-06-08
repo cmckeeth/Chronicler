@@ -47,6 +47,7 @@ struct ArchiveView: View {
                 Text("The Archive")
                     .font(Theme.display(22)).foregroundStyle(Theme.brassGradient)
                     .tracking(3)
+                    .glowBrass()
 
                 HStack(spacing: 8) {
                     TextField("Query the archive...", text: $search)

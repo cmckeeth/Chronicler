@@ -22,15 +22,28 @@ enum Theme {
     static let parchmentDim = Color(hex: 0xc8a048)
     static let ink         = Color(hex: 0x1a0c02)
 
-    // Fonts: CSS uses Cinzel / Cinzel Decorative / Lora, all with serif fallbacks.
-    // We use the declared serif fallbacks (Palatino / Georgia) available on iOS.
-    static func display(_ size: CGFloat) -> Font { .custom("Palatino", size: size).weight(.bold) }
-    static func serif(_ size: CGFloat) -> Font { .custom("Palatino", size: size) }
-    static func body(_ size: CGFloat) -> Font { .custom("Georgia", size: size) }
+    // Fonts ported from steampunk.css: Cinzel Decorative (display), Cinzel (serif), Lora (body).
+    // Registered at runtime in ChroniclerApp; PostScript names verified via fontTools.
+    static func display(_ size: CGFloat) -> Font { .custom("CinzelDecorative-Bold", size: size) }
+    static func serif(_ size: CGFloat) -> Font { .custom("Cinzel-Regular", size: size) }
+    static func body(_ size: CGFloat) -> Font { .custom("Lora-Regular", size: size) }
 
     static let brassGradient = LinearGradient(
         colors: [brassLight, brass, borderBrass],
         startPoint: .top, endPoint: .bottom)
+}
+
+// --glow-brass: 0 0 20px #e8a010 — the "electric" brass glow on headings/titles.
+extension View {
+    func glowBrass() -> some View {
+        self
+            .shadow(color: Theme.brass.opacity(0.85), radius: 12)
+            .shadow(color: Theme.brass.opacity(0.45), radius: 24)
+    }
+
+    func glowVerdigris() -> some View {
+        self.shadow(color: Theme.verdigris.opacity(0.6), radius: 8)
+    }
 }
 
 extension Color {

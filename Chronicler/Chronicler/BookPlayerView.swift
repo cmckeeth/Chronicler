@@ -23,7 +23,7 @@ struct BookPlayerView: View {
                     .font(Theme.serif(15)).foregroundColor(Theme.parchmentDim)
             } else {
                 ScrollView {
-                    VStack(spacing: 12) {
+                    VStack(spacing: 24) {
                         header
                         if current != nil { AudioPlayerView(audio: audio) }
                         chapterList
@@ -32,7 +32,8 @@ struct BookPlayerView: View {
                             .font(Theme.body(12)).foregroundColor(Theme.parchmentDim).opacity(0.5)
                             .padding(.bottom, 12)
                     }
-                    .padding(12)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
                 }
             }
         }
@@ -49,15 +50,16 @@ struct BookPlayerView: View {
 
     // ── Header (cover + title/author) ──
     private var header: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 14) {
             if let book {
                 CoverImage(book: book, api: api)
-                    .frame(width: 120, height: 120)
+                    .frame(width: 132, height: 132)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Theme.borderBrass, lineWidth: 1))
                     .onLongPressGesture(minimumDuration: 0.6) { Task { await openMeta() } }
                 Text(book.title).font(Theme.display(20)).foregroundColor(Theme.parchment)
                     .multilineTextAlignment(.center)
+                    .glowBrass()
                 HStack(spacing: 0) {
                     Text(book.author).font(Theme.serif(14)).foregroundColor(Theme.parchmentMid)
                     if let n = book.narrator {
@@ -70,8 +72,9 @@ struct BookPlayerView: View {
 
     // ── Chapter list ──
     private var chapterList: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Chapters").font(Theme.serif(16)).foregroundColor(Theme.brass)
+                .glowBrass()
             ForEach(Array(zip(chapters, progresses).enumerated()), id: \.element.0.id) { _, pair in
                 let (chapter, progress) = pair
                 let isCurrent = chapter.id == current?.id
@@ -84,19 +87,23 @@ struct BookPlayerView: View {
                         .strikethrough(progress.isListened)
                     Spacer()
                     if progress.isListened {
-                        Text("✓").foregroundColor(Theme.verdigris)
+                        Text("✓").foregroundColor(Theme.verdigris).glowVerdigris()
                     } else if progress.positionSeconds > 0 {
                         Text("…").foregroundColor(Theme.brass)
                     }
                     if isCurrent { Text("▶").foregroundColor(Theme.brassPale) }
-                    Button("↺") { Task { await resetChapter(chapter.id) } }
-                        .foregroundColor(Theme.parchmentDim).opacity(0.6)
                 }
-                .padding(.vertical, 8).padding(.horizontal, 8)
+                .padding(.vertical, 14).padding(.horizontal, 12)
                 .background(isCurrent ? Theme.surface2 : Color.clear)
-                .clipShape(RoundedRectangle(cornerRadius: 3))
+                .clipShape(RoundedRectangle(cornerRadius: 4))
                 .contentShape(Rectangle())
                 .onTapGesture { selectChapter(chapter) }
+                .contextMenu {
+                    Button(progress.isListened ? "Reset chapter (finished)" : "Reset chapter",
+                           role: .destructive) {
+                        Task { await resetChapter(chapter.id) }
+                    }
+                }
             }
         }
     }
@@ -174,9 +181,13 @@ struct BookPlayerView: View {
 
     private func saveChapterProgress(_ position: Double) async {
         guard let cur = current else { return }
-        await api.saveChapterProgress(cur.id, position: position, duration: 0)
+        let duration = audio.duration
+        await api.saveChapterProgress(cur.id, position: position, duration: duration)  // send real duration so server marks finished
         if let idx = chapters.firstIndex(where: { $0.id == cur.id }) {
             progresses[idx].positionSeconds = position
+            if duration > 0 && position / duration >= 0.95 {                            // 95% = finished
+                progresses[idx].isListened = true
+            }
         }
     }
 

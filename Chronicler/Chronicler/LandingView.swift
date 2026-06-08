@@ -26,6 +26,7 @@ struct LandingView: View {
                 Text("Chronicler")
                     .font(Theme.display(40))
                     .foregroundStyle(Theme.brassGradient)
+                    .glowBrass()
                 Text("Your Audiobook Library")
                     .font(Theme.serif(15)).foregroundColor(Theme.parchmentDim)
                     .padding(.top, 4)
@@ -40,6 +41,7 @@ struct LandingView: View {
                         Image("logo").resizable().scaledToFit().frame(width: 90, height: 90)
                         Text("Enter the Archive")
                             .font(Theme.serif(20)).foregroundColor(Theme.brassPale)
+                            .glowBrass()
                         Text("Browse your collection")
                             .font(Theme.body(13)).foregroundColor(Theme.parchmentDim)
                     }
