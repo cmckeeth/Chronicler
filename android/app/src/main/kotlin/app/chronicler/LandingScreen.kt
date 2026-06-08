@@ -85,8 +85,9 @@ private fun gear() {
 }
 
 // Status bar + self-update prompt, ported from the Blazor UpdateBanner.
+// Shared by the landing and archive pages.
 @Composable
-private fun UpdateBanner(api: ApiClient, modifier: Modifier = Modifier) {
+fun UpdateBanner(api: ApiClient, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val current = remember {
         runCatching {
