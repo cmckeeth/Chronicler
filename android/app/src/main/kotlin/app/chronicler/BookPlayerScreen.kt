@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -195,16 +196,28 @@ private fun AudioPlayerBar(audio: AudioController) {
                  else formatTime(audio.currentPosition),
                 color = Theme.parchmentDim, fontSize = 12.sp)
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp),
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { audio.skipBack() }) { Text("⏮30", color = Theme.brass) }
-            TextButton(onClick = { audio.togglePlay() }) {
-                Text(if (audio.isPlaying) "⏸" else "▶", color = Theme.brass, fontSize = 28.sp)
+            TextButton(onClick = { audio.skipBack() }) {
+                Text("⏮30", color = Theme.brass, fontSize = 20.sp)
             }
-            TextButton(onClick = { audio.skipForward() }) { Text("30⏭", color = Theme.brass) }
+            // Big circular play/pause — easy phone tap target.
+            Box(
+                Modifier.size(76.dp)
+                    .clip(CircleShape)
+                    .background(Theme.brassGradient)
+                    .clickable { audio.togglePlay() },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(if (audio.isPlaying) "⏸" else "▶", color = Theme.ink, fontSize = 38.sp)
+            }
+            TextButton(onClick = { audio.skipForward() }) {
+                Text("30⏭", color = Theme.brass, fontSize = 20.sp)
+            }
             TextButton(onClick = { showSpeed = true }) {
                 Text("${if (audio.speed % 1.0 == 0.0) audio.speed.toInt().toString() else audio.speed}×",
-                    color = Theme.parchmentMid)
+                    color = Theme.parchmentMid, fontSize = 16.sp)
             }
         }
         if (audio.duration > 0) {
