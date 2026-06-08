@@ -8,23 +8,33 @@ GRADLE_BUILD="$ANDROID_DIR/app/build.gradle.kts"
 API_UPDATES_DIR="updates"
 export ANDROID_HOME="${ANDROID_HOME:-/home/corbin/Android/Sdk}"
 
-# ── Version bump (based on last built APK, not the gradle file) ───────────────
+# ── Version bump ──────────────────────────────────────────────────────────────
+# Auto-increment patch from the last built APK. To jump major/minor, just set a
+# higher versionName in build.gradle.kts — the manual value wins when it's ahead.
 
 LAST_VER=$(ls "$API_UPDATES_DIR"/Chronicler-v*.apk 2>/dev/null \
     | sed 's/.*Chronicler-v\(.*\)\.apk/\1/' \
     | sort -t. -k1,1n -k2,2n -k3,3n \
     | tail -n1) || true
 
+GRADLE_VER=$(grep 'versionName' "$GRADLE_BUILD" | sed 's/.*"\(.*\)".*/\1/' | head -n1)
+
 if [[ -z "$LAST_VER" ]]; then
-    LAST_VER=$(grep 'versionName' "$GRADLE_BUILD" | sed 's/.*"\(.*\)".*/\1/' | head -n1)
+    NEW_VER="$GRADLE_VER"
+else
+    # Candidate from auto patch-bump of the last APK...
+    PMAJOR=$(echo "$LAST_VER" | cut -d. -f1)
+    PMINOR=$(echo "$LAST_VER" | cut -d. -f2)
+    PPATCH=$(echo "$LAST_VER" | cut -d. -f3)
+    CANDIDATE="$PMAJOR.$PMINOR.$((PPATCH + 1))"
+    # ...but a manually-set higher versionName wins (major/minor bumps).
+    NEW_VER=$(printf '%s\n%s\n' "$CANDIDATE" "$GRADLE_VER" | sort -V | tail -n1)
 fi
 
-MAJOR=$(echo "$LAST_VER" | cut -d. -f1)
-MINOR=$(echo "$LAST_VER" | cut -d. -f2)
-PATCH=$(echo "$LAST_VER" | cut -d. -f3)
-NEW_PATCH=$((PATCH + 1))
-NEW_VER="$MAJOR.$MINOR.$NEW_PATCH"
-NEW_CODE=$((MAJOR * 10000 + MINOR * 100 + NEW_PATCH))
+MAJOR=$(echo "$NEW_VER" | cut -d. -f1)
+MINOR=$(echo "$NEW_VER" | cut -d. -f2)
+PATCH=$(echo "$NEW_VER" | cut -d. -f3)
+NEW_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
 
 echo "Bumping $LAST_VER → $NEW_VER (versionCode $NEW_CODE)"
 sed -i "s|versionName = \".*\"|versionName = \"$NEW_VER\"|" "$GRADLE_BUILD"
