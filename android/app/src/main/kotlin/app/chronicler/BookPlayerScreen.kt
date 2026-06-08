@@ -338,18 +338,19 @@ private fun DrawScope.drawGearButton(glow: Float, angle: Float) {
     val cy = size.height / 2f
     val outer = size.minDimension / 2f
     val rFace = outer * 0.74f
-    val toothW = outer * 0.26f
+    val toothW = outer * 0.38f
     val toothH = outer * 0.24f
     val teeth = 10
+    val toothCorner = toothW * 0.42f
 
-    // Gear teeth around the rim (rotating).
+    // Gear teeth around the rim (rotating), wider with rounded edges.
     for (i in 0 until teeth) {
         rotate(angle + i * 360f / teeth, pivot = Offset(cx, cy)) {
             drawRoundRect(
                 color = Theme.borderBrass,
                 topLeft = Offset(cx - toothW / 2f, cy - outer + 1f),
                 size = Size(toothW, toothH),
-                cornerRadius = CornerRadius(2f, 2f))
+                cornerRadius = CornerRadius(toothCorner, toothCorner))
         }
     }
     // Brass face with an off-center sheen (fixed light source).
