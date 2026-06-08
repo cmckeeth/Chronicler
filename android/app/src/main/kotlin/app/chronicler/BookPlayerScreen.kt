@@ -138,8 +138,7 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
                     .clickable { scope.launch { showMeta = true } })
                 Spacer(Modifier.height(14.dp))
                 Text(b.title, color = Theme.parchment, fontSize = 20.sp, fontWeight = FontWeight.Bold,
-                    fontFamily = Theme.display,
-                    style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowBrass))
+                    fontFamily = Theme.body, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 Spacer(Modifier.height(6.dp))
                 Row {
                     Text(b.author, color = Theme.parchmentMid, fontSize = 14.sp)
