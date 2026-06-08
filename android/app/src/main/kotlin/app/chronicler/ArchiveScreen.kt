@@ -63,12 +63,12 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
         }
     }
 
-    Column(Modifier.fillMaxSize().background(Theme.bg).padding(12.dp)) {
+    Column(Modifier.fillMaxSize().background(Theme.bg).padding(horizontal = 18.dp, vertical = 14.dp)) {
         Text("The Archive", color = Theme.brass, fontSize = 22.sp, fontWeight = FontWeight.Bold,
             fontFamily = Theme.display,
             style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowBrass),
-            modifier = Modifier.align(Alignment.CenterHorizontally))
-        Spacer(Modifier.height(8.dp))
+            modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 6.dp))
+        Spacer(Modifier.height(16.dp))
         OutlinedTextField(value = search, onValueChange = { search = it },
             placeholder = { Text("Query the archive...", color = Theme.parchmentDim) },
             singleLine = true, modifier = Modifier.fillMaxWidth(),
@@ -76,12 +76,13 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
                 focusedTextColor = Theme.parchment, unfocusedTextColor = Theme.parchment,
                 focusedContainerColor = Theme.surface2, unfocusedContainerColor = Theme.surface2,
                 focusedBorderColor = Theme.borderBrass, unfocusedBorderColor = Theme.border))
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(14.dp))
         chipRow("Sort", listOf("Name" to "name", "Added" to "date", "Progress" to "progress"),
             sort) { sort = it }
+        Spacer(Modifier.height(10.dp))
         chipRow("Show", listOf("All" to "all", "In Progress" to "inprogress", "★ Favorites" to "favorites"),
             filter) { filter = it }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(18.dp))
 
         when {
             loading -> center("Consulting the archive...", Theme.parchmentDim)
@@ -90,8 +91,9 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
                 if (books.isEmpty()) "The archive lies empty, traveller." else "No volumes match this filter.",
                 Theme.parchmentDim)
             else -> LazyVerticalGrid(columns = GridCells.Adaptive(150.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+                contentPadding = PaddingValues(vertical = 4.dp)) {
                 items(filtered, key = { it.id }) { book ->
                     BookCard(book, auth.api, onOpen = { nav.navigate("book/${book.id}") },
                         onToggleFavorite = { scope.launch { auth.api.toggleFavorite(book.id); load() } })
@@ -133,19 +135,24 @@ private fun BookCard(book: Book, api: ApiClient, onOpen: () -> Unit, onToggleFav
         Modifier
             .combinedClickable(onClick = onOpen, onLongClick = onToggleFavorite)
             .background(Theme.surface, RoundedCornerShape(4.dp))
-            .padding(6.dp)
+            .padding(10.dp)
     ) {
         Box {
             CoverImage(book, api, Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(2.dp)))
             if (book.isFavorite) {
                 Text("★", color = Theme.brassPale, fontSize = 18.sp,
-                    modifier = Modifier.align(Alignment.TopEnd).padding(4.dp))
+                    modifier = Modifier.align(Alignment.TopEnd).padding(6.dp))
             }
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(10.dp))
         Text(book.title, color = Theme.parchment, fontSize = 14.sp, maxLines = 2)
+        Spacer(Modifier.height(3.dp))
         Text(book.author, color = Theme.parchmentDim, fontSize = 12.sp, maxLines = 1)
-        book.narrator?.let { Text(it, color = Theme.parchmentDim, fontSize = 11.sp, maxLines = 1) }
+        book.narrator?.let {
+            Spacer(Modifier.height(2.dp))
+            Text(it, color = Theme.parchmentDim, fontSize = 11.sp, maxLines = 1)
+        }
+        Spacer(Modifier.height(2.dp))
     }
 }
 

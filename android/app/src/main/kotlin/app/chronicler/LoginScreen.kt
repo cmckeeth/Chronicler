@@ -28,9 +28,9 @@ fun LoginScreen(auth: AuthStore) {
         Column(
             Modifier.padding(28.dp).fillMaxWidth()
                 .background(Theme.surface, RoundedCornerShape(6.dp))
-                .padding(24.dp),
+                .padding(horizontal = 28.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Text("Chronicler", color = Theme.brass, fontSize = 34.sp, fontWeight = FontWeight.Bold,
                 fontFamily = Theme.display,
