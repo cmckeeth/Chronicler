@@ -2,8 +2,14 @@ package app.chronicler
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -16,13 +22,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -73,7 +85,10 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
 
         book = api.getBook(bookId) ?: return@LaunchedEffect
         chapters = api.getChapters(bookId)
-        progresses = chapters.map { api.getChapterProgress(it.id) }
+        // Load all chapter statuses in parallel so they show immediately on open.
+        progresses = coroutineScope {
+            chapters.map { ch -> async { api.getChapterProgress(ch.id) } }.awaitAll()
+        }
         if (chapters.isNotEmpty()) {
             var idx = progresses.indexOfFirst { !it.isListened && it.positionSeconds > 0 }
             if (idx < 0) idx = progresses.indexOfFirst { !it.isListened }
@@ -138,12 +153,24 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
                             fontSize = 14.sp,
                             textDecoration = if (pr.isListened) TextDecoration.LineThrough else null,
                             modifier = Modifier.weight(1f).padding(end = 8.dp))
-                        when {
-                            pr.isListened -> Text("✓", color = Theme.verdigris,
-                                style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
-                            pr.positionSeconds > 0 -> Text("…", color = Theme.brass)
-                        }
-                        if (isCurrent) Text("  ▶", color = Theme.brassPale)
+                        // Always-visible status: ✓ finished, ◐ in progress, ○ not started.
+                        Text(
+                            text = when {
+                                pr.isListened -> "✓"
+                                pr.positionSeconds > 0 -> "◐"
+                                else -> "○"
+                            },
+                            color = when {
+                                pr.isListened -> Theme.verdigris
+                                pr.positionSeconds > 0 -> Theme.brass
+                                else -> Theme.parchmentDim.copy(alpha = 0.5f)
+                            },
+                            fontSize = 18.sp,
+                            style = if (pr.isListened)
+                                androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris)
+                            else androidx.compose.ui.text.TextStyle()
+                        )
+                        if (isCurrent) Text("  ▶", color = Theme.brassPale, fontSize = 16.sp)
                     }
                     DropdownMenu(expanded = menuChapterId == ch.id,
                         onDismissRequest = { menuChapterId = null }) {
@@ -180,9 +207,18 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun AudioPlayerBar(audio: AudioController) {
     var showSpeed by remember { mutableStateOf(false) }
     val speeds = listOf(0.75, 1.0, 1.25, 1.5, 2.0)
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    // Pulsing green-electric glow, livelier while playing.
+    val pulse = rememberInfiniteTransition(label = "glow")
+    val glow by pulse.animateFloat(
+        initialValue = 0.45f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(if (audio.isPlaying) 650 else 1600), RepeatMode.Reverse),
+        label = "glowAlpha")
 
     Column(
         Modifier.fillMaxWidth().background(Theme.surface, RoundedCornerShape(4.dp)).padding(12.dp),
@@ -197,27 +233,34 @@ private fun AudioPlayerBar(audio: AudioController) {
                 color = Theme.parchmentDim, fontSize = 12.sp)
         }
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = { audio.skipBack() }) {
                 Text("⏮30", color = Theme.brass, fontSize = 20.sp)
             }
-            // Big circular play/pause — easy phone tap target.
+            // Big circular play/pause — tap to play/pause, long-press to set speed.
             Box(
                 Modifier.size(76.dp)
+                    .shadow(22.dp, CircleShape, spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
                     .clip(CircleShape)
                     .background(Theme.brassGradient)
-                    .clickable { audio.togglePlay() },
+                    .border((3 * glow).dp, Theme.verdigris.copy(alpha = glow), CircleShape)
+                    .combinedClickable(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            ZapSound.play(context)
+                            audio.togglePlay()
+                        },
+                        onLongClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            showSpeed = true
+                        }),
                 contentAlignment = Alignment.Center
             ) {
                 Text(if (audio.isPlaying) "⏸" else "▶", color = Theme.ink, fontSize = 38.sp)
             }
             TextButton(onClick = { audio.skipForward() }) {
                 Text("30⏭", color = Theme.brass, fontSize = 20.sp)
-            }
-            TextButton(onClick = { showSpeed = true }) {
-                Text("${if (audio.speed % 1.0 == 0.0) audio.speed.toInt().toString() else audio.speed}×",
-                    color = Theme.parchmentMid, fontSize = 16.sp)
             }
         }
         if (audio.duration > 0) {
@@ -231,12 +274,21 @@ private fun AudioPlayerBar(audio: AudioController) {
     if (showSpeed) {
         AlertDialog(onDismissRequest = { showSpeed = false },
             confirmButton = {},
-            title = { Text("Speed") },
+            containerColor = Theme.surface,
+            title = { Text("Playback Speed", color = Theme.brass, fontFamily = Theme.serif) },
             text = {
                 Column {
                     speeds.forEach { s ->
-                        TextButton(onClick = { audio.setRate(s); showSpeed = false }) {
-                            Text("${if (s % 1.0 == 0.0) s.toInt().toString() else s}×")
+                        val selected = kotlin.math.abs(audio.speed - s) < 0.01
+                        TextButton(onClick = { audio.setRate(s); showSpeed = false },
+                            modifier = Modifier.fillMaxWidth()) {
+                            Text("${if (s % 1.0 == 0.0) s.toInt().toString() else s}×",
+                                color = if (selected) Theme.brassPale else Theme.parchmentMid,
+                                fontSize = 18.sp,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                style = if (selected)
+                                    androidx.compose.ui.text.TextStyle(shadow = Theme.glowBrass)
+                                else androidx.compose.ui.text.TextStyle())
                         }
                     }
                 }
