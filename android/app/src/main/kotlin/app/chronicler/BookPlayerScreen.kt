@@ -198,9 +198,15 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
                         if (isCurrent) Text("  ▶", color = Theme.brassPale, fontSize = 16.sp)
                     }
                     DropdownMenu(expanded = menuChapterId == ch.id,
-                        onDismissRequest = { menuChapterId = null }) {
+                        onDismissRequest = { menuChapterId = null },
+                        containerColor = Theme.surface2,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Theme.verdigris),
+                        modifier = Modifier.background(Theme.surface2)) {
                         DropdownMenuItem(
-                            text = { Text(if (pr.isListened) "↺ Reset chapter (finished)" else "↺ Reset chapter") },
+                            text = {
+                                Text("↺ Reset chapter", color = Theme.parchment,
+                                    fontFamily = Theme.body, fontSize = 15.sp)
+                            },
                             onClick = {
                                 menuChapterId = null
                                 scope.launch {
