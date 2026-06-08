@@ -10,7 +10,7 @@ struct ArchiveView: View {
     @State private var loading = true
     @State private var error: String?
 
-    private let columns = [GridItem(.adaptive(minimum: 150), spacing: 14)]
+    private let columns = [GridItem(.adaptive(minimum: 150), spacing: 16)]
 
     var filtered: [Book] {
         var q = books
@@ -43,32 +43,35 @@ struct ArchiveView: View {
     var body: some View {
         ZStack {
             Theme.bg.ignoresSafeArea()
-            VStack(spacing: 10) {
+            VStack(spacing: 14) {
+                // Cinzel (serif), NOT Cinzel Decorative; verdigris electric glow.
                 Text("The Archive")
-                    .font(Theme.display(22)).foregroundStyle(Theme.brassGradient)
+                    .font(Theme.serif(24)).foregroundColor(Theme.brass)
                     .tracking(3)
-                    .glowBrass()
+                    .glowVerdigris()
+                    .padding(.vertical, 6)
 
                 HStack(spacing: 8) {
                     TextField("Query the archive...", text: $search)
                         .font(Theme.body(14)).foregroundColor(Theme.parchment)
+                        .tint(Theme.verdigris)            // verdigris cursor
                         .padding(8)
                         .background(Theme.surface2)
-                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Theme.border, lineWidth: 1))
+                        .overlay(RoundedRectangle(cornerRadius: 4)
+                            .stroke(Theme.verdigris.opacity(0.4), lineWidth: 1))
                 }
 
-                HStack {
-                    chipGroup("Sort", [("Name","name"),("Added","date"),("Progress","progress")],
-                              selection: $sort)
-                }
-                HStack {
-                    chipGroup("Show", [("All","all"),("In Progress","inprogress"),("★ Favorites","favorites")],
-                              selection: $filter)
-                }
+                chipGroup("Sort", [("Name","name"),("Added","date"),("Progress","progress")],
+                          selection: $sort)
+                chipGroup("Show", [("All","all"),("In Progress","inprogress"),("★ Favorites","favorites")],
+                          selection: $filter)
 
                 content
+
+                UpdateBanner(api: auth.api).padding(.top, 4)
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
@@ -104,12 +107,15 @@ struct ArchiveView: View {
         HStack(spacing: 6) {
             Text(label).font(Theme.body(11)).foregroundColor(Theme.parchmentDim)
             ForEach(options, id: \.1) { (title, value) in
+                let active = selection.wrappedValue == value
                 Button { selection.wrappedValue = value } label: {
                     Text(title).font(Theme.body(12))
-                        .foregroundColor(selection.wrappedValue == value ? Theme.ink : Theme.parchmentMid)
-                        .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(selection.wrappedValue == value ? Theme.brass : Theme.surface2)
+                        .foregroundColor(active ? Theme.ink : Theme.parchmentMid)
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(active ? Theme.brass : Theme.surface2)
+                        .overlay(Capsule().stroke(active ? Theme.verdigris : .clear, lineWidth: 1))
                         .clipShape(Capsule())
+                        .shadow(color: active ? Theme.verdigris.opacity(0.5) : .clear, radius: 8)
                 }
             }
             Spacer()
@@ -150,7 +156,7 @@ struct BookCardView: View {
                             .padding(4)
                     }
                 }
-                Text(book.title).font(Theme.serif(14)).foregroundColor(Theme.parchment)
+                Text(book.title).font(Theme.body(14)).foregroundColor(Theme.parchment)
                     .lineLimit(2)
                 Text(book.author).font(Theme.body(12)).foregroundColor(Theme.parchmentDim)
                     .lineLimit(1)
@@ -159,11 +165,10 @@ struct BookCardView: View {
                         .lineLimit(1)
                 }
             }
-            .padding(6)
-            .background(Theme.surface.opacity(isFavorite ? 0.9 : 0.6))
-            .overlay(RoundedRectangle(cornerRadius: 4)
-                .stroke(isFavorite ? Theme.borderBrass : Theme.border, lineWidth: 1))
-            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .padding(10)
+            .electricPanel(bg: Theme.surface, corner: 4,
+                           alpha: isFavorite ? 0.9 : 0.5,
+                           glowRadius: isFavorite ? 18 : 10)
         }
         .buttonStyle(.plain)
         .onLongPressGesture(minimumDuration: 0.6) { showMenu = true }

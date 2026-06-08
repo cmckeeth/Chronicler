@@ -6,17 +6,27 @@ final class AuthStore: ObservableObject {
     @Published private(set) var isAuthenticated = false
     @Published private(set) var email: String?
 
+    // Persisted: auto-play the next chapter when one finishes (default off).
+    @Published private(set) var autoplayNext: Bool
+
     let api = APIClient()
 
     private let tokenKey = "chronicler.token"
     private let emailKey = "chronicler.email"
+    private let autoplayKey = "chronicler.autoplay"
 
     init() {
+        autoplayNext = UserDefaults.standard.bool(forKey: autoplayKey)
         if let token = UserDefaults.standard.string(forKey: tokenKey) {
             api.token = token
             email = UserDefaults.standard.string(forKey: emailKey)
             isAuthenticated = true
         }
+    }
+
+    func setAutoplay(_ v: Bool) {
+        autoplayNext = v
+        UserDefaults.standard.set(v, forKey: autoplayKey)
     }
 
     func setToken(_ token: String, email: String) {

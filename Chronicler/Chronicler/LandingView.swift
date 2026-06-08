@@ -26,7 +26,7 @@ struct LandingView: View {
                 Text("Chronicler")
                     .font(Theme.display(40))
                     .foregroundStyle(Theme.brassGradient)
-                    .glowBrass()
+                    .glowVerdigris()
                 Text("Your Audiobook Library")
                     .font(Theme.serif(15)).foregroundColor(Theme.parchmentDim)
                     .padding(.top, 4)
@@ -41,14 +41,12 @@ struct LandingView: View {
                         Image("logo").resizable().scaledToFit().frame(width: 90, height: 90)
                         Text("Enter the Archive")
                             .font(Theme.serif(20)).foregroundColor(Theme.brassPale)
-                            .glowBrass()
+                            .glowVerdigris()
                         Text("Browse your collection")
                             .font(Theme.body(13)).foregroundColor(Theme.parchmentDim)
                     }
-                    .padding(24)
-                    .background(Theme.surface.opacity(0.6))
-                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.borderBrass, lineWidth: 1))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .padding(28)
+                    .electricPanel(bg: Theme.surface, corner: 6, alpha: 0.8, glowRadius: 20)
                 }
 
                 Spacer()
@@ -63,6 +61,7 @@ struct LandingView: View {
                         .font(Theme.body(11)).foregroundColor(Theme.parchmentDim).opacity(0.5)
                 }
                 Spacer()
+                UpdateBanner(api: auth.api).padding(.bottom, 12)
             }
             .padding()
         }
@@ -72,5 +71,33 @@ struct LandingView: View {
 
     private var gear: some View {
         Text("⚙").font(.system(size: 26)).foregroundColor(Theme.border).opacity(0.6)
+    }
+}
+
+// Status bar (connection dot + app version), ported from the Android UpdateBanner.
+// iOS can't self-install APKs, so we never show the "tap to install" prompt — just
+// the dot + version + Connected / Server unreachable. Shared by landing + archive.
+struct UpdateBanner: View {
+    let api: APIClient
+    @State private var connected = false
+
+    private var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text("●").font(.system(size: 10))
+                .foregroundColor(connected ? Theme.verdigris : Theme.rust)
+            Text("v\(version)").font(Theme.body(12)).foregroundColor(Theme.parchmentDim)
+            Text(connected ? "Connected" : "Server unreachable")
+                .font(Theme.body(12)).foregroundColor(Theme.parchmentDim)
+        }
+        .task {
+            while !Task.isCancelled {
+                connected = (await api.getLatestVersion()) != nil
+                try? await Task.sleep(nanoseconds: 10_000_000_000)
+            }
+        }
     }
 }

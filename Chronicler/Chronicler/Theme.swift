@@ -22,27 +22,44 @@ enum Theme {
     static let parchmentDim = Color(hex: 0xc8a048)
     static let ink         = Color(hex: 0x1a0c02)
 
+    // Bump all text ~20% larger app-wide (matches Android's LocalDensity fontScale * 1.2f).
+    static let fontScale: CGFloat = 1.2
+
     // Fonts ported from steampunk.css: Cinzel Decorative (display), Cinzel (serif), Lora (body).
     // Registered at runtime in ChroniclerApp; PostScript names verified via fontTools.
-    static func display(_ size: CGFloat) -> Font { .custom("CinzelDecorative-Bold", size: size) }
-    static func serif(_ size: CGFloat) -> Font { .custom("Cinzel-Regular", size: size) }
-    static func body(_ size: CGFloat) -> Font { .custom("Lora-Regular", size: size) }
+    // display = ONLY the "Chronicler" wordmark. serif = fixed UI titles/headers.
+    // body = all content INCLUDING book titles.
+    static func display(_ size: CGFloat) -> Font { .custom("CinzelDecorative-Bold", size: size * fontScale) }
+    static func serif(_ size: CGFloat) -> Font { .custom("Cinzel-Regular", size: size * fontScale) }
+    static func body(_ size: CGFloat) -> Font { .custom("Lora-Regular", size: size * fontScale) }
+    // Lora.ttf only bundles the Regular weight; bold is synthesized via .weight(.bold).
+    static func bodyBold(_ size: CGFloat) -> Font { .custom("Lora-Regular", size: size * fontScale).weight(.bold) }
 
     static let brassGradient = LinearGradient(
         colors: [brassLight, brass, borderBrass],
         startPoint: .top, endPoint: .bottom)
 }
 
-// --glow-brass: 0 0 20px #e8a010 — the "electric" brass glow on headings/titles.
+// Green-electric glow on headings/titles (was brass; now verdigris to match Android).
 extension View {
-    func glowBrass() -> some View {
+    func glowVerdigris() -> some View {
         self
-            .shadow(color: Theme.brass.opacity(0.85), radius: 12)
-            .shadow(color: Theme.brass.opacity(0.45), radius: 24)
+            .shadow(color: Theme.verdigris.opacity(0.9), radius: 8)
+            .shadow(color: Theme.verdigris.opacity(0.5), radius: 16)
     }
 
-    func glowVerdigris() -> some View {
-        self.shadow(color: Theme.verdigris.opacity(0.6), radius: 8)
+    // Green-electric panel: verdigris drop-glow + filled background + verdigris border.
+    // Mirrors Android's Modifier.electricPanel. Slap it on containers for the electric rizz.
+    func electricPanel(bg: Color = Theme.surface,
+                       corner: CGFloat = 4,
+                       alpha: Double = 0.6,
+                       glowRadius: CGFloat = 14) -> some View {
+        self
+            .background(bg.opacity(0.6))
+            .clipShape(RoundedRectangle(cornerRadius: corner))
+            .overlay(RoundedRectangle(cornerRadius: corner)
+                .stroke(Theme.verdigris.opacity(alpha), lineWidth: 1.5))
+            .shadow(color: Theme.verdigris.opacity(0.5), radius: glowRadius)
     }
 }
 

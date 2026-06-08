@@ -25,7 +25,7 @@ struct BookPlayerView: View {
                 ScrollView {
                     VStack(spacing: 24) {
                         header
-                        if current != nil { AudioPlayerView(audio: audio) }
+                        if current != nil { AudioPlayerView(audio: audio, auth: auth) }
                         chapterList
                         Divider().background(Theme.border)
                         Button("⚙ Reset All Progress") { Task { await resetBook() } }
@@ -57,9 +57,9 @@ struct BookPlayerView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 4))
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Theme.borderBrass, lineWidth: 1))
                     .onLongPressGesture(minimumDuration: 0.6) { Task { await openMeta() } }
-                Text(book.title).font(Theme.display(20)).foregroundColor(Theme.parchment)
+                // Book title is Lora bold (matches the Archive list), NOT Cinzel Decorative.
+                Text(book.title).font(Theme.bodyBold(20)).foregroundColor(Theme.parchment)
                     .multilineTextAlignment(.center)
-                    .glowBrass()
                 HStack(spacing: 0) {
                     Text(book.author).font(Theme.serif(14)).foregroundColor(Theme.parchmentMid)
                     if let n = book.narrator {
@@ -73,38 +73,46 @@ struct BookPlayerView: View {
     // ── Chapter list ──
     private var chapterList: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Chapters").font(Theme.serif(16)).foregroundColor(Theme.brass)
-                .glowBrass()
+            Text("Chapters").font(Theme.serif(16)).foregroundColor(Theme.verdigris)
+                .glowVerdigris()
             ForEach(Array(zip(chapters, progresses).enumerated()), id: \.element.0.id) { _, pair in
                 let (chapter, progress) = pair
                 let isCurrent = chapter.id == current?.id
                 HStack(spacing: 8) {
                     Text("\(chapter.trackNumber)")
                         .font(Theme.body(12)).foregroundColor(Theme.parchmentDim)
-                        .frame(width: 24)
+                        .frame(width: 28)
                     Text(chapter.title).font(Theme.body(14))
                         .foregroundColor(progress.isListened ? Theme.parchmentDim : Theme.parchment)
                         .strikethrough(progress.isListened)
                     Spacer()
-                    if progress.isListened {
-                        Text("✓").foregroundColor(Theme.verdigris).glowVerdigris()
-                    } else if progress.positionSeconds > 0 {
-                        Text("…").foregroundColor(Theme.brass)
-                    }
-                    if isCurrent { Text("▶").foregroundColor(Theme.brassPale) }
+                    // Always-visible status: ✓ finished, ◐ in progress, ○ not started.
+                    statusGlyph(progress)
+                    if isCurrent { Text("▶").font(.system(size: 14)).foregroundColor(Theme.brassPale) }
                 }
                 .padding(.vertical, 14).padding(.horizontal, 12)
-                .background(isCurrent ? Theme.surface2 : Color.clear)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .modifier(ChapterRowBackground(isCurrent: isCurrent))
                 .contentShape(Rectangle())
                 .onTapGesture { selectChapter(chapter) }
                 .contextMenu {
-                    Button(progress.isListened ? "Reset chapter (finished)" : "Reset chapter",
-                           role: .destructive) {
+                    Button(role: .destructive) {
                         Task { await resetChapter(chapter.id) }
+                    } label: {
+                        Label("Reset chapter", systemImage: "arrow.counterclockwise")
                     }
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func statusGlyph(_ progress: ChapterProgress) -> some View {
+        if progress.isListened {
+            Text("✓").font(.system(size: 18)).foregroundColor(Theme.verdigris).glowVerdigris()
+        } else if progress.positionSeconds > 0 {
+            Text("◐").font(.system(size: 18)).foregroundColor(Theme.brass)
+        } else {
+            Text("○").font(.system(size: 18)).foregroundColor(Theme.parchmentDim.opacity(0.5))
         }
     }
 
@@ -149,14 +157,20 @@ struct BookPlayerView: View {
         book = try? await api.getBook(bookId)
         guard book != nil else { return }
         chapters = (try? await api.getChapters(bookId: bookId)) ?? []
-        var progs: [ChapterProgress] = []
-        for c in chapters { progs.append(await api.getChapterProgress(c.id)) }
-        progresses = progs
+        // Load all chapter statuses in PARALLEL so they show immediately on open.
+        progresses = await withTaskGroup(of: (Int, ChapterProgress).self) { group in
+            for (i, c) in chapters.enumerated() {
+                group.addTask { (i, await api.getChapterProgress(c.id)) }
+            }
+            var result = Array(repeating: ChapterProgress(positionSeconds: 0, isListened: false),
+                               count: chapters.count)
+            for await (i, p) in group { result[i] = p }
+            return result
+        }
 
-        var idx = progresses.firstIndex { !$0.isListened && $0.positionSeconds > 0 }
-            ?? progresses.firstIndex { !$0.isListened } ?? 0
         if chapters.isEmpty { return }
-        idx = min(idx, chapters.count - 1)
+        // Resume at the FIRST chapter that isn't completed (earliest unfinished); else first.
+        let idx = progresses.firstIndex { !$0.isListened } ?? 0
         loadChapter(chapters[idx], startPosition: progresses[idx].positionSeconds)
     }
 
@@ -177,6 +191,7 @@ struct BookPlayerView: View {
               idx < chapters.count - 1 else { return }
         progresses[idx].isListened = true
         loadChapter(chapters[idx + 1], startPosition: 0)
+        if auth.autoplayNext { audio.play() }   // continue into the next chapter
     }
 
     private func saveChapterProgress(_ position: Double) async {
@@ -228,16 +243,29 @@ struct BookPlayerView: View {
     }
 }
 
-// ── Audio player UI (mirrors AudioPlayer.razor controls) ──
+// Applies the electricPanel only to the current chapter row.
+private struct ChapterRowBackground: ViewModifier {
+    let isCurrent: Bool
+    func body(content: Content) -> some View {
+        if isCurrent {
+            content.electricPanel(bg: Theme.surface2, corner: 4, alpha: 0.8, glowRadius: 8)
+        } else {
+            content
+        }
+    }
+}
+
+// ── Audio player UI (mirrors AudioPlayer.razor + Android AudioPlayerBar) ──
 struct AudioPlayerView: View {
     @ObservedObject var audio: AudioPlayerModel
-    @State private var showSpeed = false
+    @ObservedObject var auth: AuthStore
+    @State private var showPlayback = false
     private let speeds = [0.75, 1.0, 1.25, 1.5, 2.0]
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             HStack {
-                Text(audio.title).font(Theme.serif(14)).foregroundColor(Theme.parchment)
+                Text(audio.title).font(Theme.body(14)).foregroundColor(Theme.parchment)
                     .lineLimit(1)
                 Spacer()
                 Text(audio.duration > 0
@@ -246,17 +274,21 @@ struct AudioPlayerView: View {
                     .font(Theme.body(12)).foregroundColor(Theme.parchmentDim)
             }
 
-            HStack(spacing: 24) {
-                Button { audio.skipBack() } label: { Text("⏮30").font(Theme.body(16)) }
-                Button { audio.togglePlay() } label: {
-                    Text(audio.isPlaying ? "⏸" : "▶").font(.system(size: 30))
+            // Centered controls: skip-back / gear / skip-forward. Speed/autoplay live in
+            // the long-press playback dialog (no inline speed control).
+            HStack(spacing: 28) {
+                Button { audio.skipBack() } label: {
+                    Text("⏮30").font(.system(size: 20)).foregroundColor(Theme.brass)
                 }
-                Button { audio.skipForward() } label: { Text("30⏭").font(Theme.body(16)) }
-                Text("\(speedLabel)×")
-                    .font(Theme.body(14)).foregroundColor(Theme.parchmentMid)
-                    .onLongPressGesture(minimumDuration: 0.6) { showSpeed = true }
+                GearButton(isPlaying: audio.isPlaying,
+                           onTap: { audio.togglePlay() },
+                           onLongPress: { showPlayback = true })
+                    .frame(width: 104, height: 104)
+                Button { audio.skipForward() } label: {
+                    Text("30⏭").font(.system(size: 20)).foregroundColor(Theme.brass)
+                }
             }
-            .foregroundColor(Theme.brass)
+            .padding(.vertical, 8)
 
             if audio.duration > 0 {
                 Slider(value: Binding(
@@ -265,19 +297,163 @@ struct AudioPlayerView: View {
                     .tint(Theme.brass)
             }
         }
-        .padding(12)
-        .background(Theme.surface.opacity(0.6))
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Theme.border, lineWidth: 1))
-        .clipShape(RoundedRectangle(cornerRadius: 4))
-        .confirmationDialog("Speed", isPresented: $showSpeed, titleVisibility: .visible) {
-            ForEach(speeds, id: \.self) { s in
-                Button("\(speedText(s))×") { audio.setSpeed(s) }
-            }
+        .padding(14)
+        .electricPanel(bg: Theme.surface, corner: 6, alpha: 0.7, glowRadius: 18)
+        .sheet(isPresented: $showPlayback) {
+            playbackSheet
+                .presentationDetents([.medium])
+                .presentationBackground(Theme.surface)
         }
     }
 
-    private var speedLabel: String { speedText(audio.speed) }
+    private var playbackSheet: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Playback").font(Theme.serif(20)).foregroundColor(Theme.verdigris)
+                .glowVerdigris()
+                .padding(.bottom, 4)
+            Text("Speed").font(Theme.body(12)).foregroundColor(Theme.parchmentDim)
+            ForEach(speeds, id: \.self) { s in
+                let selected = abs(audio.speed - s) < 0.01
+                Button { audio.setSpeed(s); showPlayback = false } label: {
+                    Text("\(speedText(s))×")
+                        .font(Theme.body(18)).fontWeight(selected ? .bold : .regular)
+                        .foregroundColor(selected ? Theme.brassPale : Theme.parchmentMid)
+                        .glowIf(selected)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 4)
+                }
+            }
+            Toggle(isOn: Binding(get: { auth.autoplayNext },
+                                 set: { auth.setAutoplay($0) })) {
+                Text("Autoplay next chapter")
+                    .font(Theme.body(14)).foregroundColor(Theme.parchment)
+            }
+            .tint(Theme.verdigris)
+            .padding(.top, 8)
+            Spacer()
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     private func speedText(_ s: Double) -> String {
         s == s.rounded() ? String(Int(s)) : String(s)
+    }
+}
+
+private extension View {
+    @ViewBuilder func glowIf(_ on: Bool) -> some View {
+        if on { self.glowVerdigris() } else { self }
+    }
+}
+
+// Steampunk brass-gear play/pause button. Tap = play/pause, long-press = playback dialog.
+// The gear spins (~40°/s) while playing and freezes at its angle when paused; a verdigris
+// electric ring pulses around the rim. Mirrors Android drawGearButton + rotation effect.
+struct GearButton: View {
+    let isPlaying: Bool
+    let onTap: () -> Void
+    let onLongPress: () -> Void
+
+    // Persisted rotation: angle accumulated up to the last pause, plus live elapsed
+    // playing-time. Folded together on pause so it freezes at the current angle.
+    @State private var baseAngle: Double = 0
+    @State private var playStart: Date?
+
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            let now = timeline.date
+            Canvas { ctx, size in
+                drawGear(ctx: ctx, size: size, angle: currentAngle(now), glow: pulse(now))
+            }
+            .overlay {
+                // Centered play/pause SF Symbol, ink-colored, large for driving.
+                GeometryReader { geo in
+                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: geo.size.width * 0.32, weight: .bold))
+                        .foregroundColor(Theme.ink)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                }
+            }
+        }
+        .contentShape(Circle())
+        .shadow(color: Theme.verdigris.opacity(0.6), radius: 18)
+        .onTapGesture { onTap() }
+        .onLongPressGesture(minimumDuration: 0.5) { onLongPress() }
+        .onChange(of: isPlaying) { _, playing in
+            if playing {
+                playStart = Date()
+            } else {
+                // Freeze: fold elapsed spin into the base angle.
+                baseAngle = currentAngle(Date())
+                playStart = nil
+            }
+        }
+        .onAppear { if isPlaying { playStart = Date() } }
+    }
+
+    // Angle = frozen base + (seconds spent playing since last resume) * 40°/s.
+    private func currentAngle(_ now: Date) -> Double {
+        guard isPlaying, let start = playStart else { return baseAngle }
+        return (baseAngle + now.timeIntervalSince(start) * 40).truncatingRemainder(dividingBy: 360)
+    }
+
+    // Pulsing alpha for the electric ring; livelier while playing.
+    private func pulse(_ now: Date) -> Double {
+        let period = isPlaying ? 1.3 : 3.2
+        let phase = now.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: period) / period
+        return 0.45 + 0.55 * (0.5 - 0.5 * cos(phase * 2 * .pi))
+    }
+
+    private func drawGear(ctx: GraphicsContext, size: CGSize, angle: Double, glow: Double) {
+        let cx = size.width / 2, cy = size.height / 2
+        let outer = min(size.width, size.height) / 2
+        let rFace = outer * 0.74
+        let toothH = outer * 0.24
+        let teeth = 10
+        // Tooth width == gap width at the pitch radius.
+        let pitch = outer - toothH / 2
+        let toothW = pitch * (.pi / Double(teeth))
+        let toothCorner = outer * 0.03
+        let rad = angle * .pi / 180
+
+        // Gear teeth around the rim (rotating).
+        for i in 0..<teeth {
+            let a = rad + Double(i) * 2 * .pi / Double(teeth)
+            var ctx2 = ctx
+            ctx2.translateBy(x: cx, y: cy)
+            ctx2.rotate(by: .radians(a))
+            let rect = CGRect(x: -toothW / 2, y: -outer + 1, width: toothW, height: toothH)
+            ctx2.fill(Path(roundedRect: rect, cornerRadius: toothCorner),
+                      with: .color(Theme.borderBrass))
+        }
+
+        // Brass face with an off-center radial sheen.
+        let faceRect = CGRect(x: cx - rFace, y: cy - rFace, width: rFace * 2, height: rFace * 2)
+        ctx.fill(Path(ellipseIn: faceRect), with: .radialGradient(
+            Gradient(colors: [Theme.brassPale, Theme.brass, Theme.borderBrass]),
+            center: CGPoint(x: cx - rFace * 0.3, y: cy - rFace * 0.3),
+            startRadius: 0, endRadius: rFace * 1.5))
+
+        // Dark rim line.
+        ctx.stroke(Path(ellipseIn: faceRect), with: .color(Theme.ink.opacity(0.4)),
+                   lineWidth: outer * 0.04)
+
+        // Rivets (rotating with the gear).
+        let rivetRing = rFace * 0.80
+        for i in 0..<8 {
+            let a = Double(i) / 8 * 2 * .pi + rad
+            let rc = CGPoint(x: cx + rivetRing * cos(a), y: cy + rivetRing * sin(a))
+            let rr = outer * 0.04
+            ctx.fill(Path(ellipseIn: CGRect(x: rc.x - rr, y: rc.y - rr, width: rr * 2, height: rr * 2)),
+                     with: .color(Theme.ink.opacity(0.5)))
+        }
+
+        // Pulsing verdigris electric ring (fixed).
+        let ringR = rFace + outer * 0.015
+        ctx.stroke(Path(ellipseIn: CGRect(x: cx - ringR, y: cy - ringR,
+                                          width: ringR * 2, height: ringR * 2)),
+                   with: .color(Theme.verdigris.opacity(glow)),
+                   lineWidth: outer * 0.06 * glow + 1)
     }
 }

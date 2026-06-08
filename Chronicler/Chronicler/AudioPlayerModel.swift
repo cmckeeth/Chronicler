@@ -93,6 +93,9 @@ final class AudioPlayerModel: ObservableObject {
         }
     }
 
+    // Start playback programmatically (used by autoplay-next).
+    func play() { if !isPlaying { togglePlay() } }
+
     func skipBack()    { seek(to: max(0, currentPosition - 30)) }
     func skipForward() { seek(to: duration > 0 ? min(duration, currentPosition + 30) : currentPosition + 30) }
 
