@@ -242,6 +242,18 @@ private fun AudioPlayerBar(audio: AudioController) {
         initialValue = 0.45f, targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(if (audio.isPlaying) 650 else 1600), RepeatMode.Reverse),
         label = "glowAlpha")
+    // Gear spins while playing, freezes (holds angle) when paused.
+    var gearAngle by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(audio.isPlaying) {
+        if (audio.isPlaying) {
+            var last = withFrameNanos { it }
+            while (true) {
+                val now = withFrameNanos { it }
+                gearAngle = (gearAngle + (now - last) / 1_000_000_000f * 40f) % 360f
+                last = now
+            }
+        }
+    }
 
     Column(
         Modifier.fillMaxWidth().background(Theme.surface, RoundedCornerShape(4.dp)).padding(12.dp),
@@ -276,7 +288,7 @@ private fun AudioPlayerBar(audio: AudioController) {
                         }),
                 contentAlignment = Alignment.Center
             ) {
-                Canvas(Modifier.matchParentSize()) { drawGearButton(glow) }
+                Canvas(Modifier.matchParentSize()) { drawGearButton(glow, gearAngle) }
                 Icon(
                     imageVector = if (audio.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = if (audio.isPlaying) "Pause" else "Play",
@@ -321,7 +333,8 @@ private fun AudioPlayerBar(audio: AudioController) {
 }
 
 // Draws a brass cog: teeth, radial metallic sheen, rivets, and a pulsing verdigris ring.
-private fun DrawScope.drawGearButton(glow: Float) {
+// `angle` spins the mechanical parts (teeth + rivets); the sheen and ring stay fixed.
+private fun DrawScope.drawGearButton(glow: Float, angle: Float) {
     val cx = size.width / 2f
     val cy = size.height / 2f
     val outer = size.minDimension / 2f
@@ -330,9 +343,9 @@ private fun DrawScope.drawGearButton(glow: Float) {
     val toothH = outer * 0.24f
     val teeth = 10
 
-    // Gear teeth around the rim.
+    // Gear teeth around the rim (rotating).
     for (i in 0 until teeth) {
-        rotate(i * 360f / teeth, pivot = Offset(cx, cy)) {
+        rotate(angle + i * 360f / teeth, pivot = Offset(cx, cy)) {
             drawRoundRect(
                 color = Theme.borderBrass,
                 topLeft = Offset(cx - toothW / 2f, cy - outer + 1f),
@@ -340,7 +353,7 @@ private fun DrawScope.drawGearButton(glow: Float) {
                 cornerRadius = CornerRadius(2f, 2f))
         }
     }
-    // Brass face with an off-center sheen.
+    // Brass face with an off-center sheen (fixed light source).
     drawCircle(
         brush = Brush.radialGradient(
             colors = listOf(Theme.brassPale, Theme.brass, Theme.borderBrass),
@@ -350,14 +363,15 @@ private fun DrawScope.drawGearButton(glow: Float) {
     // Rim line.
     drawCircle(color = Theme.ink.copy(alpha = 0.4f), radius = rFace, center = Offset(cx, cy),
         style = Stroke(width = outer * 0.04f))
-    // Rivets.
+    // Rivets (rotating with the gear).
     val rivetRing = rFace * 0.80f
+    val angleRad = angle / 180f * Math.PI.toFloat()
     for (i in 0 until 8) {
-        val a = (i / 8f) * 2f * Math.PI.toFloat()
+        val a = (i / 8f) * 2f * Math.PI.toFloat() + angleRad
         drawCircle(color = Theme.ink.copy(alpha = 0.5f), radius = outer * 0.04f,
             center = Offset(cx + rivetRing * kotlin.math.cos(a), cy + rivetRing * kotlin.math.sin(a)))
     }
-    // Pulsing verdigris electric ring.
+    // Pulsing verdigris electric ring (fixed).
     drawCircle(color = Theme.verdigris.copy(alpha = glow),
         radius = rFace + outer * 0.015f, center = Offset(cx, cy),
         style = Stroke(width = outer * 0.06f * glow + 1f))
