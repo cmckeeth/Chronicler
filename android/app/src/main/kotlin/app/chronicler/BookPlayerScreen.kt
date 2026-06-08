@@ -46,6 +46,7 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
     val context = LocalContext.current
     val api = auth.api
     val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
     val audio = remember { AudioController(context) }
 
     var book by remember { mutableStateOf<Book?>(null) }
@@ -155,7 +156,10 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
                             .background(if (isCurrent) Theme.surface2 else Color.Transparent, RoundedCornerShape(4.dp))
                             .combinedClickable(
                                 onClick = { loadChapter(ch, progresses[idx].positionSeconds) },
-                                onLongClick = { menuChapterId = ch.id })
+                                onLongClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    menuChapterId = ch.id
+                                })
                             .padding(horizontal = 12.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
