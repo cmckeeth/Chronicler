@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,7 +27,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -253,13 +261,10 @@ private fun AudioPlayerBar(audio: AudioController) {
             TextButton(onClick = { audio.skipBack() }) {
                 Text("⏮30", color = Theme.brass, fontSize = 20.sp)
             }
-            // Big circular play/pause — tap to play/pause, long-press to set speed.
+            // Steampunk brass-gear play/pause — tap to play/pause, long-press to set speed.
             Box(
-                Modifier.size(104.dp)
+                Modifier.size(112.dp)
                     .shadow(24.dp, CircleShape, spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
-                    .clip(CircleShape)
-                    .background(Theme.brassGradient)
-                    .border((3.5 * glow).dp, Theme.verdigris.copy(alpha = glow), CircleShape)
                     .combinedClickable(
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -271,11 +276,12 @@ private fun AudioPlayerBar(audio: AudioController) {
                         }),
                 contentAlignment = Alignment.Center
             ) {
+                Canvas(Modifier.matchParentSize()) { drawGearButton(glow) }
                 Icon(
                     imageVector = if (audio.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = if (audio.isPlaying) "Pause" else "Play",
                     tint = Theme.ink,
-                    modifier = Modifier.size(56.dp))
+                    modifier = Modifier.size(48.dp))
             }
             TextButton(onClick = { audio.skipForward() }) {
                 Text("30⏭", color = Theme.brass, fontSize = 20.sp)
@@ -312,6 +318,49 @@ private fun AudioPlayerBar(audio: AudioController) {
                 }
             })
     }
+}
+
+// Draws a brass cog: teeth, radial metallic sheen, rivets, and a pulsing verdigris ring.
+private fun DrawScope.drawGearButton(glow: Float) {
+    val cx = size.width / 2f
+    val cy = size.height / 2f
+    val outer = size.minDimension / 2f
+    val rFace = outer * 0.74f
+    val toothW = outer * 0.26f
+    val toothH = outer * 0.24f
+    val teeth = 10
+
+    // Gear teeth around the rim.
+    for (i in 0 until teeth) {
+        rotate(i * 360f / teeth, pivot = Offset(cx, cy)) {
+            drawRoundRect(
+                color = Theme.borderBrass,
+                topLeft = Offset(cx - toothW / 2f, cy - outer + 1f),
+                size = Size(toothW, toothH),
+                cornerRadius = CornerRadius(2f, 2f))
+        }
+    }
+    // Brass face with an off-center sheen.
+    drawCircle(
+        brush = Brush.radialGradient(
+            colors = listOf(Theme.brassPale, Theme.brass, Theme.borderBrass),
+            center = Offset(cx - rFace * 0.3f, cy - rFace * 0.3f),
+            radius = rFace * 1.5f),
+        radius = rFace, center = Offset(cx, cy))
+    // Rim line.
+    drawCircle(color = Theme.ink.copy(alpha = 0.4f), radius = rFace, center = Offset(cx, cy),
+        style = Stroke(width = outer * 0.04f))
+    // Rivets.
+    val rivetRing = rFace * 0.80f
+    for (i in 0 until 8) {
+        val a = (i / 8f) * 2f * Math.PI.toFloat()
+        drawCircle(color = Theme.ink.copy(alpha = 0.5f), radius = outer * 0.04f,
+            center = Offset(cx + rivetRing * kotlin.math.cos(a), cy + rivetRing * kotlin.math.sin(a)))
+    }
+    // Pulsing verdigris electric ring.
+    drawCircle(color = Theme.verdigris.copy(alpha = glow),
+        radius = rFace + outer * 0.015f, center = Offset(cx, cy),
+        style = Stroke(width = outer * 0.06f * glow + 1f))
 }
 
 @Composable
