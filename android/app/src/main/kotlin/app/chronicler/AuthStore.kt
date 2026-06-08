@@ -14,6 +14,15 @@ class AuthStore(context: Context) {
     var email by mutableStateOf<String?>(null)
         private set
 
+    // Persisted: auto-play the next chapter when one finishes.
+    var autoplayNext by mutableStateOf(prefs.getBoolean("autoplay", false))
+        private set
+
+    fun setAutoplay(v: Boolean) {
+        autoplayNext = v
+        prefs.edit().putBoolean("autoplay", v).apply()
+    }
+
     init {
         prefs.getString("token", null)?.let {
             api.token = it

@@ -86,6 +86,8 @@ class AudioController(context: Context) {
         }
     }
 
+    fun play() { if (!isPlaying) togglePlay() }
+
     fun skipBack() = seek(maxOf(0.0, currentPosition - 30))
     fun skipForward() = seek(if (duration > 0) minOf(duration, currentPosition + 30) else currentPosition + 30)
 

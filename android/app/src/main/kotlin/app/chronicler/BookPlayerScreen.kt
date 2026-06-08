@@ -92,6 +92,7 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
             if (idx in 0 until chapters.size - 1) {
                 progresses = progresses.toMutableList().also { it[idx] = it[idx].copy(isListened = true) }
                 loadChapter(chapters[idx + 1], 0.0)
+                if (auth.autoplayNext) audio.play()   // continue into the next chapter
             }
         }
 
@@ -141,7 +142,26 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
             Spacer(Modifier.height(20.dp))
             if (current != null) AudioPlayerBar(audio)
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(12.dp))
+            // Autoplay toggle: continue into the next chapter automatically.
+            Row(
+                Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(4.dp))
+                    .clickable { auth.setAutoplay(!auth.autoplayNext) }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = auth.autoplayNext,
+                    onCheckedChange = { auth.setAutoplay(it) },
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = Theme.verdigris,
+                        uncheckedColor = Theme.parchmentDim,
+                        checkmarkColor = Theme.ink))
+                Text("Autoplay next chapter", color = Theme.parchment, fontSize = 14.sp)
+            }
+
+            Spacer(Modifier.height(16.dp))
             Text("Chapters", color = Theme.brass, fontSize = 16.sp, fontFamily = Theme.serif,
                 style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
             Spacer(Modifier.height(8.dp))
