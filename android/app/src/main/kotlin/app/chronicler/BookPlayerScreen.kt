@@ -140,28 +140,9 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
             }
 
             Spacer(Modifier.height(20.dp))
-            if (current != null) AudioPlayerBar(audio)
+            if (current != null) AudioPlayerBar(audio, auth)
 
-            Spacer(Modifier.height(12.dp))
-            // Autoplay toggle: continue into the next chapter automatically.
-            Row(
-                Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(4.dp))
-                    .clickable { auth.setAutoplay(!auth.autoplayNext) }
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(
-                    checked = auth.autoplayNext,
-                    onCheckedChange = { auth.setAutoplay(it) },
-                    colors = CheckboxDefaults.colors(
-                        checkedColor = Theme.verdigris,
-                        uncheckedColor = Theme.parchmentDim,
-                        checkmarkColor = Theme.ink))
-                Text("Autoplay next chapter", color = Theme.parchment, fontSize = 14.sp)
-            }
-
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
             Text("Chapters", color = Theme.brass, fontSize = 16.sp, fontFamily = Theme.serif,
                 style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
             Spacer(Modifier.height(8.dp))
@@ -251,7 +232,7 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun AudioPlayerBar(audio: AudioController) {
+private fun AudioPlayerBar(audio: AudioController, auth: AuthStore) {
     var showSpeed by remember { mutableStateOf(false) }
     val speeds = listOf(0.75, 1.0, 1.25, 1.5, 2.0)
     val haptic = LocalHapticFeedback.current
@@ -332,9 +313,10 @@ private fun AudioPlayerBar(audio: AudioController) {
         AlertDialog(onDismissRequest = { showSpeed = false },
             confirmButton = {},
             containerColor = Theme.surface,
-            title = { Text("Playback Speed", color = Theme.brass, fontFamily = Theme.serif) },
+            title = { Text("Playback", color = Theme.brass, fontFamily = Theme.serif) },
             text = {
                 Column {
+                    Text("Speed", color = Theme.parchmentDim, fontSize = 12.sp)
                     speeds.forEach { s ->
                         val selected = kotlin.math.abs(audio.speed - s) < 0.01
                         TextButton(onClick = { audio.setRate(s); showSpeed = false },
@@ -347,6 +329,23 @@ private fun AudioPlayerBar(audio: AudioController) {
                                     androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris)
                                 else androidx.compose.ui.text.TextStyle())
                         }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(4.dp))
+                            .clickable { auth.setAutoplay(!auth.autoplayNext) }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = auth.autoplayNext,
+                            onCheckedChange = { auth.setAutoplay(it) },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = Theme.verdigris,
+                                uncheckedColor = Theme.parchmentDim,
+                                checkmarkColor = Theme.ink))
+                        Text("Autoplay next chapter", color = Theme.parchment, fontSize = 14.sp)
                     }
                 }
             })
