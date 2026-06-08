@@ -1,19 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_CSPROJ="src/Chronicler.Maui/Chronicler.Maui.csproj"
+# Build the native Kotlin/Compose Android app and deploy it through the same
+# endpoint pipeline as before: bump version, drop the APK in updates/, redeploy API.
+ANDROID_DIR="android"
+GRADLE_BUILD="$ANDROID_DIR/app/build.gradle.kts"
 API_UPDATES_DIR="updates"
+export ANDROID_HOME="${ANDROID_HOME:-/home/corbin/Android/Sdk}"
 
-# ── Version bump (based on last built APK, not csproj) ───────────────────────
+# ── Version bump (based on last built APK, not the gradle file) ───────────────
 
-# Read highest version from updates/ dir so git pull doesn't reset it
 LAST_VER=$(ls "$API_UPDATES_DIR"/Chronicler-v*.apk 2>/dev/null \
     | sed 's/.*Chronicler-v\(.*\)\.apk/\1/' \
     | sort -t. -k1,1n -k2,2n -k3,3n \
     | tail -n1) || true
 
 if [[ -z "$LAST_VER" ]]; then
-    LAST_VER=$(grep '<ApplicationDisplayVersion>' "$APP_CSPROJ" | sed 's/.*>\(.*\)<.*/\1/' | head -n1)
+    LAST_VER=$(grep 'versionName' "$GRADLE_BUILD" | sed 's/.*"\(.*\)".*/\1/' | head -n1)
 fi
 
 MAJOR=$(echo "$LAST_VER" | cut -d. -f1)
@@ -21,42 +24,19 @@ MINOR=$(echo "$LAST_VER" | cut -d. -f2)
 PATCH=$(echo "$LAST_VER" | cut -d. -f3)
 NEW_PATCH=$((PATCH + 1))
 NEW_VER="$MAJOR.$MINOR.$NEW_PATCH"
+NEW_CODE=$((MAJOR * 10000 + MINOR * 100 + NEW_PATCH))
 
-echo "Bumping $LAST_VER → $NEW_VER"
-sed -i "s|<ApplicationDisplayVersion>.*</ApplicationDisplayVersion>|<ApplicationDisplayVersion>$NEW_VER</ApplicationDisplayVersion>|" "$APP_CSPROJ"
-sed -i "s|<ApplicationVersion>.*</ApplicationVersion>|<ApplicationVersion>$((PATCH + 1))</ApplicationVersion>|" "$APP_CSPROJ"
+echo "Bumping $LAST_VER → $NEW_VER (versionCode $NEW_CODE)"
+sed -i "s|versionName = \".*\"|versionName = \"$NEW_VER\"|" "$GRADLE_BUILD"
+sed -i "s|versionCode = .*|versionCode = $NEW_CODE|" "$GRADLE_BUILD"
 
-# ── Ensure Android workload ───────────────────────────────────────────────────
+# ── Build Android APK (debug-signed, mirrors prior pipeline) ─────────────────
 
-echo "Installing MAUI Android workload..."
-dotnet workload install maui-android
+echo "Building Android APK with Gradle..."
+( cd "$ANDROID_DIR" && ./gradlew assembleDebug --no-daemon )
 
-# ── Install Android SDK dependencies ─────────────────────────────────────────
-
-echo "Installing Android SDK dependencies..."
-dotnet build "$APP_CSPROJ" \
-    -t:InstallAndroidDependencies \
-    -f net10.0-android \
-    -c Debug \
-    -p:AndroidSdkDirectory=/home/corbin/Android/Sdk \
-    -p:AcceptAndroidSDKLicenses=true
-
-# ── Build MAUI Android APK ────────────────────────────────────────────────────
-
-echo "Building Android APK..."
-dotnet publish "$APP_CSPROJ" \
-    -f net10.0-android \
-    -c Debug \
-    -p:EmbedAssembliesIntoApk=true \
-    -p:AndroidPackageFormat=apk
-
-# Prefer the debug-signed APK; fall back to any APK if not found
-APK_PATH=$(find . -name "*-Signed.apk" -newer "$APP_CSPROJ" | head -n1)
-if [[ -z "$APK_PATH" ]]; then
-    APK_PATH=$(find . -name "*.apk" -newer "$APP_CSPROJ" | head -n1)
-fi
-
-if [[ -z "$APK_PATH" ]]; then
+APK_PATH="$ANDROID_DIR/app/build/outputs/apk/debug/app-debug.apk"
+if [[ ! -f "$APK_PATH" ]]; then
     echo "Error: APK not found after build"
     exit 1
 fi
@@ -64,10 +44,7 @@ fi
 # ── Copy APK to updates dir ───────────────────────────────────────────────────
 
 mkdir -p "$API_UPDATES_DIR"
-
-# Remove old versioned APKs, keep only the new one
 rm -f "$API_UPDATES_DIR"/Chronicler-v*.apk
-
 cp "$APK_PATH" "$API_UPDATES_DIR/Chronicler-v$NEW_VER.apk"
 cp "$APK_PATH" "$API_UPDATES_DIR/Chronicler.apk"
 echo "APK saved: $API_UPDATES_DIR/Chronicler-v$NEW_VER.apk"
