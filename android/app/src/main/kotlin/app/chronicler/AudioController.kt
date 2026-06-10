@@ -25,7 +25,11 @@ import kotlinx.coroutines.launch
 // one is active when a cast session connects/disconnects, transferring the media.
 @UnstableApi
 class AudioController(context: Context) {
-    private val exo = ExoPlayer.Builder(context).build()
+    private val app = context.applicationContext
+    private val exo = ExoPlayer.Builder(context)
+        .setWakeMode(androidx.media3.common.C.WAKE_MODE_NETWORK)   // keep playing with screen off
+        .setHandleAudioBecomingNoisy(true)
+        .build()
     private val cast: CastPlayer? = runCatching {
         CastPlayer(CastContext.getSharedInstance(context))
     }.getOrNull()
@@ -53,7 +57,11 @@ class AudioController(context: Context) {
     var onEnded: (() -> Unit)? = null
 
     private val listener = object : Player.Listener {
-        override fun onIsPlayingChanged(playing: Boolean) { isPlaying = playing }
+        override fun onIsPlayingChanged(playing: Boolean) {
+            isPlaying = playing
+            // Run a foreground service while playing so background/screen-off audio survives.
+            if (playing) PlaybackService.start(app) else PlaybackService.stop(app)
+        }
         override fun onPlaybackStateChanged(state: Int) {
             if (state == Player.STATE_ENDED) { isPlaying = false; onEnded?.invoke() }
         }
@@ -165,5 +173,6 @@ class AudioController(context: Context) {
         enhancer?.release()
         exo.release()
         cast?.release()
+        PlaybackService.stop(app)
     }
 }
