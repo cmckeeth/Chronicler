@@ -15,6 +15,10 @@ object CrashReporter {
                 val sw = StringWriter()
                 throwable.printStackTrace(PrintWriter(sw))
                 val trace = sw.toString().take(4000)
+                val msg = "ANDROID CRASH v${BuildConfig.VERSION_NAME}: $trace"
+                // Build valid JSON (proper escaping of tabs/quotes/newlines in the trace).
+                val body = kotlinx.serialization.json.JsonObject(
+                    mapOf("message" to kotlinx.serialization.json.JsonPrimitive(msg))).toString()
                 // POST synchronously on a short-lived thread (main is already dying).
                 val t = Thread {
                     runCatching {
@@ -24,8 +28,6 @@ object CrashReporter {
                         conn.doOutput = true
                         conn.connectTimeout = 3000
                         conn.readTimeout = 3000
-                        val body = "{\"message\":\"ANDROID CRASH v${BuildConfig.VERSION_NAME}: " +
-                            trace.replace("\\", "\\\\").replace("\"", "'").replace("\n", " | ") + "\"}"
                         conn.outputStream.use { it.write(body.toByteArray()) }
                         conn.inputStream.use { it.readBytes() }
                     }
