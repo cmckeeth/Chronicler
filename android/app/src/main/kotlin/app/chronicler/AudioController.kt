@@ -5,57 +5,86 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.media3.cast.CastPlayer
+import androidx.media3.cast.SessionAvailabilityListener
 import androidx.media3.common.MediaItem
-import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
-import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import com.google.android.gms.cast.framework.CastContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// Mirrors AudioPlayer.razor native behavior: skip ±30, speed, poll, save every 10s, advance on end.
+// Plays locally via ExoPlayer, or on a Chromecast/Google TV/Nest via CastPlayer.
+// Both implement Player, so controls/position work uniformly; we just swap which
+// one is active when a cast session connects/disconnects, transferring the media.
+@UnstableApi
 class AudioController(context: Context) {
-    private val player = ExoPlayer.Builder(context).build()
+    private val exo = ExoPlayer.Builder(context).build()
+    private val cast: CastPlayer? = runCatching {
+        CastPlayer(CastContext.getSharedInstance(context))
+    }.getOrNull()
+
+    private var player: Player = exo
     private var pollJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.Main)
     private var lastSaveMs = 0L
+
+    val castSupported = cast != null
 
     var isPlaying by mutableStateOf(false); private set
     var currentPosition by mutableDoubleStateOf(0.0); private set
     var duration by mutableDoubleStateOf(0.0); private set
     var speed by mutableDoubleStateOf(1.0); private set
     var title by mutableStateOf(""); private set
+    var casting by mutableStateOf(false); private set
 
     var onProgress: ((Double) -> Unit)? = null
     var onEnded: (() -> Unit)? = null
 
-    init {
-        player.addListener(object : Player.Listener {
-            override fun onPlaybackStateChanged(state: Int) {
-                if (state == Player.STATE_ENDED) { isPlaying = false; onEnded?.invoke() }
-            }
-        })
+    private val listener = object : Player.Listener {
+        override fun onIsPlayingChanged(playing: Boolean) { isPlaying = playing }
+        override fun onPlaybackStateChanged(state: Int) {
+            if (state == Player.STATE_ENDED) { isPlaying = false; onEnded?.invoke() }
+        }
     }
 
-    fun load(url: String, title: String, startPosition: Double, token: String?) {
+    init {
+        exo.addListener(listener)
+        cast?.addListener(listener)
+        cast?.setSessionAvailabilityListener(object : SessionAvailabilityListener {
+            override fun onCastSessionAvailable() { transferTo(cast) }
+            override fun onCastSessionUnavailable() { transferTo(exo) }
+        })
+        startPolling()
+    }
+
+    private fun transferTo(target: Player) {
+        if (target === player) return
+        val pos = player.currentPosition
+        val wasPlaying = player.isPlaying
+        val item = player.currentMediaItem
+        player.pause()
+        player = target
+        casting = player === cast
+        if (item != null) {
+            player.setMediaItem(item, pos)
+            player.playbackParameters = player.playbackParameters.withSpeed(speed.toFloat())
+            player.prepare()
+            if (wasPlaying) player.play()
+        }
+    }
+
+    fun load(url: String, title: String, startPosition: Double, @Suppress("UNUSED_PARAMETER") token: String?) {
         this.title = title
-        isPlaying = false
         currentPosition = startPosition
         duration = 0.0
-
-        val dsf = DefaultHttpDataSource.Factory().apply {
-            if (token != null) setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
-        }
-        val source = ProgressiveMediaSource.Factory(dsf)
-            .createMediaSource(MediaItem.fromUri(url))
-        player.setMediaSource(source)
+        player.setMediaItem(MediaItem.fromUri(url))
         player.prepare()
         if (startPosition > 1) player.seekTo((startPosition * 1000).toLong())
-        startPolling()
     }
 
     private fun startPolling() {
@@ -63,10 +92,10 @@ class AudioController(context: Context) {
         pollJob = scope.launch {
             while (true) {
                 delay(250)
-                if (isPlaying) currentPosition = player.currentPosition / 1000.0
+                if (player.isPlaying) currentPosition = player.currentPosition / 1000.0
                 val d = player.duration
                 if (d > 0) duration = d / 1000.0
-                if (isPlaying && System.currentTimeMillis() - lastSaveMs >= 10_000) {
+                if (player.isPlaying && System.currentTimeMillis() - lastSaveMs >= 10_000) {
                     lastSaveMs = System.currentTimeMillis()
                     onProgress?.invoke(currentPosition)
                 }
@@ -75,18 +104,16 @@ class AudioController(context: Context) {
     }
 
     fun togglePlay() {
-        if (isPlaying) {
-            isPlaying = false
+        if (player.isPlaying) {
             player.pause()
             onProgress?.invoke(currentPosition)
         } else {
-            isPlaying = true
-            player.playbackParameters = PlaybackParameters(speed.toFloat())
+            player.playbackParameters = player.playbackParameters.withSpeed(speed.toFloat())
             player.play()
         }
     }
 
-    fun play() { if (!isPlaying) togglePlay() }
+    fun play() { if (!player.isPlaying) togglePlay() }
 
     fun skipBack() = seek(maxOf(0.0, currentPosition - 30))
     fun skipForward() = seek(if (duration > 0) minOf(duration, currentPosition + 30) else currentPosition + 30)
@@ -98,12 +125,14 @@ class AudioController(context: Context) {
 
     fun setRate(s: Double) {
         speed = s
-        player.playbackParameters = PlaybackParameters(s.toFloat())
+        player.playbackParameters = player.playbackParameters.withSpeed(s.toFloat())
     }
 
     fun release() {
-        if (isPlaying) onProgress?.invoke(currentPosition)
+        if (player.isPlaying) onProgress?.invoke(currentPosition)
         pollJob?.cancel()
-        player.release()
+        cast?.setSessionAvailabilityListener(null)
+        exo.release()
+        cast?.release()
     }
 }

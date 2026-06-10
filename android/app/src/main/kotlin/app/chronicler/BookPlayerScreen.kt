@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -261,13 +262,34 @@ private fun AudioPlayerBar(audio: AudioController, auth: AuthStore) {
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
             Text(audio.title, color = Theme.parchment, fontSize = 14.sp, maxLines = 1,
                 modifier = Modifier.weight(1f))
             Text(if (audio.duration > 0)
                 "${formatTime(audio.currentPosition)} / ${formatTime(audio.duration)}"
                  else formatTime(audio.currentPosition),
                 color = Theme.parchmentDim, fontSize = 12.sp)
+            if (audio.castSupported) {
+                AndroidView(
+                    modifier = Modifier.size(40.dp),
+                    factory = { ctx ->
+                        // MediaRouteButton needs an AppCompat theme; wrap + guard so a
+                        // failure can never crash the player screen.
+                        runCatching {
+                            val themed = android.view.ContextThemeWrapper(
+                                ctx, androidx.appcompat.R.style.Theme_AppCompat_DayNight_NoActionBar)
+                            androidx.mediarouter.app.MediaRouteButton(themed).apply {
+                                com.google.android.gms.cast.framework.CastButtonFactory
+                                    .setUpMediaRouteButton(themed, this)
+                            }
+                        }.getOrElse { android.view.View(ctx) }
+                    })
+            }
+        }
+        if (audio.casting) {
+            Text("📡 Casting", color = Theme.verdigris, fontSize = 11.sp,
+                style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
         }
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterHorizontally),

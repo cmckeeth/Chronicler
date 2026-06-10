@@ -55,4 +55,8 @@ dependencies {
 
     implementation("androidx.media3:media3-exoplayer:1.5.0")
     implementation("androidx.media3:media3-session:1.5.0")
+    implementation("androidx.media3:media3-cast:1.5.0")
+    implementation("com.google.android.gms:play-services-cast-framework:21.5.0")
+    implementation("androidx.mediarouter:mediarouter:1.7.0")
+    implementation("androidx.appcompat:appcompat:1.7.0")
 }
