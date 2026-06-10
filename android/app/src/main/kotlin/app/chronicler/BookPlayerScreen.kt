@@ -365,10 +365,10 @@ private fun AudioPlayerBar(audio: AudioController, auth: AuthStore) {
             TextButton(onClick = { audio.skipBack() }) {
                 Text("⏮30", color = Theme.brass, fontSize = 20.sp)
             }
-            // Steampunk brass-gear play/pause — tap to play/pause, long-press to set speed.
+            // Electric orb play/pause — tap to play/pause, long-press for playback options.
             Box(
                 Modifier.size(112.dp)
-                    .shadow(24.dp, CircleShape, spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
+                    .shadow(28.dp, CircleShape, spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
                     .combinedClickable(
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -380,12 +380,12 @@ private fun AudioPlayerBar(audio: AudioController, auth: AuthStore) {
                         }),
                 contentAlignment = Alignment.Center
             ) {
-                Canvas(Modifier.matchParentSize()) { drawGearButton(glow, phase, audio.isPlaying) }
+                Canvas(Modifier.matchParentSize()) { drawElectricButton(glow, phase, audio.isPlaying) }
                 Icon(
                     imageVector = if (audio.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = if (audio.isPlaying) "Pause" else "Play",
-                    tint = Theme.ink,
-                    modifier = Modifier.size(48.dp))
+                    tint = Theme.brassPale,
+                    modifier = Modifier.size(50.dp))
             }
             TextButton(onClick = { audio.skipForward() }) {
                 Text("30⏭", color = Theme.brass, fontSize = 20.sp)
@@ -458,82 +458,85 @@ private fun AudioPlayerBar(audio: AudioController, auth: AuthStore) {
     }
 }
 
-// Brass cog (static) with a green-electric overlay while playing: pulsing core,
-// crackling veins of electricity, and a pulsing verdigris rim.
-private fun DrawScope.drawGearButton(glow: Float, phase: Float, playing: Boolean) {
+// A dark electric orb: pulsing verdigris core, crackling veins of electricity,
+// and a glowing rim. No cog — pure electricity. Livelier while playing.
+private fun DrawScope.drawElectricButton(glow: Float, phase: Float, playing: Boolean) {
     val cx = size.width / 2f
     val cy = size.height / 2f
     val outer = size.minDimension / 2f
-    val rFace = outer * 0.74f
-    val toothH = outer * 0.24f
-    val teeth = 10
-    val pitch = outer - toothH / 2f
-    val toothW = pitch * (Math.PI.toFloat() / teeth)   // tooth width == gap width
-    val toothCorner = outer * 0.03f
+    val r = outer * 0.82f
+    val center = Offset(cx, cy)
 
-    // Gear teeth (static).
-    for (i in 0 until teeth) {
-        rotate(i * 360f / teeth, pivot = Offset(cx, cy)) {
-            drawRoundRect(
-                color = Theme.borderBrass,
-                topLeft = Offset(cx - toothW / 2f, cy - outer + 1f),
-                size = Size(toothW, toothH),
-                cornerRadius = CornerRadius(toothCorner, toothCorner))
-        }
-    }
-    // Brass face with an off-center sheen.
+    // Dark orb base with a faint green depth.
     drawCircle(
         brush = Brush.radialGradient(
-            colors = listOf(Theme.brassPale, Theme.brass, Theme.borderBrass),
-            center = Offset(cx - rFace * 0.3f, cy - rFace * 0.3f),
-            radius = rFace * 1.5f),
-        radius = rFace, center = Offset(cx, cy))
-    drawCircle(color = Theme.ink.copy(alpha = 0.4f), radius = rFace, center = Offset(cx, cy),
-        style = Stroke(width = outer * 0.04f))
-    val rivetRing = rFace * 0.80f
-    for (i in 0 until 8) {
-        val a = (i / 8f) * 2f * Math.PI.toFloat()
-        drawCircle(color = Theme.ink.copy(alpha = 0.5f), radius = outer * 0.04f,
-            center = Offset(cx + rivetRing * kotlin.math.cos(a), cy + rivetRing * kotlin.math.sin(a)))
+            colors = listOf(Color(0xFF13301C), Theme.ink),
+            center = center, radius = r * 1.15f),
+        radius = r, center = center)
+
+    // Pulsing verdigris core glow.
+    val coreA = (if (playing) 0.40f else 0.16f) * (0.6f + 0.4f * glow)
+    drawCircle(
+        brush = Brush.radialGradient(
+            colors = listOf(Theme.verdigris.copy(alpha = coreA),
+                Theme.verdigris.copy(alpha = 0f)),
+            center = center, radius = r * 0.85f),
+        radius = r * 0.85f, center = center)
+
+    // Crackling veins (more + brighter while playing; a faint few when paused).
+    val veinCount = if (playing) 9 else 4
+    val intensity = if (playing) (0.6f + 0.4f * glow) else 0.30f
+    for (k in 0 until veinCount) {
+        val ang = (k / veinCount.toFloat()) * 2f * Math.PI.toFloat() + phase * 0.6f
+        drawVein(cx, cy, ang, r * 1.02f, phase, k, intensity)
     }
 
-    // Electric overlay while playing: pulsing core + crackling veins.
-    if (playing) {
-        val a = 0.55f + 0.45f * glow
-        drawCircle(color = Theme.verdigris.copy(alpha = 0.22f * glow), radius = rFace * 0.55f,
-            center = Offset(cx, cy))
-        val veins = 7
-        for (k in 0 until veins) {
-            val ang = (k / veins.toFloat()) * 2f * Math.PI.toFloat() + phase * 0.5f
-            drawVein(cx, cy, ang, rFace * 0.95f, phase, k, a)
-        }
-    }
-
-    // Pulsing verdigris rim (brighter while playing).
-    drawCircle(color = Theme.verdigris.copy(alpha = if (playing) glow else glow * 0.55f),
-        radius = rFace + outer * 0.015f, center = Offset(cx, cy),
-        style = Stroke(width = outer * 0.06f * glow + 1f))
+    // Glowing rim — outer halo + crisp inner ring, pulsing.
+    drawCircle(color = Theme.verdigris.copy(alpha = 0.18f * glow),
+        radius = r + outer * 0.08f, center = center, style = Stroke(width = outer * 0.05f))
+    drawCircle(color = Theme.verdigris.copy(alpha = if (playing) glow else glow * 0.6f),
+        radius = r, center = center, style = Stroke(width = outer * 0.05f * glow + 2f))
 }
 
-// One jagged vein of electricity from the center toward the rim, wobbling by `phase`.
+// One jagged, forking vein of electricity from the center toward the rim.
 private fun DrawScope.drawVein(
     cx: Float, cy: Float, angle: Float, length: Float, phase: Float, seed: Int, alpha: Float,
 ) {
-    val segs = 6
+    val segs = 7
     val perp = angle + Math.PI.toFloat() / 2f
-    val path = androidx.compose.ui.graphics.Path().apply { moveTo(cx, cy) }
+    val pts = ArrayList<Offset>(segs + 1)
+    pts.add(Offset(cx, cy))
     for (i in 1..segs) {
         val t = i / segs.toFloat()
         val bx = cx + kotlin.math.cos(angle) * length * t
         val by = cy + kotlin.math.sin(angle) * length * t
-        val jitter = kotlin.math.sin(phase * 11f + i * 2.3f + seed * 1.7f) *
-            length * 0.16f * (1f - t * 0.25f)
-        path.lineTo(bx + kotlin.math.cos(perp) * jitter, by + kotlin.math.sin(perp) * jitter)
+        val jitter = kotlin.math.sin(phase * 12f + i * 2.3f + seed * 1.7f) *
+            length * 0.18f * (1f - t * 0.2f)
+        pts.add(Offset(bx + kotlin.math.cos(perp) * jitter, by + kotlin.math.sin(perp) * jitter))
     }
-    drawPath(path, color = Theme.verdigris.copy(alpha = 0.18f * alpha),
-        style = Stroke(width = length * 0.06f, cap = androidx.compose.ui.graphics.StrokeCap.Round))
-    drawPath(path, color = androidx.compose.ui.graphics.Color(0xFFC8FF7A).copy(alpha = 0.9f * alpha),
-        style = Stroke(width = length * 0.018f, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+    val path = androidx.compose.ui.graphics.Path().apply {
+        moveTo(pts[0].x, pts[0].y)
+        for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
+    }
+    // A short fork branching off about two-thirds out.
+    val branch = androidx.compose.ui.graphics.Path().apply {
+        val b = pts[(segs * 2) / 3]
+        moveTo(b.x, b.y)
+        val ba = angle + (if (seed % 2 == 0) 0.6f else -0.6f)
+        val bl = length * 0.28f
+        val jb = kotlin.math.sin(phase * 14f + seed) * length * 0.10f
+        lineTo(b.x + kotlin.math.cos(ba) * bl + kotlin.math.cos(perp) * jb,
+            b.y + kotlin.math.sin(ba) * bl + kotlin.math.sin(perp) * jb)
+    }
+    val cap = androidx.compose.ui.graphics.StrokeCap.Round
+    // Glow underlay then bright core, for each.
+    drawPath(path, color = Theme.verdigris.copy(alpha = 0.22f * alpha),
+        style = Stroke(width = length * 0.07f, cap = cap))
+    drawPath(branch, color = Theme.verdigris.copy(alpha = 0.16f * alpha),
+        style = Stroke(width = length * 0.05f, cap = cap))
+    val core = androidx.compose.ui.graphics.Color(0xFFD6FF8C).copy(alpha = 0.95f * alpha)
+    drawPath(path, color = core, style = Stroke(width = length * 0.02f, cap = cap))
+    drawPath(branch, color = core, style = Stroke(width = length * 0.014f, cap = cap))
 }
 
 @Composable
