@@ -305,14 +305,14 @@ private fun AudioPlayerBar(audio: AudioController, auth: AuthStore) {
         initialValue = 0.45f, targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(if (audio.isPlaying) 650 else 1600), RepeatMode.Reverse),
         label = "glowAlpha")
-    // Gear spins while playing, freezes (holds angle) when paused.
-    var gearAngle by remember { mutableFloatStateOf(0f) }
+    // Time phase (seconds) that advances while playing — drives the electric veins.
+    var phase by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(audio.isPlaying) {
         if (audio.isPlaying) {
             var last = withFrameNanos { it }
             while (true) {
                 val now = withFrameNanos { it }
-                gearAngle = (gearAngle + (now - last) / 1_000_000_000f * 40f) % 360f
+                phase += (now - last) / 1_000_000_000f
                 last = now
             }
         }
@@ -374,7 +374,7 @@ private fun AudioPlayerBar(audio: AudioController, auth: AuthStore) {
                         }),
                 contentAlignment = Alignment.Center
             ) {
-                Canvas(Modifier.matchParentSize()) { drawGearButton(glow, gearAngle) }
+                Canvas(Modifier.matchParentSize()) { drawGearButton(glow, phase, audio.isPlaying) }
                 Icon(
                     imageVector = if (audio.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = if (audio.isPlaying) "Pause" else "Play",
@@ -452,23 +452,22 @@ private fun AudioPlayerBar(audio: AudioController, auth: AuthStore) {
     }
 }
 
-// Draws a brass cog: teeth, radial metallic sheen, rivets, and a pulsing verdigris ring.
-// `angle` spins the mechanical parts (teeth + rivets); the sheen and ring stay fixed.
-private fun DrawScope.drawGearButton(glow: Float, angle: Float) {
+// Brass cog (static) with a green-electric overlay while playing: pulsing core,
+// crackling veins of electricity, and a pulsing verdigris rim.
+private fun DrawScope.drawGearButton(glow: Float, phase: Float, playing: Boolean) {
     val cx = size.width / 2f
     val cy = size.height / 2f
     val outer = size.minDimension / 2f
     val rFace = outer * 0.74f
     val toothH = outer * 0.24f
     val teeth = 10
-    // Tooth width == gap width: each tooth spans half its angular slot at the pitch radius.
     val pitch = outer - toothH / 2f
-    val toothW = pitch * (Math.PI.toFloat() / teeth)
+    val toothW = pitch * (Math.PI.toFloat() / teeth)   // tooth width == gap width
     val toothCorner = outer * 0.03f
 
-    // Gear teeth around the rim (rotating): wide, squared off with a slight corner.
+    // Gear teeth (static).
     for (i in 0 until teeth) {
-        rotate(angle + i * 360f / teeth, pivot = Offset(cx, cy)) {
+        rotate(i * 360f / teeth, pivot = Offset(cx, cy)) {
             drawRoundRect(
                 color = Theme.borderBrass,
                 topLeft = Offset(cx - toothW / 2f, cy - outer + 1f),
@@ -476,28 +475,59 @@ private fun DrawScope.drawGearButton(glow: Float, angle: Float) {
                 cornerRadius = CornerRadius(toothCorner, toothCorner))
         }
     }
-    // Brass face with an off-center sheen (fixed light source).
+    // Brass face with an off-center sheen.
     drawCircle(
         brush = Brush.radialGradient(
             colors = listOf(Theme.brassPale, Theme.brass, Theme.borderBrass),
             center = Offset(cx - rFace * 0.3f, cy - rFace * 0.3f),
             radius = rFace * 1.5f),
         radius = rFace, center = Offset(cx, cy))
-    // Rim line.
     drawCircle(color = Theme.ink.copy(alpha = 0.4f), radius = rFace, center = Offset(cx, cy),
         style = Stroke(width = outer * 0.04f))
-    // Rivets (rotating with the gear).
     val rivetRing = rFace * 0.80f
-    val angleRad = angle / 180f * Math.PI.toFloat()
     for (i in 0 until 8) {
-        val a = (i / 8f) * 2f * Math.PI.toFloat() + angleRad
+        val a = (i / 8f) * 2f * Math.PI.toFloat()
         drawCircle(color = Theme.ink.copy(alpha = 0.5f), radius = outer * 0.04f,
             center = Offset(cx + rivetRing * kotlin.math.cos(a), cy + rivetRing * kotlin.math.sin(a)))
     }
-    // Pulsing verdigris electric ring (fixed).
-    drawCircle(color = Theme.verdigris.copy(alpha = glow),
+
+    // Electric overlay while playing: pulsing core + crackling veins.
+    if (playing) {
+        val a = 0.55f + 0.45f * glow
+        drawCircle(color = Theme.verdigris.copy(alpha = 0.22f * glow), radius = rFace * 0.55f,
+            center = Offset(cx, cy))
+        val veins = 7
+        for (k in 0 until veins) {
+            val ang = (k / veins.toFloat()) * 2f * Math.PI.toFloat() + phase * 0.5f
+            drawVein(cx, cy, ang, rFace * 0.95f, phase, k, a)
+        }
+    }
+
+    // Pulsing verdigris rim (brighter while playing).
+    drawCircle(color = Theme.verdigris.copy(alpha = if (playing) glow else glow * 0.55f),
         radius = rFace + outer * 0.015f, center = Offset(cx, cy),
         style = Stroke(width = outer * 0.06f * glow + 1f))
+}
+
+// One jagged vein of electricity from the center toward the rim, wobbling by `phase`.
+private fun DrawScope.drawVein(
+    cx: Float, cy: Float, angle: Float, length: Float, phase: Float, seed: Int, alpha: Float,
+) {
+    val segs = 6
+    val perp = angle + Math.PI.toFloat() / 2f
+    val path = androidx.compose.ui.graphics.Path().apply { moveTo(cx, cy) }
+    for (i in 1..segs) {
+        val t = i / segs.toFloat()
+        val bx = cx + kotlin.math.cos(angle) * length * t
+        val by = cy + kotlin.math.sin(angle) * length * t
+        val jitter = kotlin.math.sin(phase * 11f + i * 2.3f + seed * 1.7f) *
+            length * 0.16f * (1f - t * 0.25f)
+        path.lineTo(bx + kotlin.math.cos(perp) * jitter, by + kotlin.math.sin(perp) * jitter)
+    }
+    drawPath(path, color = Theme.verdigris.copy(alpha = 0.18f * alpha),
+        style = Stroke(width = length * 0.06f, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+    drawPath(path, color = androidx.compose.ui.graphics.Color(0xFFC8FF7A).copy(alpha = 0.9f * alpha),
+        style = Stroke(width = length * 0.018f, cap = androidx.compose.ui.graphics.StrokeCap.Round))
 }
 
 @Composable
