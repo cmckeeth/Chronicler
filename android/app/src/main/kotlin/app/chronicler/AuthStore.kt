@@ -23,6 +23,15 @@ class AuthStore(context: Context) {
         prefs.edit().putBoolean("autoplay", v).apply()
     }
 
+    // Persisted: boost playback volume beyond 100%.
+    var volumeBoosted by mutableStateOf(prefs.getBoolean("volumeBoost", false))
+        private set
+
+    fun setVolumeBoost(v: Boolean) {
+        volumeBoosted = v
+        prefs.edit().putBoolean("volumeBoost", v).apply()
+    }
+
     init {
         prefs.getString("token", null)?.let {
             api.token = it

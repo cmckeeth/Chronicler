@@ -1,6 +1,7 @@
 package app.chronicler
 
 import android.content.Context
+import android.media.audiofx.LoudnessEnhancer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -11,6 +12,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.analytics.AnalyticsListener
 import com.google.android.gms.cast.framework.CastContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +34,11 @@ class AudioController(context: Context) {
     private var pollJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.Main)
     private var lastSaveMs = 0L
+
+    // Volume boost on local playback via LoudnessEnhancer (gain beyond 100%).
+    private var enhancer: LoudnessEnhancer? = null
+    private var boostEnabled = false
+    private val boostGainMillibels = 1200   // ~12 dB
 
     val castSupported = cast != null
 
@@ -59,7 +66,30 @@ class AudioController(context: Context) {
             override fun onCastSessionAvailable() { transferTo(cast) }
             override fun onCastSessionUnavailable() { transferTo(exo) }
         })
+        exo.addAnalyticsListener(object : AnalyticsListener {
+            override fun onAudioSessionIdChanged(eventTime: AnalyticsListener.EventTime, audioSessionId: Int) {
+                setupEnhancer(audioSessionId)
+            }
+        })
         startPolling()
+    }
+
+    private fun setupEnhancer(sessionId: Int) {
+        enhancer?.release()
+        enhancer = runCatching {
+            LoudnessEnhancer(sessionId).apply {
+                setTargetGain(if (boostEnabled) boostGainMillibels else 0)
+                enabled = boostEnabled
+            }
+        }.getOrNull()
+    }
+
+    fun setBoost(on: Boolean) {
+        boostEnabled = on
+        runCatching {
+            enhancer?.setTargetGain(if (on) boostGainMillibels else 0)
+            enhancer?.enabled = on
+        }
     }
 
     private fun transferTo(target: Player) {
@@ -132,6 +162,7 @@ class AudioController(context: Context) {
         if (player.isPlaying) onProgress?.invoke(currentPosition)
         pollJob?.cancel()
         cast?.setSessionAvailabilityListener(null)
+        enhancer?.release()
         exo.release()
         cast?.release()
     }

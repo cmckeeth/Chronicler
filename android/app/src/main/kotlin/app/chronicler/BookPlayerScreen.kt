@@ -97,6 +97,7 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
             }
         }
 
+        audio.setBoost(auth.volumeBoosted)
         book = api.getBook(bookId) ?: return@LaunchedEffect
         chapters = api.getChapters(bookId)
         // Load all chapter statuses in parallel so they show immediately on open.
@@ -368,6 +369,22 @@ private fun AudioPlayerBar(audio: AudioController, auth: AuthStore) {
                                 uncheckedColor = Theme.parchmentDim,
                                 checkmarkColor = Theme.ink))
                         Text("Autoplay next chapter", color = Theme.parchment, fontSize = 14.sp)
+                    }
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(4.dp))
+                            .clickable { auth.setVolumeBoost(!auth.volumeBoosted); audio.setBoost(auth.volumeBoosted) }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = auth.volumeBoosted,
+                            onCheckedChange = { auth.setVolumeBoost(it); audio.setBoost(it) },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = Theme.verdigris,
+                                uncheckedColor = Theme.parchmentDim,
+                                checkmarkColor = Theme.ink))
+                        Text("Volume boost", color = Theme.parchment, fontSize = 14.sp)
                     }
                 }
             })
