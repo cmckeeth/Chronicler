@@ -64,11 +64,36 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
     var current by remember { mutableStateOf<Chapter?>(null) }
     var showMeta by remember { mutableStateOf(false) }
     var menuChapterId by remember { mutableStateOf<Int?>(null) }
+    // Download state per chapter: 0 = none, 1 = downloading, 2 = downloaded.
+    val downloads = remember { mutableStateMapOf<Int, Int>() }
 
     fun loadChapter(ch: Chapter, start: Double) {
         current = ch
-        audio.load(api.audioUrl(ch.id), ch.title, start, api.token)
+        // Play the local file when downloaded; otherwise stream.
+        audio.load(Downloads.sourceUri(context, ch.id, api.audioUrl(ch.id)), ch.title, start, api.token)
     }
+
+    fun downloadChapter(ch: Chapter) {
+        downloads[ch.id] = 1
+        scope.launch {
+            val ok = Downloads.download(context, ch.id, api.audioUrl(ch.id))
+            downloads[ch.id] = if (ok) 2 else 0
+        }
+    }
+    fun removeDownload(ch: Chapter) {
+        Downloads.deleteChapter(context, ch.id)
+        downloads[ch.id] = 0
+    }
+    fun downloadAll() {
+        scope.launch {
+            for (ch in chapters) {
+                if (downloads[ch.id] == 2) continue
+                downloads[ch.id] = 1
+                downloads[ch.id] = if (Downloads.download(context, ch.id, api.audioUrl(ch.id))) 2 else 0
+            }
+        }
+    }
+    fun removeAll() { chapters.forEach { removeDownload(it) } }
 
     LaunchedEffect(bookId) {
         audio.onProgress = { pos ->
@@ -104,6 +129,7 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
         progresses = coroutineScope {
             chapters.map { ch -> async { api.getChapterProgress(ch.id) } }.awaitAll()
         }
+        chapters.forEach { downloads[it.id] = if (Downloads.isDownloaded(context, it.id)) 2 else 0 }
         if (chapters.isNotEmpty()) {
             // Resume at the FIRST chapter that isn't completed (earliest unfinished),
             // picking up at its saved position. Falls back to the first chapter.
@@ -145,8 +171,22 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
             if (current != null) AudioPlayerBar(audio, auth)
 
             Spacer(Modifier.height(24.dp))
-            Text("Chapters", color = Theme.brass, fontSize = 16.sp, fontFamily = Theme.serif,
-                style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Chapters", color = Theme.brass, fontSize = 16.sp, fontFamily = Theme.serif,
+                    style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris),
+                    modifier = Modifier.weight(1f))
+                val allDownloaded = chapters.isNotEmpty() && chapters.all { downloads[it.id] == 2 }
+                val anyDownloading = chapters.any { downloads[it.id] == 1 }
+                when {
+                    anyDownloading -> Text("⚙ Downloading…", color = Theme.brass, fontSize = 12.sp)
+                    allDownloaded -> TextButton(onClick = { removeAll() }) {
+                        Text("✕ Remove all", color = Theme.parchmentDim, fontSize = 12.sp)
+                    }
+                    else -> TextButton(onClick = { downloadAll() }) {
+                        Text("⬇ All", color = Theme.verdigris, fontSize = 12.sp)
+                    }
+                }
+            }
             Spacer(Modifier.height(8.dp))
             chapters.forEachIndexed { idx, ch ->
                 val pr = progresses.getOrElse(idx) { ChapterProgress() }
@@ -190,6 +230,12 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
                                 androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris)
                             else androidx.compose.ui.text.TextStyle()
                         )
+                        // Offline-download indicator.
+                        when (downloads[ch.id]) {
+                            1 -> Text("  ⏳", color = Theme.brass, fontSize = 13.sp)
+                            2 -> Text("  ⬇", color = Theme.verdigris, fontSize = 14.sp,
+                                style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
+                        }
                         if (isCurrent) Text("  ▶", color = Theme.brassPale, fontSize = 16.sp)
                     }
                     DropdownMenu(expanded = menuChapterId == ch.id,
@@ -209,6 +255,21 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
                                     progresses = progresses.toMutableList().also { it[idx] = ChapterProgress() }
                                 }
                             })
+                        if (downloads[ch.id] == 2) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text("⬇ Remove download", color = Theme.parchment,
+                                        fontFamily = Theme.body, fontSize = 15.sp)
+                                },
+                                onClick = { menuChapterId = null; removeDownload(ch) })
+                        } else if (downloads[ch.id] != 1) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text("⬇ Download for offline", color = Theme.parchment,
+                                        fontFamily = Theme.body, fontSize = 15.sp)
+                                },
+                                onClick = { menuChapterId = null; downloadChapter(ch) })
+                        }
                     }
                 }
             }
