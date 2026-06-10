@@ -52,6 +52,7 @@ class AudioController(context: Context) {
     var speed by mutableDoubleStateOf(1.0); private set
     var title by mutableStateOf(""); private set
     var casting by mutableStateOf(false); private set
+    var isLocal by mutableStateOf(false); private set   // playing a downloaded local file
 
     var onProgress: ((Double) -> Unit)? = null
     var onEnded: (() -> Unit)? = null
@@ -118,6 +119,7 @@ class AudioController(context: Context) {
 
     fun load(url: String, title: String, startPosition: Double, @Suppress("UNUSED_PARAMETER") token: String?) {
         this.title = title
+        isLocal = url.startsWith("file:")
         currentPosition = startPosition
         duration = 0.0
         player.setMediaItem(MediaItem.fromUri(url))

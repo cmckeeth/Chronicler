@@ -349,10 +349,16 @@ private fun AudioPlayerBar(audio: AudioController, auth: AuthStore) {
                     })
             }
         }
-        if (audio.casting) {
-            Text("📡 Casting", color = Theme.verdigris, fontSize = 11.sp,
-                style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
+        // Source badge: casting / local file / streaming.
+        val (badge, badgeColor) = when {
+            audio.casting -> "📡 Casting" to Theme.verdigris
+            audio.isLocal -> "📱 Local" to Theme.verdigris
+            else -> "📡 Streaming" to Theme.brass
         }
+        Text(badge, color = badgeColor, fontSize = 11.sp,
+            style = if (audio.casting || audio.isLocal)
+                androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris)
+            else androidx.compose.ui.text.TextStyle())
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically) {
