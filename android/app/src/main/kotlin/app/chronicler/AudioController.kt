@@ -2,6 +2,9 @@ package app.chronicler
 
 import android.content.Context
 import android.media.audiofx.LoudnessEnhancer
+import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +47,20 @@ class AudioController(context: Context) {
     private var boostEnabled = false
     private val boostGainMillibels = 1200   // ~12 dB
 
+    // Media session powering the lock-screen / notification controls.
+    private val session = MediaSessionCompat(app, "Chronicler").apply {
+        setCallback(object : MediaSessionCompat.Callback() {
+            override fun onPlay() { play() }
+            override fun onPause() { if (isPlaying) togglePlay() }
+            override fun onRewind() { skipBack() }
+            override fun onFastForward() { skipForward() }
+            override fun onSeekTo(pos: Long) { seek(pos / 1000.0) }
+            override fun onStop() { if (isPlaying) togglePlay() }
+        })
+        isActive = true
+        PlaybackHub.session = this
+    }
+
     val castSupported = cast != null
 
     var isPlaying by mutableStateOf(false); private set
@@ -60,12 +77,34 @@ class AudioController(context: Context) {
     private val listener = object : Player.Listener {
         override fun onIsPlayingChanged(playing: Boolean) {
             isPlaying = playing
-            // Run a foreground service while playing so background/screen-off audio survives.
-            if (playing) PlaybackService.start(app) else PlaybackService.stop(app)
+            PlaybackHub.playing = playing
+            updateSession()
+            // Keep a foreground service (with media notification) alive across play/pause
+            // so background/screen-off audio survives and lock-screen controls persist.
+            PlaybackService.update(app)
         }
         override fun onPlaybackStateChanged(state: Int) {
             if (state == Player.STATE_ENDED) { isPlaying = false; onEnded?.invoke() }
         }
+    }
+
+    private fun updateSession() {
+        session.setMetadata(MediaMetadataCompat.Builder()
+            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
+            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, title)
+            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, (duration * 1000).toLong())
+            .build())
+        session.setPlaybackState(PlaybackStateCompat.Builder()
+            .setActions(
+                PlaybackStateCompat.ACTION_PLAY or PlaybackStateCompat.ACTION_PAUSE or
+                PlaybackStateCompat.ACTION_PLAY_PAUSE or PlaybackStateCompat.ACTION_REWIND or
+                PlaybackStateCompat.ACTION_FAST_FORWARD or PlaybackStateCompat.ACTION_SEEK_TO or
+                PlaybackStateCompat.ACTION_STOP)
+            .setState(
+                if (isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
+                (currentPosition * 1000).toLong(), speed.toFloat())
+            .build())
+        PlaybackHub.title = title
     }
 
     init {
@@ -125,6 +164,7 @@ class AudioController(context: Context) {
         player.setMediaItem(MediaItem.fromUri(url))
         player.prepare()
         if (startPosition > 1) player.seekTo((startPosition * 1000).toLong())
+        updateSession()
     }
 
     private fun startPolling() {
@@ -139,6 +179,8 @@ class AudioController(context: Context) {
                     lastSaveMs = System.currentTimeMillis()
                     onProgress?.invoke(currentPosition)
                 }
+                updateSession()   // keep lock-screen position/state fresh
+
             }
         }
     }
@@ -175,6 +217,9 @@ class AudioController(context: Context) {
         enhancer?.release()
         exo.release()
         cast?.release()
+        session.isActive = false
+        session.release()
+        PlaybackHub.session = null
         PlaybackService.stop(app)
     }
 }
