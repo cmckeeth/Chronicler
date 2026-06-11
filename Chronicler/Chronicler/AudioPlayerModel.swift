@@ -37,6 +37,27 @@ final class AudioPlayerModel: ObservableObject {
         let s = AVAudioSession.sharedInstance()
         try? s.setCategory(.playback, mode: .spokenAudio)
         try? s.setActive(true)
+        setupRemoteCommands()
+    }
+
+    private var remoteCommandsSet = false
+    private func setupRemoteCommands() {
+        guard !remoteCommandsSet else { return }
+        remoteCommandsSet = true
+        let cc = MPRemoteCommandCenter.shared()
+        cc.playCommand.addTarget { [weak self] _ in self?.play(); return .success }
+        cc.pauseCommand.addTarget { [weak self] _ in
+            if self?.isPlaying == true { self?.togglePlay() }; return .success
+        }
+        cc.togglePlayPauseCommand.addTarget { [weak self] _ in self?.togglePlay(); return .success }
+        cc.skipForwardCommand.preferredIntervals = [30]
+        cc.skipForwardCommand.addTarget { [weak self] _ in self?.skipForward(); return .success }
+        cc.skipBackwardCommand.preferredIntervals = [30]
+        cc.skipBackwardCommand.addTarget { [weak self] _ in self?.skipBack(); return .success }
+        cc.changePlaybackPositionCommand.addTarget { [weak self] event in
+            guard let e = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
+            self?.seek(to: e.positionTime); return .success
+        }
     }
 
     // Load a chapter without auto-playing (matches OnParametersSetAsync resetting state).
