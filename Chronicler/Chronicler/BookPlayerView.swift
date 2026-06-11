@@ -1,4 +1,5 @@
 import SwiftUI
+import AVKit
 import PhotosUI
 
 struct BookPlayerView: View {
@@ -12,6 +13,8 @@ struct BookPlayerView: View {
     @State private var progresses: [ChapterProgress] = []
     @State private var current: Chapter?
     @State private var showMeta = false
+    // Download state per chapter: 0 = none, 1 = downloading, 2 = downloaded.
+    @State private var downloads: [Int: Int] = [:]
 
     private var api: APIClient { auth.api }
 
@@ -73,8 +76,12 @@ struct BookPlayerView: View {
     // ── Chapter list ──
     private var chapterList: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Chapters").font(Theme.serif(16)).foregroundColor(Theme.verdigris)
-                .glowVerdigris()
+            HStack {
+                Text("Chapters").font(Theme.serif(16)).foregroundColor(Theme.verdigris)
+                    .glowVerdigris()
+                Spacer()
+                downloadAllControl
+            }
             ForEach(Array(zip(chapters, progresses).enumerated()), id: \.element.0.id) { _, pair in
                 let (chapter, progress) = pair
                 let isCurrent = chapter.id == current?.id
@@ -88,6 +95,8 @@ struct BookPlayerView: View {
                     Spacer()
                     // Always-visible status: ✓ finished, ◐ in progress, ○ not started.
                     statusGlyph(progress)
+                    // Offline-download indicator.
+                    downloadGlyph(chapter.id)
                     if isCurrent { Text("▶").font(.system(size: 14)).foregroundColor(Theme.brassPale) }
                 }
                 .padding(.vertical, 14).padding(.horizontal, 12)
@@ -100,7 +109,33 @@ struct BookPlayerView: View {
                     } label: {
                         Label("Reset chapter", systemImage: "arrow.counterclockwise")
                     }
+                    if downloads[chapter.id] == 2 {
+                        Button { removeDownload(chapter) } label: {
+                            Label("Remove download", systemImage: "trash")
+                        }
+                    } else if downloads[chapter.id] != 1 {
+                        Button { downloadChapter(chapter) } label: {
+                            Label("Download for offline", systemImage: "arrow.down.circle")
+                        }
+                    }
                 }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var downloadAllControl: some View {
+        let allDownloaded = !chapters.isEmpty && chapters.allSatisfy { downloads[$0.id] == 2 }
+        let anyDownloading = chapters.contains { downloads[$0.id] == 1 }
+        if anyDownloading {
+            Text("⚙ Downloading…").font(Theme.body(12)).foregroundColor(Theme.brass)
+        } else if allDownloaded {
+            Button { removeAll() } label: {
+                Text("✕ Remove all").font(Theme.body(12)).foregroundColor(Theme.parchmentDim)
+            }
+        } else {
+            Button { downloadAll() } label: {
+                Text("⬇ All").font(Theme.body(12)).foregroundColor(Theme.verdigris)
             }
         }
     }
@@ -113,6 +148,15 @@ struct BookPlayerView: View {
             Text("◐").font(.system(size: 18)).foregroundColor(Theme.brass)
         } else {
             Text("○").font(.system(size: 18)).foregroundColor(Theme.parchmentDim.opacity(0.5))
+        }
+    }
+
+    @ViewBuilder
+    private func downloadGlyph(_ chapterId: Int) -> some View {
+        switch downloads[chapterId] {
+        case 1: Text("⏳").font(.system(size: 13)).foregroundColor(Theme.brass)
+        case 2: Text("⬇").font(.system(size: 14)).foregroundColor(Theme.verdigris).glowVerdigris()
+        default: EmptyView()
         }
     }
 
@@ -154,6 +198,7 @@ struct BookPlayerView: View {
     private func loadAll() async {
         audio.onProgress = { pos in Task { await saveChapterProgress(pos) } }
         audio.onEnded = { advanceChapter() }
+        audio.setBoost(auth.volumeBoosted)
         book = try? await api.getBook(bookId)
         guard book != nil else { return }
         chapters = (try? await api.getChapters(bookId: bookId)) ?? []
@@ -167,6 +212,8 @@ struct BookPlayerView: View {
             for await (i, p) in group { result[i] = p }
             return result
         }
+        // Seed download indicators from disk.
+        for c in chapters { downloads[c.id] = Downloads.isDownloaded(chapterId: c.id) ? 2 : 0 }
 
         if chapters.isEmpty { return }
         // Resume at the FIRST chapter that isn't completed (earliest unfinished); else first.
@@ -176,8 +223,10 @@ struct BookPlayerView: View {
 
     private func loadChapter(_ chapter: Chapter, startPosition: Double) {
         current = chapter
-        audio.load(url: api.audioURL(chapterId: chapter.id),
-                   title: chapter.title, startPosition: startPosition, token: api.token)
+        // Play the local file when downloaded; otherwise stream.
+        let source = Downloads.sourceURL(chapterId: chapter.id,
+                                         streamURL: api.audioURL(chapterId: chapter.id))
+        audio.load(url: source, title: chapter.title, startPosition: startPosition, token: api.token)
     }
 
     private func selectChapter(_ chapter: Chapter) {
@@ -193,6 +242,35 @@ struct BookPlayerView: View {
         loadChapter(chapters[idx + 1], startPosition: 0)
         if auth.autoplayNext { audio.play() }   // continue into the next chapter
     }
+
+    // ── Downloads ──
+    private func downloadChapter(_ chapter: Chapter) {
+        downloads[chapter.id] = 1
+        Task {
+            let ok = await Downloads.download(chapterId: chapter.id,
+                                              url: api.audioURL(chapterId: chapter.id), token: api.token)
+            downloads[chapter.id] = ok ? 2 : 0
+        }
+    }
+
+    private func removeDownload(_ chapter: Chapter) {
+        Downloads.deleteChapter(chapterId: chapter.id)
+        downloads[chapter.id] = 0
+    }
+
+    private func downloadAll() {
+        Task {
+            for chapter in chapters {
+                if downloads[chapter.id] == 2 { continue }
+                downloads[chapter.id] = 1
+                let ok = await Downloads.download(chapterId: chapter.id,
+                                                  url: api.audioURL(chapterId: chapter.id), token: api.token)
+                downloads[chapter.id] = ok ? 2 : 0
+            }
+        }
+    }
+
+    private func removeAll() { chapters.forEach { removeDownload($0) } }
 
     private func saveChapterProgress(_ position: Double) async {
         guard let cur = current else { return }
@@ -272,17 +350,22 @@ struct AudioPlayerView: View {
                      ? "\(formatTime(audio.currentPosition)) / \(formatTime(audio.duration))"
                      : formatTime(audio.currentPosition))
                     .font(Theme.body(12)).foregroundColor(Theme.parchmentDim)
+                // AirPlay route picker (iOS equivalent of Android's cast button).
+                AirPlayButton().frame(width: 32, height: 32)
             }
 
-            // Centered controls: skip-back / gear / skip-forward. Speed/autoplay live in
-            // the long-press playback dialog (no inline speed control).
+            // Source badge: 📱 Local / 📡 AirPlay / 📡 Streaming.
+            sourceBadge
+
+            // Centered controls: skip-back / electric orb / skip-forward. Speed/autoplay/boost
+            // live in the long-press playback dialog (no inline speed control).
             HStack(spacing: 28) {
                 Button { audio.skipBack() } label: {
                     Text("⏮30").font(.system(size: 20)).foregroundColor(Theme.brass)
                 }
-                GearButton(isPlaying: audio.isPlaying,
-                           onTap: { audio.togglePlay() },
-                           onLongPress: { showPlayback = true })
+                ElectricButton(isPlaying: audio.isPlaying,
+                               onTap: { audio.togglePlay() },
+                               onLongPress: { showPlayback = true })
                     .frame(width: 104, height: 104)
                 Button { audio.skipForward() } label: {
                     Text("30⏭").font(.system(size: 20)).foregroundColor(Theme.brass)
@@ -303,6 +386,19 @@ struct AudioPlayerView: View {
             playbackSheet
                 .presentationDetents([.medium])
                 .presentationBackground(Theme.surface)
+        }
+    }
+
+    @ViewBuilder
+    private var sourceBadge: some View {
+        let (text, color, glow): (String, Color, Bool) = {
+            if audio.isAirPlay { return ("📡 AirPlay", Theme.verdigris, true) }
+            if audio.isLocal   { return ("📱 Local", Theme.verdigris, true) }
+            return ("📡 Streaming", Theme.brass, false)
+        }()
+        HStack {
+            Text(text).font(Theme.body(11)).foregroundColor(color).glowIf(glow)
+            Spacer()
         }
     }
 
@@ -330,6 +426,12 @@ struct AudioPlayerView: View {
             }
             .tint(Theme.verdigris)
             .padding(.top, 8)
+            Toggle(isOn: Binding(get: { auth.volumeBoosted },
+                                 set: { auth.setVolumeBoost($0); audio.setBoost($0) })) {
+                Text("Volume boost")
+                    .font(Theme.body(14)).foregroundColor(Theme.parchment)
+            }
+            .tint(Theme.verdigris)
             Spacer()
         }
         .padding(24)
@@ -347,31 +449,39 @@ private extension View {
     }
 }
 
-// Steampunk brass-gear play/pause button. Tap = play/pause, long-press = playback dialog.
-// The gear spins (~40°/s) while playing and freezes at its angle when paused; a verdigris
-// electric ring pulses around the rim. Mirrors Android drawGearButton + rotation effect.
-struct GearButton: View {
+// AirPlay route picker wrapped for SwiftUI, tinted to theme.
+struct AirPlayButton: UIViewRepresentable {
+    func makeUIView(context: Context) -> AVRoutePickerView {
+        let v = AVRoutePickerView()
+        v.tintColor = UIColor(Theme.brass)
+        v.activeTintColor = UIColor(Theme.verdigris)
+        v.backgroundColor = .clear
+        v.prioritizesVideoDevices = false
+        return v
+    }
+    func updateUIView(_ uiView: AVRoutePickerView, context: Context) {}
+}
+
+// A dark electric orb play/pause button: pulsing verdigris core, crackling forking veins of
+// electricity (more/brighter while playing, a faint few when paused), and a glowing pulsing rim.
+// No cog — pure electricity. Tap = play/pause, long-press = playback dialog. Mirrors Android's
+// drawElectricButton + drawVein. Uses TimelineView(.animation) for the time phase.
+struct ElectricButton: View {
     let isPlaying: Bool
     let onTap: () -> Void
     let onLongPress: () -> Void
 
-    // Persisted rotation: angle accumulated up to the last pause, plus live elapsed
-    // playing-time. Folded together on pause so it freezes at the current angle.
-    @State private var baseAngle: Double = 0
-    @State private var playStart: Date?
-
     var body: some View {
         TimelineView(.animation) { timeline in
-            let now = timeline.date
+            let t = timeline.date.timeIntervalSinceReferenceDate
             Canvas { ctx, size in
-                drawGear(ctx: ctx, size: size, angle: currentAngle(now), glow: pulse(now))
+                drawElectric(ctx: ctx, size: size, glow: pulse(t), phase: t, playing: isPlaying)
             }
             .overlay {
-                // Centered play/pause SF Symbol, ink-colored, large for driving.
                 GeometryReader { geo in
                     Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: geo.size.width * 0.32, weight: .bold))
-                        .foregroundColor(Theme.ink)
+                        .font(.system(size: geo.size.width * 0.30, weight: .bold))
+                        .foregroundColor(Theme.brassPale)
                         .frame(width: geo.size.width, height: geo.size.height)
                 }
             }
@@ -380,80 +490,91 @@ struct GearButton: View {
         .shadow(color: Theme.verdigris.opacity(0.6), radius: 18)
         .onTapGesture { onTap() }
         .onLongPressGesture(minimumDuration: 0.5) { onLongPress() }
-        .onChange(of: isPlaying) { _, playing in
-            if playing {
-                playStart = Date()
-            } else {
-                // Freeze: fold elapsed spin into the base angle.
-                baseAngle = currentAngle(Date())
-                playStart = nil
-            }
-        }
-        .onAppear { if isPlaying { playStart = Date() } }
     }
 
-    // Angle = frozen base + (seconds spent playing since last resume) * 40°/s.
-    private func currentAngle(_ now: Date) -> Double {
-        guard isPlaying, let start = playStart else { return baseAngle }
-        return (baseAngle + now.timeIntervalSince(start) * 40).truncatingRemainder(dividingBy: 360)
-    }
-
-    // Pulsing alpha for the electric ring; livelier while playing.
-    private func pulse(_ now: Date) -> Double {
+    // Pulsing 0.45…1.0; livelier while playing.
+    private func pulse(_ t: Double) -> Double {
         let period = isPlaying ? 1.3 : 3.2
-        let phase = now.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: period) / period
+        let phase = t.truncatingRemainder(dividingBy: period) / period
         return 0.45 + 0.55 * (0.5 - 0.5 * cos(phase * 2 * .pi))
     }
 
-    private func drawGear(ctx: GraphicsContext, size: CGSize, angle: Double, glow: Double) {
+    private func drawElectric(ctx: GraphicsContext, size: CGSize,
+                              glow: Double, phase: Double, playing: Bool) {
         let cx = size.width / 2, cy = size.height / 2
+        let center = CGPoint(x: cx, y: cy)
         let outer = min(size.width, size.height) / 2
-        let rFace = outer * 0.74
-        let toothH = outer * 0.24
-        let teeth = 10
-        // Tooth width == gap width at the pitch radius.
-        let pitch = outer - toothH / 2
-        let toothW = pitch * (.pi / Double(teeth))
-        let toothCorner = outer * 0.03
-        let rad = angle * .pi / 180
+        let r = outer * 0.82
 
-        // Gear teeth around the rim (rotating).
-        for i in 0..<teeth {
-            let a = rad + Double(i) * 2 * .pi / Double(teeth)
-            var ctx2 = ctx
-            ctx2.translateBy(x: cx, y: cy)
-            ctx2.rotate(by: .radians(a))
-            let rect = CGRect(x: -toothW / 2, y: -outer + 1, width: toothW, height: toothH)
-            ctx2.fill(Path(roundedRect: rect, cornerRadius: toothCorner),
-                      with: .color(Theme.borderBrass))
+        // Dark orb base with a faint green depth.
+        let baseRect = CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2)
+        ctx.fill(Path(ellipseIn: baseRect), with: .radialGradient(
+            Gradient(colors: [Color(hex: 0x13301c), Theme.ink]),
+            center: center, startRadius: 0, endRadius: r * 1.15))
+
+        // Pulsing verdigris core glow.
+        let coreA = (playing ? 0.40 : 0.16) * (0.6 + 0.4 * glow)
+        let coreR = r * 0.85
+        let coreRect = CGRect(x: cx - coreR, y: cy - coreR, width: coreR * 2, height: coreR * 2)
+        ctx.fill(Path(ellipseIn: coreRect), with: .radialGradient(
+            Gradient(colors: [Theme.verdigris.opacity(coreA), Theme.verdigris.opacity(0)]),
+            center: center, startRadius: 0, endRadius: coreR))
+
+        // Crackling veins (more + brighter while playing; a faint few when paused).
+        let veinCount = playing ? 9 : 4
+        let intensity = playing ? (0.6 + 0.4 * glow) : 0.30
+        for k in 0..<veinCount {
+            let ang = (Double(k) / Double(veinCount)) * 2 * .pi + phase * 0.6
+            drawVein(ctx: ctx, cx: cx, cy: cy, angle: ang, length: r * 1.02,
+                     phase: phase, seed: k, alpha: intensity)
         }
 
-        // Brass face with an off-center radial sheen.
-        let faceRect = CGRect(x: cx - rFace, y: cy - rFace, width: rFace * 2, height: rFace * 2)
-        ctx.fill(Path(ellipseIn: faceRect), with: .radialGradient(
-            Gradient(colors: [Theme.brassPale, Theme.brass, Theme.borderBrass]),
-            center: CGPoint(x: cx - rFace * 0.3, y: cy - rFace * 0.3),
-            startRadius: 0, endRadius: rFace * 1.5))
+        // Glowing rim — outer halo + crisp inner ring, pulsing.
+        let haloR = r + outer * 0.08
+        ctx.stroke(Path(ellipseIn: CGRect(x: cx - haloR, y: cy - haloR, width: haloR * 2, height: haloR * 2)),
+                   with: .color(Theme.verdigris.opacity(0.18 * glow)), lineWidth: outer * 0.05)
+        ctx.stroke(Path(ellipseIn: baseRect),
+                   with: .color(Theme.verdigris.opacity(playing ? glow : glow * 0.6)),
+                   lineWidth: outer * 0.05 * glow + 2)
+    }
 
-        // Dark rim line.
-        ctx.stroke(Path(ellipseIn: faceRect), with: .color(Theme.ink.opacity(0.4)),
-                   lineWidth: outer * 0.04)
-
-        // Rivets (rotating with the gear).
-        let rivetRing = rFace * 0.80
-        for i in 0..<8 {
-            let a = Double(i) / 8 * 2 * .pi + rad
-            let rc = CGPoint(x: cx + rivetRing * cos(a), y: cy + rivetRing * sin(a))
-            let rr = outer * 0.04
-            ctx.fill(Path(ellipseIn: CGRect(x: rc.x - rr, y: rc.y - rr, width: rr * 2, height: rr * 2)),
-                     with: .color(Theme.ink.opacity(0.5)))
+    // One jagged, forking vein of electricity from the center toward the rim.
+    private func drawVein(ctx: GraphicsContext, cx: Double, cy: Double, angle: Double,
+                          length: Double, phase: Double, seed: Int, alpha: Double) {
+        let segs = 7
+        let perp = angle + .pi / 2
+        var pts: [CGPoint] = [CGPoint(x: cx, y: cy)]
+        for i in 1...segs {
+            let t = Double(i) / Double(segs)
+            let bx = cx + cos(angle) * length * t
+            let by = cy + sin(angle) * length * t
+            let jitter = sin(phase * 12 + Double(i) * 2.3 + Double(seed) * 1.7) *
+                length * 0.18 * (1 - t * 0.2)
+            pts.append(CGPoint(x: bx + cos(perp) * jitter, y: by + sin(perp) * jitter))
         }
+        var path = Path()
+        path.move(to: pts[0])
+        for i in 1..<pts.count { path.addLine(to: pts[i]) }
 
-        // Pulsing verdigris electric ring (fixed).
-        let ringR = rFace + outer * 0.015
-        ctx.stroke(Path(ellipseIn: CGRect(x: cx - ringR, y: cy - ringR,
-                                          width: ringR * 2, height: ringR * 2)),
-                   with: .color(Theme.verdigris.opacity(glow)),
-                   lineWidth: outer * 0.06 * glow + 1)
+        // A short fork branching off about two-thirds out.
+        var branch = Path()
+        let b = pts[(segs * 2) / 3]
+        branch.move(to: b)
+        let ba = angle + (seed % 2 == 0 ? 0.6 : -0.6)
+        let bl = length * 0.28
+        let jb = sin(phase * 14 + Double(seed)) * length * 0.10
+        branch.addLine(to: CGPoint(x: b.x + cos(ba) * bl + cos(perp) * jb,
+                                   y: b.y + sin(ba) * bl + sin(perp) * jb))
+
+        // Glow underlay then bright core, for each.
+        ctx.stroke(path, with: .color(Theme.verdigris.opacity(0.22 * alpha)),
+                   style: StrokeStyle(lineWidth: length * 0.07, lineCap: .round))
+        ctx.stroke(branch, with: .color(Theme.verdigris.opacity(0.16 * alpha)),
+                   style: StrokeStyle(lineWidth: length * 0.05, lineCap: .round))
+        let core = Color(hex: 0xd6ff8c).opacity(0.95 * alpha)
+        ctx.stroke(path, with: .color(core),
+                   style: StrokeStyle(lineWidth: length * 0.02, lineCap: .round))
+        ctx.stroke(branch, with: .color(core),
+                   style: StrokeStyle(lineWidth: length * 0.014, lineCap: .round))
     }
 }

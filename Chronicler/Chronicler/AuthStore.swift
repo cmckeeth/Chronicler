@@ -8,15 +8,19 @@ final class AuthStore: ObservableObject {
 
     // Persisted: auto-play the next chapter when one finishes (default off).
     @Published private(set) var autoplayNext: Bool
+    // Persisted: boost playback volume beyond 100% (default off).
+    @Published private(set) var volumeBoosted: Bool
 
     let api = APIClient()
 
     private let tokenKey = "chronicler.token"
     private let emailKey = "chronicler.email"
     private let autoplayKey = "chronicler.autoplay"
+    private let volumeBoostKey = "chronicler.volumeBoost"
 
     init() {
         autoplayNext = UserDefaults.standard.bool(forKey: autoplayKey)
+        volumeBoosted = UserDefaults.standard.bool(forKey: volumeBoostKey)
         if let token = UserDefaults.standard.string(forKey: tokenKey) {
             api.token = token
             email = UserDefaults.standard.string(forKey: emailKey)
@@ -27,6 +31,11 @@ final class AuthStore: ObservableObject {
     func setAutoplay(_ v: Bool) {
         autoplayNext = v
         UserDefaults.standard.set(v, forKey: autoplayKey)
+    }
+
+    func setVolumeBoost(_ v: Bool) {
+        volumeBoosted = v
+        UserDefaults.standard.set(v, forKey: volumeBoostKey)
     }
 
     func setToken(_ token: String, email: String) {
