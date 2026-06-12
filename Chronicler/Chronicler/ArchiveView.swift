@@ -8,6 +8,7 @@ struct ArchiveView: View {
     @State private var sort = "name"
     @State private var filter = "favorites"     // default matches LibraryBrowser
     @State private var loading = true
+    @State private var refreshing = false
     @State private var error: String?
 
     private let columns = [GridItem(.adaptive(minimum: 150), spacing: 16)]
@@ -68,6 +69,8 @@ struct ArchiveView: View {
 
                 content
 
+                refreshButton
+
                 UpdateBanner(api: auth.api).padding(.top, 4)
             }
             .padding(.horizontal, 18)
@@ -102,6 +105,31 @@ struct ArchiveView: View {
         }
     }
 
+    private var refreshButton: some View {
+        Button {
+            Task { await refresh() }
+        } label: {
+            HStack(spacing: 8) {
+                if refreshing {
+                    ProgressView().tint(Theme.ink).scaleEffect(0.8)
+                    Text("Consulting the archive...")
+                } else {
+                    Text("↻").font(Theme.serif(16))
+                    Text("Refresh the Archive")
+                }
+            }
+            .font(Theme.body(13))
+            .foregroundColor(Theme.ink)
+            .padding(.horizontal, 16).padding(.vertical, 9)
+            .frame(maxWidth: .infinity)
+            .background(Theme.brass)
+            .overlay(Capsule().stroke(Theme.verdigris, lineWidth: 1))
+            .clipShape(Capsule())
+            .shadow(color: Theme.verdigris.opacity(0.5), radius: 8)
+        }
+        .disabled(refreshing)
+    }
+
     private func chipGroup(_ label: String, _ options: [(String, String)],
                            selection: Binding<String>) -> some View {
         HStack(spacing: 6) {
@@ -127,6 +155,14 @@ struct ArchiveView: View {
         do { books = try await auth.api.getBooks() }
         catch { self.error = "unreachable" }
         loading = false
+    }
+
+    // Reload without blanking the grid — keeps current books visible while fetching.
+    private func refresh() async {
+        refreshing = true
+        do { books = try await auth.api.getBooks(); error = nil }
+        catch { self.error = "unreachable" }
+        refreshing = false
     }
 }
 

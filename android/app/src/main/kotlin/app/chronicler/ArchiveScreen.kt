@@ -29,6 +29,7 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
     var sort by remember { mutableStateOf("name") }
     var filter by remember { mutableStateOf("favorites") }
     var loading by remember { mutableStateOf(true) }
+    var refreshing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -38,6 +39,15 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
             .onSuccess { books = it }
             .onFailure { error = "unreachable" }
         loading = false
+    }
+
+    // Reload without blanking the grid — keeps current books visible while fetching.
+    suspend fun refresh() {
+        refreshing = true
+        runCatching { auth.api.getBooks() }
+            .onSuccess { books = it; error = null }
+            .onFailure { error = "unreachable" }
+        refreshing = false
     }
     LaunchedEffect(Unit) { load() }
 
@@ -101,6 +111,30 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
                 items(filtered, key = { it.id }) { book ->
                     BookCard(book, auth.api, onOpen = { nav.navigate("book/${book.id}") },
                         onToggleFavorite = { scope.launch { auth.api.toggleFavorite(book.id); load() } })
+                }
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+        Surface(color = Theme.brass, shape = RoundedCornerShape(50),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Theme.verdigris),
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(8.dp, RoundedCornerShape(50),
+                    spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
+                .clickable(enabled = !refreshing) { scope.launch { refresh() } }) {
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+                if (refreshing) {
+                    CircularProgressIndicator(color = Theme.ink, strokeWidth = 2.dp,
+                        modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Consulting the archive...", color = Theme.ink, fontSize = 13.sp)
+                } else {
+                    Text("↻", color = Theme.ink, fontSize = 16.sp, fontFamily = Theme.serif)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Refresh the Archive", color = Theme.ink, fontSize = 13.sp)
                 }
             }
         }
