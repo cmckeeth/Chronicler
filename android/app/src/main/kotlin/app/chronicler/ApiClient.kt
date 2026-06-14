@@ -68,6 +68,8 @@ class ApiClient {
         }.getOrNull()
     }
     fun audioUrl(chapterId: Int) = "$BASE_URL/api/chapters/$chapterId/audio"
+    // Cover endpoint is public (no auth) — usable directly as an artwork URL, e.g. by Android Auto.
+    fun coverUrl(bookId: Int) = "$BASE_URL/api/books/$bookId/cover"
 
     suspend fun getChapters(bookId: Int): List<Chapter> {
         val resp = body(builder("/api/books/$bookId/chapters").build()) ?: return emptyList()
