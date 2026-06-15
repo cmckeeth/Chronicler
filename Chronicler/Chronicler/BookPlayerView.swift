@@ -506,14 +506,14 @@ struct ElectricButton: View {
         let outer = min(size.width, size.height) / 2
         let r = outer * 0.82
 
-        // Dark orb base with a faint green depth.
+        // Dark orb base with a faint electric-blue depth.
         let baseRect = CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2)
         ctx.fill(Path(ellipseIn: baseRect), with: .radialGradient(
-            Gradient(colors: [Color(hex: 0x13301c), Theme.ink]),
+            Gradient(colors: [Color(hex: 0x0a2a40), Theme.ink]),
             center: center, startRadius: 0, endRadius: r * 1.15))
 
-        // Pulsing verdigris core glow.
-        let coreA = (playing ? 0.40 : 0.16) * (0.6 + 0.4 * glow)
+        // Pulsing electric-blue core glow (hotter while playing).
+        let coreA = (playing ? 0.50 : 0.20) * (0.6 + 0.4 * glow)
         let coreR = r * 0.85
         let coreRect = CGRect(x: cx - coreR, y: cy - coreR, width: coreR * 2, height: coreR * 2)
         ctx.fill(Path(ellipseIn: coreRect), with: .radialGradient(
@@ -521,7 +521,7 @@ struct ElectricButton: View {
             center: center, startRadius: 0, endRadius: coreR))
 
         // Crackling veins (more + brighter while playing; a faint few when paused).
-        let veinCount = playing ? 9 : 4
+        let veinCount = playing ? 13 : 6
         let intensity = playing ? (0.6 + 0.4 * glow) : 0.30
         for k in 0..<veinCount {
             let ang = (Double(k) / Double(veinCount)) * 2 * .pi + phase * 0.6
@@ -571,7 +571,7 @@ struct ElectricButton: View {
                    style: StrokeStyle(lineWidth: length * 0.07, lineCap: .round))
         ctx.stroke(branch, with: .color(Theme.verdigris.opacity(0.16 * alpha)),
                    style: StrokeStyle(lineWidth: length * 0.05, lineCap: .round))
-        let core = Color(hex: 0xd6ff8c).opacity(0.95 * alpha)
+        let core = Color(hex: 0xc8f0ff).opacity(0.97 * alpha)
         ctx.stroke(path, with: .color(core),
                    style: StrokeStyle(lineWidth: length * 0.02, lineCap: .round))
         ctx.stroke(branch, with: .color(core),

@@ -30,7 +30,9 @@ object Theme {
     val brassPale = Color(0xFFFFE060)
     val copper = Color(0xFFD07020)
     val rust = Color(0xFFC03010)
-    val verdigris = Color(0xFF8FD44A)
+    // Accent / "electric" color. Token name kept (used ~35 places) but repointed
+    // from verdigris green to a vivid electric blue — drives every glow + panel.
+    val verdigris = Color(0xFF2BC4FF)
     val parchment = Color(0xFFFFF4D8)
     val parchmentMid = Color(0xFFE8C878)
     val parchmentDim = Color(0xFFC8A048)
@@ -49,11 +51,12 @@ object Theme {
 
     // --glow-brass: 0 0 20px #e8a010 — the "electric" brass glow on headings/titles.
     val glowBrass = Shadow(color = brass.copy(alpha = 0.85f), offset = Offset.Zero, blurRadius = 24f)
-    val glowVerdigris = Shadow(color = verdigris.copy(alpha = 0.9f), offset = Offset.Zero, blurRadius = 16f)
+    // Electric-blue glow on headings/titles — fatter, brighter halo for max electro-rizz.
+    val glowVerdigris = Shadow(color = verdigris.copy(alpha = 0.95f), offset = Offset.Zero, blurRadius = 30f)
 }
 
-// Green-electric panel: verdigris drop-glow + filled background + verdigris border,
-// in the right draw order. Slap it on containers for that old-MAUI electric rizz.
+// Electric-blue panel: brighter drop-glow + filled background + brighter border,
+// in the right draw order. Slap it on containers for that electric rizz.
 fun Modifier.electricPanel(
     bg: Color = Theme.surface,
     corner: Dp = 4.dp,
@@ -62,9 +65,9 @@ fun Modifier.electricPanel(
 ): Modifier {
     val shape = RoundedCornerShape(corner)
     return this
-        .shadow(elevation, shape, spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
+        .shadow(elevation * 1.5f, shape, spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
         .background(bg, shape)
-        .border(1.5.dp, Theme.verdigris.copy(alpha = alpha), shape)
+        .border(2.dp, Theme.verdigris.copy(alpha = (alpha * 1.35f).coerceAtMost(1f)), shape)
 }
 
 fun formatTime(seconds: Double): String {

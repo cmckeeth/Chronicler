@@ -467,15 +467,15 @@ private fun DrawScope.drawElectricButton(glow: Float, phase: Float, playing: Boo
     val r = outer * 0.82f
     val center = Offset(cx, cy)
 
-    // Dark orb base with a faint green depth.
+    // Dark orb base with a faint electric-blue depth.
     drawCircle(
         brush = Brush.radialGradient(
-            colors = listOf(Color(0xFF13301C), Theme.ink),
+            colors = listOf(Color(0xFF0A2A40), Theme.ink),
             center = center, radius = r * 1.15f),
         radius = r, center = center)
 
-    // Pulsing verdigris core glow.
-    val coreA = (if (playing) 0.40f else 0.16f) * (0.6f + 0.4f * glow)
+    // Pulsing electric-blue core glow (hotter while playing).
+    val coreA = (if (playing) 0.50f else 0.20f) * (0.6f + 0.4f * glow)
     drawCircle(
         brush = Brush.radialGradient(
             colors = listOf(Theme.verdigris.copy(alpha = coreA),
@@ -484,7 +484,7 @@ private fun DrawScope.drawElectricButton(glow: Float, phase: Float, playing: Boo
         radius = r * 0.85f, center = center)
 
     // Crackling veins (more + brighter while playing; a faint few when paused).
-    val veinCount = if (playing) 9 else 4
+    val veinCount = if (playing) 13 else 6
     val intensity = if (playing) (0.6f + 0.4f * glow) else 0.30f
     for (k in 0 until veinCount) {
         val ang = (k / veinCount.toFloat()) * 2f * Math.PI.toFloat() + phase * 0.6f
@@ -534,7 +534,7 @@ private fun DrawScope.drawVein(
         style = Stroke(width = length * 0.07f, cap = cap))
     drawPath(branch, color = Theme.verdigris.copy(alpha = 0.16f * alpha),
         style = Stroke(width = length * 0.05f, cap = cap))
-    val core = androidx.compose.ui.graphics.Color(0xFFD6FF8C).copy(alpha = 0.95f * alpha)
+    val core = androidx.compose.ui.graphics.Color(0xFFC8F0FF).copy(alpha = 0.97f * alpha)
     drawPath(path, color = core, style = Stroke(width = length * 0.02f, cap = cap))
     drawPath(branch, color = core, style = Stroke(width = length * 0.014f, cap = cap))
 }

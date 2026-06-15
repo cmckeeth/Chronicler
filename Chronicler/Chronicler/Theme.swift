@@ -16,7 +16,9 @@ enum Theme {
     static let copper      = Color(hex: 0xd07020)
     static let copperLight = Color(hex: 0xf09040)
     static let rust        = Color(hex: 0xc03010)
-    static let verdigris   = Color(hex: 0x8fd44a)
+    // Accent / "electric" color. Token name kept (used ~36 places) but repointed
+    // from verdigris green to a vivid electric blue — drives every glow + panel.
+    static let verdigris   = Color(hex: 0x2bc4ff)
     static let parchment   = Color(hex: 0xfff4d8)
     static let parchmentMid = Color(hex: 0xe8c878)
     static let parchmentDim = Color(hex: 0xc8a048)
@@ -40,15 +42,17 @@ enum Theme {
         startPoint: .top, endPoint: .bottom)
 }
 
-// Green-electric glow on headings/titles (was brass; now verdigris to match Android).
+// Electric-blue glow on headings/titles. Triple-stacked halo for maximum electro-rizz:
+// a tight bright core, a mid bloom, and a wide outer aura.
 extension View {
     func glowVerdigris() -> some View {
         self
-            .shadow(color: Theme.verdigris.opacity(0.9), radius: 8)
-            .shadow(color: Theme.verdigris.opacity(0.5), radius: 16)
+            .shadow(color: Theme.verdigris.opacity(0.95), radius: 5)
+            .shadow(color: Theme.verdigris.opacity(0.7), radius: 13)
+            .shadow(color: Theme.verdigris.opacity(0.4), radius: 26)
     }
 
-    // Green-electric panel: verdigris drop-glow + filled background + verdigris border.
+    // Electric-blue panel: stacked drop-glow + filled background + brighter border.
     // Mirrors Android's Modifier.electricPanel. Slap it on containers for the electric rizz.
     func electricPanel(bg: Color = Theme.surface,
                        corner: CGFloat = 4,
@@ -58,8 +62,9 @@ extension View {
             .background(bg.opacity(0.6))
             .clipShape(RoundedRectangle(cornerRadius: corner))
             .overlay(RoundedRectangle(cornerRadius: corner)
-                .stroke(Theme.verdigris.opacity(alpha), lineWidth: 1.5))
-            .shadow(color: Theme.verdigris.opacity(0.5), radius: glowRadius)
+                .stroke(Theme.verdigris.opacity(min(1, alpha * 1.35)), lineWidth: 2))
+            .shadow(color: Theme.verdigris.opacity(0.65), radius: glowRadius * 1.4)
+            .shadow(color: Theme.verdigris.opacity(0.32), radius: glowRadius * 2.4)
     }
 }
 
