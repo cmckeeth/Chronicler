@@ -46,8 +46,8 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("Chronicler", color = Theme.brass, fontSize = 56.sp, fontWeight = FontWeight.Bold,
-                fontFamily = Theme.display,
+            Text("Chronicler", color = Theme.brass, fontSize = 38.sp, fontWeight = FontWeight.Bold,
+                fontFamily = Theme.display, maxLines = 1, softWrap = false,
                 style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
             Text("Your Audiobook Library", color = Theme.parchmentDim, fontSize = 15.sp,
                 fontFamily = Theme.serif)
