@@ -50,7 +50,10 @@ struct CoverImage: View {
 final class StartupSound {
     static let shared = StartupSound()
     private var player: AVAudioPlayer?
+    private var played = false          // once per app launch, not every time Landing appears
     func play() {
+        guard !played else { return }
+        played = true
         guard let url = Bundle.main.url(forResource: "startup", withExtension: "mp3") else { return }
         try? AVAudioSession.sharedInstance().setCategory(.ambient)
         player = try? AVAudioPlayer(contentsOf: url)

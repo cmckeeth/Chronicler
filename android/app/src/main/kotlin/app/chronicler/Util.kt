@@ -55,7 +55,10 @@ fun invalidateCover(bookId: Int) { coverCache.remove(bookId) }
 
 // Startup sound (commit: "Play startup sound on app open").
 object StartupSound {
+    private var played = false          // once per app launch, not every time Landing recomposes
     fun play(context: Context) {
+        if (played) return
+        played = true
         runCatching {
             MediaPlayer.create(context, R.raw.startup)?.apply {
                 setOnCompletionListener { it.release() }
