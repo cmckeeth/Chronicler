@@ -51,37 +51,62 @@ struct ElectricBackground: View {
         }
     }
 
+    // A natural lightning bolt: a fractal (midpoint-displaced) channel rendered as
+    // stacked glow layers up to a white-hot core, with a few jagged forks branching off.
     private func bolt(_ ctx: GraphicsContext, _ a: CGPoint, _ b: CGPoint, _ t: Double, _ seed: Int, _ alpha: Double) {
-        let segs = 16
-        let dx = b.x - a.x, dy = b.y - a.y
-        let len = max(1, hypot(dx, dy))
-        let nx = -dy / len, ny = dx / len
-        var pts: [CGPoint] = []
-        for i in 0...segs {
-            let f = Double(i) / Double(segs)
-            let env = sin(f * .pi)
-            let j = sin(t * 9 + Double(seed) * 3.1 + f * 13) * 46 * env
-                  + sin(t * 23 + Double(seed) + f * 31) * 18 * env
-            pts.append(CGPoint(x: a.x + dx * f + nx * j, y: a.y + dy * f + ny * j))
+        let len = max(1, hypot(b.x - a.x, b.y - a.y))
+        let pts = jagged(a, b, rough: len * 0.13, levels: 5, seed: seed, t: t)
+        strokeBolt(ctx, pts, alpha: alpha, scale: 1)
+
+        let dir0 = atan2(b.y - a.y, b.x - a.x)
+        let forks = 2 + seed % 2
+        for k in 0..<forks {
+            let idx = min(pts.count - 2, Int(Double(pts.count) * (0.35 + 0.2 * Double(k))))
+            guard idx > 0 else { continue }
+            let base = pts[idx]
+            let dir = dir0 + (k % 2 == 0 ? 0.8 : -0.8) + sin(t * 2 + Double(seed + k)) * 0.25
+            let fl = len * (0.24 - 0.05 * Double(k))
+            let end = CGPoint(x: base.x + cos(dir) * fl, y: base.y + sin(dir) * fl)
+            strokeBolt(ctx, jagged(base, end, rough: fl * 0.2, levels: 3, seed: seed * 7 + k, t: t),
+                       alpha: alpha * 0.8, scale: 0.6)
         }
+    }
+
+    // Recursive midpoint displacement → a jagged, organic lightning channel.
+    private func jagged(_ a: CGPoint, _ b: CGPoint, rough: Double, levels: Int, seed: Int, t: Double) -> [CGPoint] {
+        var pts = [a, b]
+        var disp = rough
+        for level in 0..<levels {
+            var next: [CGPoint] = [pts[0]]
+            for i in 0..<(pts.count - 1) {
+                let p0 = pts[i], p1 = pts[i + 1]
+                let sx = p1.x - p0.x, sy = p1.y - p0.y
+                let sl = max(1, hypot(sx, sy))
+                let nx = -sy / sl, ny = sx / sl
+                let h = sin(Double(seed) * 12.9 + Double(i + level * 7) * 78.233 + t * 2.5)
+                let off = h * disp
+                next.append(CGPoint(x: (p0.x + p1.x) / 2 + nx * off, y: (p0.y + p1.y) / 2 + ny * off))
+                next.append(p1)
+            }
+            pts = next
+            disp *= 0.52
+        }
+        return pts
+    }
+
+    // Stacked strokes: wide soft halo → blue glow → bright channel → white-hot core.
+    private func strokeBolt(_ ctx: GraphicsContext, _ pts: [CGPoint], alpha: Double, scale: Double) {
+        guard pts.count > 1 else { return }
         var path = Path()
         path.move(to: pts[0]); for p in pts.dropFirst() { path.addLine(to: p) }
-        ctx.stroke(path, with: .color(Theme.verdigris.opacity(0.25 * alpha)),
-                   style: StrokeStyle(lineWidth: 10, lineCap: .round, lineJoin: .round))
-        ctx.stroke(path, with: .color(Theme.verdigris.opacity(0.55 * alpha)),
-                   style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
-        ctx.stroke(path, with: .color(Color(hex: 0xc8f0ff).opacity(0.95 * alpha)),
-                   style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
-        if seed % 2 == 0 {                                   // a forking branch
-            let m = pts[segs * 2 / 3]
-            let fa = atan2(dy, dx) + (seed % 4 == 0 ? 0.7 : -0.7)
-            let fl = len * 0.18
-            var fork = Path()
-            fork.move(to: m)
-            fork.addLine(to: CGPoint(x: m.x + cos(fa) * fl, y: m.y + sin(fa) * fl))
-            ctx.stroke(fork, with: .color(Color(hex: 0xc8f0ff).opacity(0.8 * alpha)),
-                       style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
-        }
+        ctx.stroke(path, with: .color(Theme.verdigris.opacity(0.10 * alpha)),
+                   style: StrokeStyle(lineWidth: 16 * scale, lineCap: .round, lineJoin: .round))
+        ctx.stroke(path, with: .color(Theme.verdigris.opacity(0.32 * alpha)),
+                   style: StrokeStyle(lineWidth: 7 * scale, lineCap: .round, lineJoin: .round))
+        ctx.stroke(path, with: .color(Color(hex: 0x9fe0ff).opacity(0.9 * alpha)),
+                   style: StrokeStyle(lineWidth: 3 * scale, lineCap: .round, lineJoin: .round))
+        ctx.stroke(path, with: .color(Color.white.opacity(0.95 * alpha)),
+                   style: StrokeStyle(lineWidth: 1.3 * scale, lineCap: .round, lineJoin: .round))
     }
 }
 

@@ -89,39 +89,64 @@ private fun DrawScope.drawField(t: Float, intensity: Float) {
     }
 }
 
+// A natural lightning bolt: a fractal (midpoint-displaced) channel rendered as stacked
+// glow layers up to a white-hot core, with a few jagged forks branching off.
 private fun DrawScope.drawBolt(a: Offset, b: Offset, t: Float, seed: Int, alpha: Float) {
-    val segs = 16
-    val dx = b.x - a.x; val dy = b.y - a.y
-    val len = max(1f, hypot(dx, dy))
-    val nx = -dy / len; val ny = dx / len
-    val pts = ArrayList<Offset>(segs + 1)
-    for (i in 0..segs) {
-        val f = i / segs.toFloat()
-        val env = sin(f * Math.PI.toFloat())
-        val j = sin(t * 9f + seed * 3.1f + f * 13f) * 46f * env +
-                sin(t * 23f + seed + f * 31f) * 18f * env
-        pts.add(Offset(a.x + dx * f + nx * j, a.y + dy * f + ny * j))
+    val len = max(1f, hypot(b.x - a.x, b.y - a.y))
+    val pts = jagged(a, b, len * 0.13f, 5, seed, t)
+    strokeBolt(pts, alpha, 1f)
+
+    val dir0 = kotlin.math.atan2(b.y - a.y, b.x - a.x)
+    val forks = 2 + seed % 2
+    for (k in 0 until forks) {
+        val idx = minOf(pts.size - 2, (pts.size * (0.35f + 0.2f * k)).toInt())
+        if (idx <= 0) continue
+        val base = pts[idx]
+        val dir = dir0 + (if (k % 2 == 0) 0.8f else -0.8f) + kotlin.math.sin(t * 2f + (seed + k)) * 0.25f
+        val fl = len * (0.24f - 0.05f * k)
+        val end = Offset(base.x + cos(dir) * fl, base.y + sin(dir) * fl)
+        strokeBolt(jagged(base, end, fl * 0.2f, 3, seed * 7 + k, t), alpha * 0.8f, 0.6f)
     }
-    val path = Path().apply {
-        moveTo(pts[0].x, pts[0].y)
-        for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
-    }
-    drawPath(path, Theme.verdigris.copy(alpha = 0.25f * alpha),
-        style = Stroke(width = 10f, cap = StrokeCap.Round, join = StrokeJoin.Round), blendMode = BlendMode.Plus)
-    drawPath(path, Theme.verdigris.copy(alpha = 0.55f * alpha),
-        style = Stroke(width = 4f, cap = StrokeCap.Round, join = StrokeJoin.Round), blendMode = BlendMode.Plus)
-    drawPath(path, SPARK.copy(alpha = 0.95f * alpha),
-        style = Stroke(width = 1.6f, cap = StrokeCap.Round, join = StrokeJoin.Round), blendMode = BlendMode.Plus)
-    if (seed % 2 == 0) {
-        val m = pts[segs * 2 / 3]
-        val fa = kotlin.math.atan2(dy, dx) + if (seed % 4 == 0) 0.7f else -0.7f
-        val fl = len * 0.18f
-        val fork = Path().apply {
-            moveTo(m.x, m.y); lineTo(m.x + cos(fa) * fl, m.y + sin(fa) * fl)
+}
+
+// Recursive midpoint displacement → a jagged, organic lightning channel.
+private fun jagged(a: Offset, b: Offset, rough: Float, levels: Int, seed: Int, t: Float): List<Offset> {
+    var pts = mutableListOf(a, b)
+    var disp = rough
+    repeat(levels) { level ->
+        val next = ArrayList<Offset>(pts.size * 2)
+        next.add(pts[0])
+        for (i in 0 until pts.size - 1) {
+            val p0 = pts[i]; val p1 = pts[i + 1]
+            val sx = p1.x - p0.x; val sy = p1.y - p0.y
+            val sl = max(1f, hypot(sx, sy))
+            val nx = -sy / sl; val ny = sx / sl
+            val h = sin(seed * 12.9f + (i + level * 7) * 78.233f + t * 2.5f)
+            val off = h * disp
+            next.add(Offset((p0.x + p1.x) / 2 + nx * off, (p0.y + p1.y) / 2 + ny * off))
+            next.add(p1)
         }
-        drawPath(fork, SPARK.copy(alpha = 0.8f * alpha),
-            style = Stroke(width = 1.4f, cap = StrokeCap.Round), blendMode = BlendMode.Plus)
+        pts = next
+        disp *= 0.52f
     }
+    return pts
+}
+
+// Stacked strokes: wide soft halo → blue glow → bright channel → white-hot core.
+private fun DrawScope.strokeBolt(pts: List<Offset>, alpha: Float, scale: Float) {
+    if (pts.size < 2) return
+    val path = Path().apply {
+        moveTo(pts[0].x, pts[0].y); for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
+    }
+    val cap = StrokeCap.Round; val join = StrokeJoin.Round; val plus = BlendMode.Plus
+    drawPath(path, Theme.verdigris.copy(alpha = 0.10f * alpha),
+        style = Stroke(width = 16f * scale, cap = cap, join = join), blendMode = plus)
+    drawPath(path, Theme.verdigris.copy(alpha = 0.32f * alpha),
+        style = Stroke(width = 7f * scale, cap = cap, join = join), blendMode = plus)
+    drawPath(path, Color(0xFF9FE0FF).copy(alpha = 0.9f * alpha),
+        style = Stroke(width = 3f * scale, cap = cap, join = join), blendMode = plus)
+    drawPath(path, Color(0xFFFFFFFF).copy(alpha = 0.95f * alpha),
+        style = Stroke(width = 1.3f * scale, cap = cap, join = join), blendMode = plus)
 }
 
 // A light electric "charge" — faint pulsing border. For elements that should feel
