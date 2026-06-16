@@ -1,9 +1,17 @@
 package app.chronicler
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -51,23 +59,29 @@ object Theme {
 
     // --glow-brass: 0 0 20px #e8a010 — the "electric" brass glow on headings/titles.
     val glowBrass = Shadow(color = brass.copy(alpha = 0.85f), offset = Offset.Zero, blurRadius = 24f)
-    // Electric-blue glow on headings/titles — fatter, brighter halo for max electro-rizz.
-    val glowVerdigris = Shadow(color = verdigris.copy(alpha = 0.95f), offset = Offset.Zero, blurRadius = 30f)
+    // Electric-blue glow on headings/titles — fat, bright halo for max electro-rizz.
+    val glowVerdigris = Shadow(color = verdigris.copy(alpha = 1f), offset = Offset.Zero, blurRadius = 36f)
 }
 
-// Electric-blue panel: brighter drop-glow + filled background + brighter border,
-// in the right draw order. Slap it on containers for that electric rizz.
+// Electric-blue panel with a BREATHING border + drop-glow: the stroke alpha, border
+// width and glow elevation all pulse forever. Built with composed {} so it can hold an
+// infinite transition while keeping a plain Modifier signature (no call-site changes).
 fun Modifier.electricPanel(
     bg: Color = Theme.surface,
     corner: Dp = 4.dp,
     alpha: Float = 0.6f,
     elevation: Dp = 14.dp,
-): Modifier {
+): Modifier = composed {
     val shape = RoundedCornerShape(corner)
-    return this
-        .shadow(elevation * 1.5f, shape, spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
+    val t = rememberInfiniteTransition(label = "panel")
+    val p by t.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1700, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "pulse")
+    this
+        .shadow(elevation * (1.3f + 1.0f * p), shape, spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
         .background(bg, shape)
-        .border(2.dp, Theme.verdigris.copy(alpha = (alpha * 1.35f).coerceAtMost(1f)), shape)
+        .border((1.8f + 1.0f * p).dp, Theme.verdigris.copy(alpha = (alpha * (0.9f + 0.6f * p)).coerceAtMost(1f)), shape)
 }
 
 fun formatTime(seconds: Double): String {

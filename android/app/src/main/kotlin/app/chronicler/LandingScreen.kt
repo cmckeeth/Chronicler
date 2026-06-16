@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -62,7 +63,9 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Image(painterResource(R.drawable.logo), contentDescription = null,
-                    modifier = Modifier.size(180.dp))
+                    modifier = Modifier.size(180.dp)
+                        .electricPanel(bg = Theme.bg, corner = 16.dp, alpha = 0.8f, elevation = 22.dp)
+                        .clip(RoundedCornerShape(16.dp)))
                 Text("Enter the Archive", color = Theme.brassPale, fontSize = 20.sp,
                     fontFamily = Theme.serif,
                     style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))

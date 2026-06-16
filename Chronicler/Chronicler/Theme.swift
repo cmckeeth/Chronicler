@@ -42,29 +42,47 @@ enum Theme {
         startPoint: .top, endPoint: .bottom)
 }
 
-// Electric-blue glow on headings/titles. Triple-stacked halo for maximum electro-rizz:
-// a tight bright core, a mid bloom, and a wide outer aura.
-extension View {
-    func glowVerdigris() -> some View {
-        self
-            .shadow(color: Theme.verdigris.opacity(0.95), radius: 5)
-            .shadow(color: Theme.verdigris.opacity(0.7), radius: 13)
-            .shadow(color: Theme.verdigris.opacity(0.4), radius: 26)
+// Breathing electric-blue aura on headings/titles — triple-stacked halo whose
+// brightness + radius pulse forever. Animated via a repeating value animation
+// (NOT a per-frame subtree rebuild), so it stays cheap even across the grid.
+private struct ElectricGlow: ViewModifier {
+    let tight: CGFloat, mid: CGFloat, wide: CGFloat
+    @State private var on = false
+    func body(content: Content) -> some View {
+        content
+            .shadow(color: Theme.verdigris.opacity(on ? 1.0 : 0.6),  radius: on ? tight * 1.5 : tight)
+            .shadow(color: Theme.verdigris.opacity(on ? 0.8 : 0.42), radius: on ? mid * 1.5 : mid)
+            .shadow(color: Theme.verdigris.opacity(on ? 0.5 : 0.22), radius: on ? wide * 1.5 : wide)
+            .onAppear { withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) { on = true } }
     }
+}
 
-    // Electric-blue panel: stacked drop-glow + filled background + brighter border.
-    // Mirrors Android's Modifier.electricPanel. Slap it on containers for the electric rizz.
+// Electric-blue panel with a pulsing border + breathing drop-glow. Filled background,
+// clipped, then an animated stroke + stacked halo on top. Mirrors Android's electricPanel.
+private struct ElectricPanelStyle: ViewModifier {
+    let bg: Color, corner: CGFloat, alpha: Double, glowRadius: CGFloat
+    @State private var on = false
+    func body(content: Content) -> some View {
+        content
+            .background(bg.opacity(0.6))
+            .clipShape(RoundedRectangle(cornerRadius: corner))
+            .overlay(RoundedRectangle(cornerRadius: corner)
+                .stroke(Theme.verdigris.opacity(on ? min(1, alpha * 1.6) : alpha * 0.9),
+                        lineWidth: on ? 2.6 : 1.6))
+            .shadow(color: Theme.verdigris.opacity(on ? 0.85 : 0.45), radius: on ? glowRadius * 1.8 : glowRadius)
+            .shadow(color: Theme.verdigris.opacity(on ? 0.45 : 0.2),  radius: on ? glowRadius * 2.9 : glowRadius * 1.8)
+            .onAppear { withAnimation(.easeInOut(duration: 1.7).repeatForever(autoreverses: true)) { on = true } }
+    }
+}
+
+extension View {
+    func glowVerdigris() -> some View { modifier(ElectricGlow(tight: 5, mid: 13, wide: 26)) }
+
     func electricPanel(bg: Color = Theme.surface,
                        corner: CGFloat = 4,
                        alpha: Double = 0.6,
                        glowRadius: CGFloat = 14) -> some View {
-        self
-            .background(bg.opacity(0.6))
-            .clipShape(RoundedRectangle(cornerRadius: corner))
-            .overlay(RoundedRectangle(cornerRadius: corner)
-                .stroke(Theme.verdigris.opacity(min(1, alpha * 1.35)), lineWidth: 2))
-            .shadow(color: Theme.verdigris.opacity(0.65), radius: glowRadius * 1.4)
-            .shadow(color: Theme.verdigris.opacity(0.32), radius: glowRadius * 2.4)
+        modifier(ElectricPanelStyle(bg: bg, corner: corner, alpha: alpha, glowRadius: glowRadius))
     }
 }
 
