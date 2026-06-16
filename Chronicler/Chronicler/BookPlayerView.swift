@@ -476,15 +476,15 @@ struct ElectricButton: View {
         TimelineView(.animation) { timeline in
             let t = timeline.date.timeIntervalSinceReferenceDate
             Canvas { ctx, size in
-                drawElectric(ctx: ctx, size: size, glow: pulse(t), phase: t, playing: isPlaying)
+                drawOrb(ctx: ctx, size: size, glow: pulse(t), playing: isPlaying)
             }
-            // Bursts of electricity that escape the rim — a larger, un-clipped canvas
-            // overlaid on the orb so arcs shoot out beyond the button.
+            // Elaborate pulse: concentric ripples radiating out past the rim — a larger,
+            // un-clipped canvas overlaid on the orb.
             .overlay {
                 Canvas { ctx, size in
-                    drawEscaping(ctx: ctx, size: size, phase: t, playing: isPlaying)
+                    drawPulses(ctx: ctx, size: size, t: t, glow: pulse(t), playing: isPlaying)
                 }
-                .frame(width: 210, height: 210)
+                .frame(width: 240, height: 240)
                 .blendMode(.screen)
                 .allowsHitTesting(false)
             }
@@ -510,37 +510,35 @@ struct ElectricButton: View {
         return 0.45 + 0.55 * (0.5 - 0.5 * cos(phase * 2 * .pi))
     }
 
-    private func drawElectric(ctx: GraphicsContext, size: CGSize,
-                              glow: Double, phase: Double, playing: Bool) {
+    private func drawOrb(ctx: GraphicsContext, size: CGSize, glow: Double, playing: Bool) {
         let cx = size.width / 2, cy = size.height / 2
         let center = CGPoint(x: cx, y: cy)
         let outer = min(size.width, size.height) / 2
         let r = outer * 0.82
+        let baseRect = CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2)
 
         // Dark orb base with a faint electric-blue depth.
-        let baseRect = CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2)
         ctx.fill(Path(ellipseIn: baseRect), with: .radialGradient(
             Gradient(colors: [Color(hex: 0x0a2a40), Theme.ink]),
             center: center, startRadius: 0, endRadius: r * 1.15))
 
-        // Pulsing electric-blue core glow (hotter while playing).
-        let coreA = (playing ? 0.50 : 0.20) * (0.6 + 0.4 * glow)
-        let coreR = r * 0.85
-        let coreRect = CGRect(x: cx - coreR, y: cy - coreR, width: coreR * 2, height: coreR * 2)
-        ctx.fill(Path(ellipseIn: coreRect), with: .radialGradient(
-            Gradient(colors: [Theme.verdigris.opacity(coreA), Theme.verdigris.opacity(0)]),
-            center: center, startRadius: 0, endRadius: coreR))
+        // Breathing core glow (hotter while playing).
+        let coreA = (playing ? 0.55 : 0.22) * (0.55 + 0.45 * glow)
+        let coreR = r * 0.92
+        ctx.fill(Path(ellipseIn: CGRect(x: cx - coreR, y: cy - coreR, width: coreR * 2, height: coreR * 2)),
+                 with: .radialGradient(
+                    Gradient(colors: [Theme.verdigris.opacity(coreA), Theme.verdigris.opacity(0)]),
+                    center: center, startRadius: 0, endRadius: coreR))
 
-        // Crackling veins (more + brighter while playing; a faint few when paused).
-        let veinCount = playing ? 13 : 6
-        let intensity = playing ? (0.6 + 0.4 * glow) : 0.30
-        for k in 0..<veinCount {
-            let ang = (Double(k) / Double(veinCount)) * 2 * .pi + phase * 0.6
-            drawVein(ctx: ctx, cx: cx, cy: cy, angle: ang, length: r * 1.02,
-                     phase: phase, seed: k, alpha: intensity)
+        // Concentric inner rings that breathe in place.
+        for i in 1...3 {
+            let rr = r * (0.30 * Double(i))
+            ctx.stroke(Path(ellipseIn: CGRect(x: cx - rr, y: cy - rr, width: rr * 2, height: rr * 2)),
+                       with: .color(Theme.verdigris.opacity((0.10 + 0.24 * glow) / Double(i))),
+                       lineWidth: 1.5)
         }
 
-        // Glowing rim — outer halo + crisp inner ring, pulsing.
+        // Breathing rim — outer halo + crisp ring.
         let haloR = r + outer * 0.08
         ctx.stroke(Path(ellipseIn: CGRect(x: cx - haloR, y: cy - haloR, width: haloR * 2, height: haloR * 2)),
                    with: .color(Theme.verdigris.opacity(0.18 * glow)), lineWidth: outer * 0.05)
@@ -549,86 +547,31 @@ struct ElectricButton: View {
                    lineWidth: outer * 0.05 * glow + 2)
     }
 
-    // One jagged, forking vein of electricity from the center toward the rim.
-    private func drawVein(ctx: GraphicsContext, cx: Double, cy: Double, angle: Double,
-                          length: Double, phase: Double, seed: Int, alpha: Double) {
-        let segs = 7
-        let perp = angle + .pi / 2
-        var pts: [CGPoint] = [CGPoint(x: cx, y: cy)]
-        for i in 1...segs {
-            let t = Double(i) / Double(segs)
-            let bx = cx + cos(angle) * length * t
-            let by = cy + sin(angle) * length * t
-            let jitter = sin(phase * 12 + Double(i) * 2.3 + Double(seed) * 1.7) *
-                length * 0.18 * (1 - t * 0.2)
-            pts.append(CGPoint(x: bx + cos(perp) * jitter, y: by + sin(perp) * jitter))
-        }
-        var path = Path()
-        path.move(to: pts[0])
-        for i in 1..<pts.count { path.addLine(to: pts[i]) }
-
-        // A short fork branching off about two-thirds out.
-        var branch = Path()
-        let b = pts[(segs * 2) / 3]
-        branch.move(to: b)
-        let ba = angle + (seed % 2 == 0 ? 0.6 : -0.6)
-        let bl = length * 0.28
-        let jb = sin(phase * 14 + Double(seed)) * length * 0.10
-        branch.addLine(to: CGPoint(x: b.x + cos(ba) * bl + cos(perp) * jb,
-                                   y: b.y + sin(ba) * bl + sin(perp) * jb))
-
-        // Glow underlay then bright core, for each.
-        ctx.stroke(path, with: .color(Theme.verdigris.opacity(0.22 * alpha)),
-                   style: StrokeStyle(lineWidth: length * 0.07, lineCap: .round))
-        ctx.stroke(branch, with: .color(Theme.verdigris.opacity(0.16 * alpha)),
-                   style: StrokeStyle(lineWidth: length * 0.05, lineCap: .round))
-        let core = Color(hex: 0xc8f0ff).opacity(0.97 * alpha)
-        ctx.stroke(path, with: .color(core),
-                   style: StrokeStyle(lineWidth: length * 0.02, lineCap: .round))
-        ctx.stroke(branch, with: .color(core),
-                   style: StrokeStyle(lineWidth: length * 0.014, lineCap: .round))
-    }
-
-    // Sparks that escape the orb: strobing arcs that shoot from the rim outward into
-    // the surrounding (un-clipped) canvas. More + livelier while playing.
-    private func drawEscaping(ctx: GraphicsContext, size: CGSize, phase: Double, playing: Bool) {
+    // Elaborate pulse — staggered concentric ripples expanding from the rim and fading
+    // as they grow, plus a breathing source ring. Faster while playing.
+    private func drawPulses(ctx: GraphicsContext, size: CGSize, t: Double, glow: Double, playing: Bool) {
         let cx = size.width / 2, cy = size.height / 2
-        let rimR = min(size.width, size.height) * 0.205   // ≈ the orb rim in this larger canvas
-        let count = playing ? 8 : 3
+        let rimR = min(size.width, size.height) * 0.195
+        let expand = size.width * 0.26
+        let period = playing ? 1.6 : 3.2
+        let count = 4
         for k in 0..<count {
-            let p = Double(k) * 1.9
-            let strobe = pow(max(0, sin(phase * (3.0 + Double(k % 3) * 0.7) + p)), 8)  // brief pops
-            let a = strobe * (playing ? 1.0 : 0.5)
-            if a < 0.03 { continue }
-            let ang = Double(k) / Double(count) * 2 * .pi + phase * 0.4 + sin(phase * 2 + p) * 0.35
-            let endR = rimR + size.width * (0.16 + 0.10 * (0.5 + 0.5 * sin(phase * 5 + p)))
-            spark(ctx, cx, cy, ang, rimR, endR, phase, k, a)
+            let p = ((t / period) + Double(k) / Double(count)).truncatingRemainder(dividingBy: 1)
+            let rr = rimR + p * expand
+            let a = (1 - p) * (playing ? 1.0 : 0.5)
+            if a < 0.02 { continue }
+            let rect = CGRect(x: cx - rr, y: cy - rr, width: rr * 2, height: rr * 2)
+            // soft glow ring + crisp bright core ring
+            ctx.stroke(Path(ellipseIn: rect),
+                       with: .color(Theme.verdigris.opacity(0.30 * a)),
+                       lineWidth: 7 * (1 - p) + 2)
+            ctx.stroke(Path(ellipseIn: rect),
+                       with: .color(Color(hex: 0xc8f0ff).opacity(0.7 * a)),
+                       lineWidth: 2)
         }
-    }
-
-    private func spark(_ ctx: GraphicsContext, _ cx: Double, _ cy: Double, _ ang: Double,
-                       _ r0: Double, _ r1: Double, _ phase: Double, _ seed: Int, _ alpha: Double) {
-        let segs = 6
-        let ux = cos(ang), uy = sin(ang)
-        let px = -uy, py = ux                      // perpendicular
-        var pts: [CGPoint] = []
-        for i in 0...segs {
-            let f = Double(i) / Double(segs)
-            let r = r0 + (r1 - r0) * f
-            let j = sin(phase * 30 + Double(seed) * 2.7 + f * 9) * (r1 - r0) * 0.5 * sin(f * .pi)
-            pts.append(CGPoint(x: cx + ux * r + px * j, y: cy + uy * r + py * j))
-        }
-        var path = Path()
-        path.move(to: pts[0]); for p in pts.dropFirst() { path.addLine(to: p) }
-        ctx.stroke(path, with: .color(Theme.verdigris.opacity(0.5 * alpha)),
-                   style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
-        ctx.stroke(path, with: .color(Color(hex: 0xc8f0ff).opacity(0.95 * alpha)),
-                   style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
-        // bright spark head
-        if let tip = pts.last {
-            let s = 3.0 * alpha
-            ctx.fill(Path(ellipseIn: CGRect(x: tip.x - s, y: tip.y - s, width: s * 2, height: s * 2)),
-                     with: .color(Color(hex: 0xc8f0ff).opacity(0.9 * alpha)))
-        }
+        // Breathing source ring at the rim.
+        let rect = CGRect(x: cx - rimR, y: cy - rimR, width: rimR * 2, height: rimR * 2)
+        ctx.stroke(Path(ellipseIn: rect),
+                   with: .color(Theme.verdigris.opacity(0.5 * glow)), lineWidth: 3)
     }
 }
