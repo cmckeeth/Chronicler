@@ -24,7 +24,7 @@ fun LoginScreen(auth: AuthStore) {
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    Box(Modifier.fillMaxSize().background(Theme.bg), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             Modifier.padding(28.dp).fillMaxWidth()
                 .background(Theme.surface, RoundedCornerShape(6.dp))

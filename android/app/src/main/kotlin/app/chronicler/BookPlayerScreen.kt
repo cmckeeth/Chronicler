@@ -141,7 +141,7 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
 
     DisposableEffect(Unit) { onDispose { audio.release() } }
 
-    Column(Modifier.fillMaxSize().background(Theme.bg).verticalScroll(rememberScrollState())
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
         .padding(horizontal = 20.dp, vertical = 12.dp)) {
         TextButton(onClick = { nav.popBackStack() }, contentPadding = PaddingValues(0.dp)) {
             Text("‹ Library", color = Theme.brass)
@@ -197,7 +197,7 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
                             .padding(vertical = 3.dp)
                             .then(if (isCurrent)
                                 Modifier.electricPanel(Theme.surface2, corner = 4.dp, alpha = 0.8f, elevation = 8.dp)
-                            else Modifier)
+                            else Modifier.charged())   // every chapter row stays a little charged
                             .combinedClickable(
                                 onClick = { loadChapter(ch, progresses[idx].positionSeconds) },
                                 onLongClick = {
@@ -381,6 +381,8 @@ private fun AudioPlayerBar(audio: AudioController, auth: AuthStore) {
                 contentAlignment = Alignment.Center
             ) {
                 Canvas(Modifier.matchParentSize()) { drawElectricButton(glow, phase, audio.isPlaying) }
+                // Bursts that escape the rim — larger, unclipped canvas overlaid on the orb.
+                Canvas(Modifier.size(210.dp)) { drawEscapingSparks(phase, audio.isPlaying) }
                 Icon(
                     imageVector = if (audio.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = if (audio.isPlaying) "Pause" else "Play",
@@ -460,6 +462,52 @@ private fun AudioPlayerBar(audio: AudioController, auth: AuthStore) {
 
 // A dark electric orb: pulsing verdigris core, crackling veins of electricity,
 // and a glowing rim. No cog — pure electricity. Livelier while playing.
+// Sparks that escape the orb: strobing arcs shooting from the rim outward into the
+// surrounding (larger) canvas. More + livelier while playing. Mirrors iOS drawEscaping.
+private fun DrawScope.drawEscapingSparks(phase: Float, playing: Boolean) {
+    val cx = size.width / 2f; val cy = size.height / 2f
+    val rimR = minOf(size.width, size.height) * 0.205f
+    val count = if (playing) 8 else 3
+    for (k in 0 until count) {
+        val p = k * 1.9f
+        val sv = kotlin.math.max(0f, kotlin.math.sin(phase * (3.0f + (k % 3) * 0.7f) + p))
+        val s2 = sv * sv; val s4 = s2 * s2; val strobe = s4 * s4   // ≈ sin^8 → brief pops
+        val a = strobe * (if (playing) 1.0f else 0.5f)
+        if (a < 0.03f) continue
+        val ang = k / count.toFloat() * 2f * Math.PI.toFloat() +
+            phase * 0.4f + kotlin.math.sin(phase * 2f + p) * 0.35f
+        val endR = rimR + size.width * (0.16f + 0.10f * (0.5f + 0.5f * kotlin.math.sin(phase * 5f + p)))
+        drawSpark(cx, cy, ang, rimR, endR, phase, k, a)
+    }
+}
+
+private fun DrawScope.drawSpark(cx: Float, cy: Float, ang: Float, r0: Float, r1: Float,
+                                phase: Float, seed: Int, alpha: Float) {
+    val ux = kotlin.math.cos(ang); val uy = kotlin.math.sin(ang)
+    val px = -uy; val py = ux
+    val segs = 6
+    val pts = ArrayList<Offset>(segs + 1)
+    for (i in 0..segs) {
+        val f = i / segs.toFloat()
+        val r = r0 + (r1 - r0) * f
+        val j = kotlin.math.sin(phase * 30f + seed * 2.7f + f * 9f) *
+            (r1 - r0) * 0.5f * kotlin.math.sin(f * Math.PI.toFloat())
+        pts.add(Offset(cx + ux * r + px * j, cy + uy * r + py * j))
+    }
+    val path = androidx.compose.ui.graphics.Path().apply {
+        moveTo(pts[0].x, pts[0].y); for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
+    }
+    val cap = androidx.compose.ui.graphics.StrokeCap.Round
+    val join = androidx.compose.ui.graphics.StrokeJoin.Round
+    val plus = androidx.compose.ui.graphics.BlendMode.Plus
+    drawPath(path, Theme.verdigris.copy(alpha = 0.5f * alpha),
+        style = Stroke(width = 5f, cap = cap, join = join), blendMode = plus)
+    drawPath(path, Color(0xFFC8F0FF).copy(alpha = 0.95f * alpha),
+        style = Stroke(width = 1.6f, cap = cap, join = join), blendMode = plus)
+    val tip = pts.last()
+    drawCircle(Color(0xFFC8F0FF).copy(alpha = 0.9f * alpha), radius = 3f * alpha, center = tip, blendMode = plus)
+}
+
 private fun DrawScope.drawElectricButton(glow: Float, phase: Float, playing: Boolean) {
     val cx = size.width / 2f
     val cy = size.height / 2f

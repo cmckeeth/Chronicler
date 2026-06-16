@@ -71,6 +71,7 @@ private struct ElectricPanelStyle: ViewModifier {
                         lineWidth: on ? 2.6 : 1.6))
             .shadow(color: Theme.verdigris.opacity(on ? 0.85 : 0.45), radius: on ? glowRadius * 1.8 : glowRadius)
             .shadow(color: Theme.verdigris.opacity(on ? 0.45 : 0.2),  radius: on ? glowRadius * 2.9 : glowRadius * 1.8)
+            .travelingCurrent(corner: corner)   // bright arc of current racing the border
             .onAppear { withAnimation(.easeInOut(duration: 1.7).repeatForever(autoreverses: true)) { on = true } }
     }
 }

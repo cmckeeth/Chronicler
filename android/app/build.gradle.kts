@@ -13,8 +13,8 @@ android {
         applicationId = "app.chronicler"
         minSdk = 26
         targetSdk = 35
-        versionCode = 30000
-        versionName = "3.0.0"
+        versionCode = 30200
+        versionName = "3.2.0"
     }
 
     buildTypes {

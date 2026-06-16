@@ -29,7 +29,7 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
     val context = LocalContext.current
     androidx.compose.runtime.LaunchedEffect(Unit) { StartupSound.play(context) }
 
-    Box(Modifier.fillMaxSize().background(Theme.bg)) {
+    Box(Modifier.fillMaxSize()) {   // transparent: the app-wide electric backdrop shows through
         // Gear corners
         Column(Modifier.fillMaxSize().padding(20.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

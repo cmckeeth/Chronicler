@@ -21,6 +21,7 @@ struct BookPlayerView: View {
     var body: some View {
         ZStack {
             Theme.bg.ignoresSafeArea()
+            ElectricBackground(intensity: 0.9)
             if book == nil {
                 Text("Consulting the archive...")
                     .font(Theme.serif(15)).foregroundColor(Theme.parchmentDim)
@@ -328,7 +329,7 @@ private struct ChapterRowBackground: ViewModifier {
         if isCurrent {
             content.electricPanel(bg: Theme.surface2, corner: 4, alpha: 0.8, glowRadius: 8)
         } else {
-            content
+            content.charged()   // every chapter row stays a little charged
         }
     }
 }
@@ -477,6 +478,16 @@ struct ElectricButton: View {
             Canvas { ctx, size in
                 drawElectric(ctx: ctx, size: size, glow: pulse(t), phase: t, playing: isPlaying)
             }
+            // Bursts of electricity that escape the rim — a larger, un-clipped canvas
+            // overlaid on the orb so arcs shoot out beyond the button.
+            .overlay {
+                Canvas { ctx, size in
+                    drawEscaping(ctx: ctx, size: size, phase: t, playing: isPlaying)
+                }
+                .frame(width: 210, height: 210)
+                .blendMode(.screen)
+                .allowsHitTesting(false)
+            }
             .overlay {
                 GeometryReader { geo in
                     Image(systemName: isPlaying ? "pause.fill" : "play.fill")
@@ -576,5 +587,48 @@ struct ElectricButton: View {
                    style: StrokeStyle(lineWidth: length * 0.02, lineCap: .round))
         ctx.stroke(branch, with: .color(core),
                    style: StrokeStyle(lineWidth: length * 0.014, lineCap: .round))
+    }
+
+    // Sparks that escape the orb: strobing arcs that shoot from the rim outward into
+    // the surrounding (un-clipped) canvas. More + livelier while playing.
+    private func drawEscaping(ctx: GraphicsContext, size: CGSize, phase: Double, playing: Bool) {
+        let cx = size.width / 2, cy = size.height / 2
+        let rimR = min(size.width, size.height) * 0.205   // ≈ the orb rim in this larger canvas
+        let count = playing ? 8 : 3
+        for k in 0..<count {
+            let p = Double(k) * 1.9
+            let strobe = pow(max(0, sin(phase * (3.0 + Double(k % 3) * 0.7) + p)), 8)  // brief pops
+            let a = strobe * (playing ? 1.0 : 0.5)
+            if a < 0.03 { continue }
+            let ang = Double(k) / Double(count) * 2 * .pi + phase * 0.4 + sin(phase * 2 + p) * 0.35
+            let endR = rimR + size.width * (0.16 + 0.10 * (0.5 + 0.5 * sin(phase * 5 + p)))
+            spark(ctx, cx, cy, ang, rimR, endR, phase, k, a)
+        }
+    }
+
+    private func spark(_ ctx: GraphicsContext, _ cx: Double, _ cy: Double, _ ang: Double,
+                       _ r0: Double, _ r1: Double, _ phase: Double, _ seed: Int, _ alpha: Double) {
+        let segs = 6
+        let ux = cos(ang), uy = sin(ang)
+        let px = -uy, py = ux                      // perpendicular
+        var pts: [CGPoint] = []
+        for i in 0...segs {
+            let f = Double(i) / Double(segs)
+            let r = r0 + (r1 - r0) * f
+            let j = sin(phase * 30 + Double(seed) * 2.7 + f * 9) * (r1 - r0) * 0.5 * sin(f * .pi)
+            pts.append(CGPoint(x: cx + ux * r + px * j, y: cy + uy * r + py * j))
+        }
+        var path = Path()
+        path.move(to: pts[0]); for p in pts.dropFirst() { path.addLine(to: p) }
+        ctx.stroke(path, with: .color(Theme.verdigris.opacity(0.5 * alpha)),
+                   style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+        ctx.stroke(path, with: .color(Color(hex: 0xc8f0ff).opacity(0.95 * alpha)),
+                   style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
+        // bright spark head
+        if let tip = pts.last {
+            let s = 3.0 * alpha
+            ctx.fill(Path(ellipseIn: CGRect(x: tip.x - s, y: tip.y - s, width: s * 2, height: s * 2)),
+                     with: .color(Color(hex: 0xc8f0ff).opacity(0.9 * alpha)))
+        }
     }
 }

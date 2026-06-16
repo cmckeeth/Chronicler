@@ -51,7 +51,10 @@ fun App(auth: AuthStore) {
             LocalDensity provides Density(base.density, base.fontScale * 1.2f),
             LocalTextStyle provides TextStyle(fontFamily = Theme.body, color = Theme.parchment)
         ) {
-        Surface(modifier = Modifier.fillMaxSize().background(Theme.bg), color = Theme.bg) {
+        Surface(modifier = Modifier.fillMaxSize(), color = Theme.bg) {
+          Box(Modifier.fillMaxSize()) {
+            // Full-screen electric backdrop behind every screen — the whole app buzzes.
+            ElectricBackground(intensity = 1.4f, modifier = Modifier.fillMaxSize())
             // Inset content below the status bar / camera cutout and above the nav bar.
             Box(Modifier.fillMaxSize().systemBarsPadding()) {
                 if (!auth.isAuthenticated) {
@@ -73,6 +76,7 @@ fun App(auth: AuthStore) {
                     }
                 }
             }
+          }
         }
         }
     }

@@ -74,7 +74,7 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
         }
     }
 
-    Column(Modifier.fillMaxSize().background(Theme.bg).padding(horizontal = 18.dp, vertical = 14.dp)) {
+    Column(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 14.dp)) {
         Text("The Archive", color = Theme.brass, fontSize = 24.sp, fontWeight = FontWeight.Bold,
             fontFamily = Theme.serif, letterSpacing = 2.sp,
             style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris),
