@@ -110,23 +110,21 @@ struct ArchiveView: View {
         Button {
             Task { await refresh() }
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 if refreshing {
-                    ProgressView().tint(Theme.ink).scaleEffect(0.8)
-                    Text("Consulting the archive...")
+                    ProgressView().tint(Theme.ink).scaleEffect(0.7)
                 } else {
-                    Text("↻").font(Theme.serif(16))
-                    Text("Refresh the Archive")
+                    Text("↻").font(Theme.serif(14))
                 }
+                Text(refreshing ? "Refreshing…" : "Refresh")
             }
             .font(Theme.body(13))
             .foregroundColor(Theme.ink)
-            .padding(.horizontal, 16).padding(.vertical, 9)
-            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 18).padding(.vertical, 7)
             .background(Theme.brass)
             .overlay(Capsule().stroke(Theme.verdigris, lineWidth: 1))
             .clipShape(Capsule())
-            .shadow(color: Theme.verdigris.opacity(0.5), radius: 8)
+            .shadow(color: Theme.verdigris.opacity(0.5), radius: 6)
         }
         .disabled(refreshing)
     }

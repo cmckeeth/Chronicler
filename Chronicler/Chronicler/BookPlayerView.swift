@@ -21,7 +21,7 @@ struct BookPlayerView: View {
     var body: some View {
         ZStack {
             Theme.bg.ignoresSafeArea()
-            ElectricBackground(intensity: 0.9)
+            if audio.isPlaying { ElectricBackground(intensity: 0.9) }   // crackle only during playback
             if book == nil {
                 Text("Consulting the archive...")
                     .font(Theme.serif(15)).foregroundColor(Theme.parchmentDim)

@@ -141,6 +141,10 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
 
     DisposableEffect(Unit) { onDispose { audio.release() } }
 
+    // Keep the electric backdrop calm here until playback starts; restore on leaving.
+    LaunchedEffect(audio.isPlaying) { ElectricState.suppressed = !audio.isPlaying }
+    DisposableEffect(Unit) { onDispose { ElectricState.suppressed = false } }
+
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
         .padding(horizontal = 20.dp, vertical = 12.dp)) {
         TextButton(onClick = { nav.popBackStack() }, contentPadding = PaddingValues(0.dp)) {

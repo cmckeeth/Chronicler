@@ -25,7 +25,7 @@ struct LandingView: View {
             VStack(spacing: 0) {
                 Spacer()
                 Text("Chronicler")
-                    .font(Theme.display(40))
+                    .font(Theme.display(56))
                     .foregroundStyle(Theme.brassGradient)
                     .lineLimit(1)
                     .minimumScaleFactor(0.4)
@@ -46,8 +46,6 @@ struct LandingView: View {
                         Text("Enter the Archive")
                             .font(Theme.serif(20)).foregroundColor(Theme.brassPale)
                             .glowVerdigris()
-                        Text("Browse your collection")
-                            .font(Theme.body(13)).foregroundColor(Theme.parchmentDim)
                     }
                     .padding(28)
                     .electricPanel(bg: Theme.surface, corner: 6, alpha: 0.8, glowRadius: 20)

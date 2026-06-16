@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -37,6 +38,12 @@ import kotlin.math.pow
 import kotlin.math.sin
 
 private val SPARK = Color(0xFFC8F0FF)   // icy electric-blue lightning core
+
+// Lets a screen temporarily hide the app-wide electric backdrop (e.g. the book page
+// stays calm until playback starts). Reset to false when leaving that screen.
+object ElectricState {
+    var suppressed by mutableStateOf(false)
+}
 
 // Full-screen animated electricity behind content: roving lightning bolts that strobe
 // + flicker, plus drifting glow nodes. Additive (Plus) blend so the app looks charged.
@@ -73,11 +80,11 @@ private fun DrawScope.drawField(t: Float, intensity: Float) {
             radius = r, center = Offset(gx, gy))
     }
 
-    // Strobing lightning bolts.
-    val bolts = max(2, (6 * intensity).toInt())
+    // Strobing lightning bolts — sparse: fewer bolts + slower, briefer strikes (~¼ as much).
+    val bolts = max(1, (2.5f * intensity).toInt())
     for (k in 0 until bolts) {
         val phase = k * 1.7f
-        val strobe = max(0f, sin(t * (2.2f + (k % 3) * 0.6f) + phase)).pow(6)
+        val strobe = max(0f, sin(t * (0.9f + (k % 3) * 0.35f) + phase)).pow(12)
         val flick = 0.55f + 0.45f * sin(t * 42f + phase)
         val alpha = strobe * (0.35f + 0.65f * flick) * min(1.3f, intensity)
         if (alpha < 0.02f) continue

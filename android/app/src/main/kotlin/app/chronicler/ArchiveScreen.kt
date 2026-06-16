@@ -119,22 +119,22 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
         Surface(color = Theme.brass, shape = RoundedCornerShape(50),
             border = androidx.compose.foundation.BorderStroke(1.dp, Theme.verdigris),
             modifier = Modifier
-                .fillMaxWidth()
-                .shadow(8.dp, RoundedCornerShape(50),
+                .align(Alignment.CenterHorizontally)
+                .shadow(6.dp, RoundedCornerShape(50),
                     spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
                 .clickable(enabled = !refreshing) { scope.launch { refresh() } }) {
             Row(verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 7.dp)) {
                 if (refreshing) {
                     CircularProgressIndicator(color = Theme.ink, strokeWidth = 2.dp,
-                        modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Consulting the archive...", color = Theme.ink, fontSize = 13.sp)
+                        modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Refreshing…", color = Theme.ink, fontSize = 13.sp)
                 } else {
-                    Text("↻", color = Theme.ink, fontSize = 16.sp, fontFamily = Theme.serif)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Refresh the Archive", color = Theme.ink, fontSize = 13.sp)
+                    Text("↻", color = Theme.ink, fontSize = 14.sp, fontFamily = Theme.serif)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Refresh", color = Theme.ink, fontSize = 13.sp)
                 }
             }
         }

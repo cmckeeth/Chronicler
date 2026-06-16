@@ -35,12 +35,12 @@ struct ElectricBackground: View {
                         center: CGPoint(x: gx, y: gy), startRadius: 0, endRadius: r))
         }
 
-        // Strobing lightning bolts.
-        let bolts = max(2, Int(6 * intensity))
+        // Strobing lightning bolts — sparse: fewer bolts + slower, briefer strikes (~¼ as much).
+        let bolts = max(1, Int(2.5 * intensity))
         for k in 0..<bolts {
             let phase = Double(k) * 1.7
-            let strobe = pow(max(0, sin(t * (2.2 + Double(k % 3) * 0.6) + phase)), 6)  // sharp bursts
-            let flick = 0.55 + 0.45 * sin(t * 42 + phase)                              // fast flicker while lit
+            let strobe = pow(max(0, sin(t * (0.9 + Double(k % 3) * 0.35) + phase)), 12)  // rare, brief bursts
+            let flick = 0.55 + 0.45 * sin(t * 42 + phase)                                // fast flicker while lit
             let alpha = strobe * (0.35 + 0.65 * flick) * min(1.3, intensity)
             if alpha < 0.02 { continue }
             let a = CGPoint(x: w * (0.5 + 0.52 * sin(t * 0.13 + phase)),

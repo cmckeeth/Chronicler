@@ -47,14 +47,17 @@ fun App(auth: AuthStore) {
     MaterialTheme {
         val base = LocalDensity.current
         CompositionLocalProvider(
-            // Bump all text ~20% larger app-wide.
-            LocalDensity provides Density(base.density, base.fontScale * 1.2f),
+            // Bump all text larger app-wide.
+            LocalDensity provides Density(base.density, base.fontScale * 1.32f),
             LocalTextStyle provides TextStyle(fontFamily = Theme.body, color = Theme.parchment)
         ) {
         Surface(modifier = Modifier.fillMaxSize(), color = Theme.bg) {
           Box(Modifier.fillMaxSize()) {
             // Full-screen electric backdrop behind every screen — the whole app buzzes.
-            ElectricBackground(intensity = 1.4f, modifier = Modifier.fillMaxSize())
+            // Suppressed on the book page until playback starts (see BookPlayerScreen).
+            if (!ElectricState.suppressed) {
+                ElectricBackground(intensity = 1.4f, modifier = Modifier.fillMaxSize())
+            }
             // Inset content below the status bar / camera cutout and above the nav bar.
             Box(Modifier.fillMaxSize().systemBarsPadding()) {
                 if (!auth.isAuthenticated) {

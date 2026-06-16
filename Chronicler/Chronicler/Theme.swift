@@ -24,8 +24,8 @@ enum Theme {
     static let parchmentDim = Color(hex: 0xc8a048)
     static let ink         = Color(hex: 0x1a0c02)
 
-    // Bump all text ~20% larger app-wide (matches Android's LocalDensity fontScale * 1.2f).
-    static let fontScale: CGFloat = 1.2
+    // Bump all text larger app-wide (matches Android's LocalDensity fontScale).
+    static let fontScale: CGFloat = 1.32
 
     // Fonts ported from steampunk.css: Cinzel Decorative (display), Cinzel (serif), Lora (body).
     // Registered at runtime in ChroniclerApp; PostScript names verified via fontTools.
