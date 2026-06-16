@@ -62,7 +62,7 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Image(painterResource(R.drawable.logo), contentDescription = null,
-                    modifier = Modifier.size(90.dp))
+                    modifier = Modifier.size(180.dp))
                 Text("Enter the Archive", color = Theme.brassPale, fontSize = 20.sp,
                     fontFamily = Theme.serif,
                     style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))

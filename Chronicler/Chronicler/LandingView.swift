@@ -40,7 +40,7 @@ struct LandingView: View {
 
                 NavigationLink(value: Route.archive) {
                     VStack(spacing: 6) {
-                        Image("logo").resizable().scaledToFit().frame(width: 90, height: 90)
+                        Image("logo").resizable().scaledToFit().frame(width: 180, height: 180)
                         Text("Enter the Archive")
                             .font(Theme.serif(20)).foregroundColor(Theme.brassPale)
                             .glowVerdigris()
