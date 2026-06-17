@@ -83,3 +83,11 @@ desktop.ini
 !.vscode/settings.json
 Chronicler/build/
 Chronicler/build-device/
+
+# fastlane / iOS release
+Chronicler/fastlane/report.xml
+Chronicler/fastlane/Preview.html
+Chronicler/fastlane/test_output
+Chronicler/*.ipa
+Chronicler/*.app.dSYM.zip
+AuthKey_*.p8

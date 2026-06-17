@@ -1,0 +1,5 @@
+app_identifier("com.corbin.chronicler")
+apple_id("corbin.mckeeth@gmail.com")
+
+# Developer Portal Team ID — fill in after enrollment (developer.apple.com → Membership).
+team_id(ENV["APPLE_TEAM_ID"] || "REPLACE_TEAM_ID")
