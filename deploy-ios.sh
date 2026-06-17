@@ -3,7 +3,7 @@
 # Prereqs:
 #   - Apple Developer Program membership (active)
 #   - fastlane installed:  (cd Chronicler && bundle install)   or   brew install fastlane
-#   - App record created in App Store Connect for com.corbin.chronicler
+#   - App record created in App Store Connect for blackbird.llc.Chronicler
 #   - These env vars set (see Chronicler/fastlane/Fastfile):
 #       APPLE_TEAM_ID, ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH
 set -euo pipefail

@@ -6,7 +6,7 @@ Version is automatically synced from the server before building — no manual bu
 ## Prerequisites
 - iPhone plugged in via USB
 - Signing cert: `Apple Development: corbin.mckeeth@gmail.com (RXQYCD389C)`
-- Provisioning profile: `iOS Team Provisioning Profile: com.corbin.chronicler`
+- Provisioning profile: `iOS Team Provisioning Profile: blackbird.llc.Chronicler`
 - Device UDID: `00008120-001C3D20216BC01E`
 
 ## Steps
@@ -35,7 +35,7 @@ echo "Building v$VER ($APP_VER)"
   -p:ApplicationDisplayVersion=$VER \
   -p:ApplicationVersion=$APP_VER \
   -p:CodesignKey="Apple Development: corbin.mckeeth@gmail.com (RXQYCD389C)" \
-  -p:CodesignProvision="iOS Team Provisioning Profile: com.corbin.chronicler" \
+  -p:CodesignProvision="iOS Team Provisioning Profile: blackbird.llc.Chronicler" \
   --no-restore
 ```
 

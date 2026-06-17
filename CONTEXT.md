@@ -108,7 +108,7 @@ src/
 - Free Apple Developer account: app expires every 7 days, re-run skill to renew
 - Device UDID: `00008120-001C3D20216BC01E` (Hannah's iPhone)
 - Signing: `Apple Development: corbin.mckeeth@gmail.com (RXQYCD389C)`
-- Provisioning: `iOS Team Provisioning Profile: com.corbin.chronicler`
+- Provisioning: `iOS Team Provisioning Profile: blackbird.llc.Chronicler`
 - .NET 10 SDK at `/usr/local/share/dotnet/dotnet` (not homebrew `dotnet`)
 
 ## Styling

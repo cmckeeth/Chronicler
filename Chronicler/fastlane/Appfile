@@ -1,4 +1,4 @@
-app_identifier("com.corbin.chronicler")
+app_identifier("blackbird.llc.Chronicler")
 apple_id("corbin.mckeeth@gmail.com")
 
 # Developer Portal Team ID — fill in after enrollment (developer.apple.com → Membership).

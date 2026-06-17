@@ -19,7 +19,7 @@ API contract lives in `src/Chronicler.Shared/Services/ApiClient.cs` (endpoints, 
 
 Native SwiftUI port of the Blazor UI — same behavior, same steampunk look. Xcode 16 project
 (objectVersion 77, **synchronized folders**: drop `.swift` files into `Chronicler/Chronicler/`
-and they auto-compile, no pbxproj edits). Target iOS 26.5, bundle `com.corbin.chronicler`.
+and they auto-compile, no pbxproj edits). Target iOS 26.5, bundle `blackbird.llc.Chronicler`.
 
 Files: `Theme` (palette from `steampunk.css`), `Models` (Codable DTOs), `APIClient` (Swift port,
 Bearer auth), `AuthStore` (token in UserDefaults), `AudioPlayerModel` (AVPlayer: skip±30, speed,
@@ -36,7 +36,7 @@ xcodebuild -project Chronicler.xcodeproj -scheme Chronicler \
 xcrun simctl boot "iPhone 17" 2>/dev/null; open -a Simulator
 APP=build/Build/Products/Debug-iphonesimulator/Chronicler.app
 xcrun simctl install booted "$APP"
-xcrun simctl launch booted com.corbin.chronicler
+xcrun simctl launch booted blackbird.llc.Chronicler
 xcrun simctl io booted screenshot /tmp/shot.png   # verify
 ```
 SourceKit may flag cross-file "cannot find type" / macOS-unavailable errors in the editor —
@@ -127,7 +127,7 @@ xcrun devicectl device install app --device <UDID> \
   bin/Release/net10.0-ios/ios-arm64/Chronicler.Maui.app
 
 # 3. Launch
-xcrun devicectl device process launch --device <UDID> com.corbin.chronicler
+xcrun devicectl device process launch --device <UDID> blackbird.llc.Chronicler
 ```
 
 `dotnet build -t:Run -p:_DeviceName=<UDID>` also works but only after a separate build step (the Run target won't build first), and it routes launch through `mlaunch`.
@@ -139,7 +139,7 @@ profile has not been explicitly trusted by the user (FBSOpenApplicationServiceEr
 ```
 Fix on the iPhone: **Settings → General → VPN & Device Management → Apple Development: <account> → Trust**. Then tap the app icon. The free/dev provisioning profile expires (~7 days), so this repeats periodically — rerun the build/install steps when it lapses.
 
-- Bundle id: `com.corbin.chronicler`
+- Bundle id: `blackbird.llc.Chronicler`
 - Signing: `Apple Development: corbin.mckeeth@gmail.com`
 
 ## Server deploy
