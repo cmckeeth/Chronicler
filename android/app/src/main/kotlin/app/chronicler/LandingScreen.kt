@@ -1,5 +1,8 @@
 package app.chronicler
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,12 +20,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import kotlinx.coroutines.delay
 
 @Composable
 fun LandingScreen(auth: AuthStore, nav: NavController) {
@@ -80,6 +86,70 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
         }
 
         UpdateBanner(auth.api, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp))
+
+        // Garden-only: flowers bloom open on first composition, then hold.
+        if (Theme.themeMode == ThemeMode.GARDEN) BloomOverlay()
+    }
+}
+
+// One blooming flower positioned in the Box. Pure Text emoji — never intercepts touches.
+private data class Bloom(
+    val emoji: String,
+    val align: Alignment,
+    val x: Int,      // dp offset from the alignment anchor
+    val y: Int,
+    val rot: Float,  // small final rotation, degrees
+    val delayMs: Long,
+    val size: Int,   // sp
+)
+
+// GARDEN only: a scatter of flowers around the screen edges that bloom from a closed bud
+// (scale 0) → slight overshoot (~1.15) → settle to 1, with a tiny rotation, staggered.
+// Bouncy spring gives the "pop open" feel. Blooms once, then holds. Mirrors the web feature.
+@Composable
+private fun BloomOverlay() {
+    var started by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { started = true }
+
+    val flowers = remember {
+        listOf(
+            Bloom("🌸", Alignment.TopStart,     28,  96, -12f,   0,  34),
+            Bloom("🌷", Alignment.TopEnd,       -24, 120,  10f,  90,  30),
+            Bloom("🌼", Alignment.CenterStart,   16,   0,  -8f, 180,  30),
+            Bloom("🌺", Alignment.CenterEnd,    -20, -40,  14f, 130,  36),
+            Bloom("🌻", Alignment.BottomStart,   34, -96,   9f, 240,  32),
+            Bloom("🌸", Alignment.BottomEnd,    -30, -72, -10f, 300,  28),
+        )
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        flowers.forEach { f ->
+            // Per-flower stagger: hold scale at 0 until this flower's delay elapses.
+            var bloom by remember { mutableStateOf(false) }
+            LaunchedEffect(started) {
+                if (started) { delay(f.delayMs); bloom = true }
+            }
+            val scale by animateFloatAsState(
+                targetValue = if (bloom) 1f else 0f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow),
+                label = "bloomScale")
+            val rot by animateFloatAsState(
+                targetValue = if (bloom) f.rot else 0f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                label = "bloomRot")
+            Text(
+                f.emoji,
+                fontSize = f.size.sp,
+                modifier = Modifier
+                    .align(f.align)
+                    .offset(x = f.x.dp, y = f.y.dp)
+                    .scale(scale)
+                    .rotate(rot)
+                    .alpha(0.9f)
+            )
+        }
     }
 }
 
