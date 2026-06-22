@@ -41,6 +41,14 @@ function GardenFX() {
       <span className="petal petal-3">🍃</span>
       <span className="petal petal-4">🌺</span>
       <span className="petal petal-5">🌸</span>
+      {/* Flowers that bloom open on screen load */}
+      <span className="bloom bloom-1">🌸</span>
+      <span className="bloom bloom-2">🌷</span>
+      <span className="bloom bloom-3">🌼</span>
+      <span className="bloom bloom-4">🌺</span>
+      <span className="bloom bloom-5">🌻</span>
+      <span className="bloom bloom-6">🌷</span>
+      <span className="bloom bloom-7">🌸</span>
     </div>
   );
 }

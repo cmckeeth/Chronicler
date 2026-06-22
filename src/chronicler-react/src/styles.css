@@ -331,8 +331,34 @@
     100% { transform: translateY(102vh)  translateX(-2rem) rotate(430deg); opacity: 0;  }
 }
 
+/* Flowers that bloom open when the screen loads (one-shot, then hold) */
+[data-theme="garden"] .bloom {
+    position: absolute;
+    font-size: 2rem;
+    transform: scale(0) rotate(-40deg);
+    opacity: 0;
+    transform-origin: center bottom;
+    animation: bloom 1.2s cubic-bezier(.2, .85, .3, 1) both;
+    filter: drop-shadow(0 2px 5px #000);
+}
+[data-theme="garden"] .bloom-1 { top: 16%; left: 9%;  font-size: 2.4rem; animation-delay: .15s; }
+[data-theme="garden"] .bloom-2 { top: 27%; right: 11%;                  animation-delay: .45s; }
+[data-theme="garden"] .bloom-3 { top: 52%; left: 6%;                    animation-delay: .75s; }
+[data-theme="garden"] .bloom-4 { top: 63%; right: 8%;  font-size: 2.6rem; animation-delay: .3s;  }
+[data-theme="garden"] .bloom-5 { bottom: 14%; left: 14%; font-size: 2.2rem; animation-delay: .6s;  }
+[data-theme="garden"] .bloom-6 { top: 40%; right: 22%; font-size: 1.7rem; animation-delay: .9s;  }
+[data-theme="garden"] .bloom-7 { bottom: 22%; right: 28%; font-size: 1.8rem; animation-delay: 1.05s; }
+
+@keyframes bloom {
+    0%   { transform: scale(0)    rotate(-40deg); opacity: 0;   }
+    55%  { transform: scale(1.18) rotate(10deg);  opacity: 1;   }
+    75%  { transform: scale(.95)  rotate(-4deg);                }
+    100% { transform: scale(1)    rotate(0deg);   opacity: .94; }
+}
+
 @media (prefers-reduced-motion: reduce) {
     [data-theme="garden"] .petal { animation: none; opacity: 0; }
+    [data-theme="garden"] .bloom { animation: none; transform: none; opacity: .9; }
 }
 
 /* ── Reset ────────────────────────────────────────────────────────────────── */
