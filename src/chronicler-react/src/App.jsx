@@ -28,27 +28,32 @@ function SteampunkFX() {
   );
 }
 
-// Garden-only decorative backdrop: corner vines + drifting petals.
+// One growing vine: the stem "draws" itself in, leaves pop along it, then a
+// flower blooms slowly at the tip.
+function Vine({ cls, flower }) {
+  return (
+    <svg className={`vine-grow ${cls}`} viewBox="0 0 100 210" aria-hidden="true">
+      <path className="vine-stem" d="M50,208 C22,172 84,140 42,102 C14,74 74,46 53,12" />
+      <text className="vine-leaf vine-leaf-1" x="28" y="150" fontSize="17">🍃</text>
+      <text className="vine-leaf vine-leaf-2" x="70" y="108" fontSize="15">🍃</text>
+      <text className="vine-leaf vine-leaf-3" x="30" y="64"  fontSize="16">🍃</text>
+      <text className="vine-flower" x="53" y="14" fontSize="28" textAnchor="middle">{flower}</text>
+    </svg>
+  );
+}
+
+// Garden-only backdrop: vines that grow + bloom at the tip, plus drifting petals.
 function GardenFX() {
   return (
     <div className="garden-fx" aria-hidden="true">
-      <span className="vine vine-tl">🌿</span>
-      <span className="vine vine-tr">🌿</span>
-      <span className="vine vine-bl">🌿</span>
-      <span className="vine vine-br">🌿</span>
+      <Vine cls="vg-bl" flower="🌸" />
+      <Vine cls="vg-br" flower="🌷" />
+      <Vine cls="vg-bm" flower="🌼" />
       <span className="petal petal-1">🌸</span>
       <span className="petal petal-2">🌷</span>
       <span className="petal petal-3">🍃</span>
       <span className="petal petal-4">🌺</span>
       <span className="petal petal-5">🌸</span>
-      {/* Flowers that bloom open on screen load */}
-      <span className="bloom bloom-1">🌸</span>
-      <span className="bloom bloom-2">🌷</span>
-      <span className="bloom bloom-3">🌼</span>
-      <span className="bloom bloom-4">🌺</span>
-      <span className="bloom bloom-5">🌻</span>
-      <span className="bloom bloom-6">🌷</span>
-      <span className="bloom bloom-7">🌸</span>
     </div>
   );
 }

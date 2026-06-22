@@ -296,18 +296,56 @@
     overflow: hidden;
     pointer-events: none;
 }
-/* Climbing vines framing the corners (emoji keep their natural foliage color) */
-[data-theme="garden"] .vine {
+/* Growing vines: the stem draws itself up from the bottom, leaves pop in along
+   the way, then a flower blooms slowly at the tip. */
+[data-theme="garden"] .vine-grow {
     position: absolute;
-    font-size: 9rem;
-    opacity: .5;
-    line-height: 1;
-    filter: drop-shadow(0 2px 6px #000);
+    width: 7rem;
+    height: 15rem;
+    overflow: visible;
 }
-[data-theme="garden"] .vine-tl { top: -2.5rem; left: -2rem;  transform: rotate(15deg); }
-[data-theme="garden"] .vine-tr { top: -2.5rem; right: -2rem; transform: scaleX(-1) rotate(15deg); }
-[data-theme="garden"] .vine-bl { bottom: -2.5rem; left: -2rem;  transform: scaleY(-1) rotate(15deg); }
-[data-theme="garden"] .vine-br { bottom: -2.5rem; right: -2rem; transform: scale(-1) rotate(15deg); }
+[data-theme="garden"] .vg-bl { bottom: 0; left: .5rem; }
+[data-theme="garden"] .vg-br { bottom: 0; right: .5rem; transform: scaleX(-1); }
+[data-theme="garden"] .vg-bm { bottom: 0; left: 42%; height: 11rem; opacity: .85; }
+
+[data-theme="garden"] .vine-stem {
+    fill: none;
+    stroke: #6fae5f;
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    filter: drop-shadow(0 1px 2px #000);
+    stroke-dasharray: 560;
+    stroke-dashoffset: 560;        /* fully "undrawn" → animates to 0 = grown */
+    animation: vine-grow 3.4s ease-out forwards;
+}
+@keyframes vine-grow { to { stroke-dashoffset: 0; } }
+
+[data-theme="garden"] .vine-leaf {
+    transform-box: fill-box;
+    transform-origin: center;
+    transform: scale(0);
+    opacity: 0;
+    animation: leaf-pop .7s ease-out forwards;
+}
+[data-theme="garden"] .vine-leaf-1 { animation-delay: 1.1s; }
+[data-theme="garden"] .vine-leaf-2 { animation-delay: 1.9s; }
+[data-theme="garden"] .vine-leaf-3 { animation-delay: 2.6s; }
+@keyframes leaf-pop { 0% { transform: scale(0); opacity: 0; } 70% { transform: scale(1.2); } 100% { transform: scale(1); opacity: .95; } }
+
+/* Flower blooms slowly at the tip, only after the vine has finished growing */
+[data-theme="garden"] .vine-flower {
+    transform-box: fill-box;
+    transform-origin: center bottom;
+    transform: scale(0);
+    opacity: 0;
+    filter: drop-shadow(0 2px 5px #000);
+    animation: flower-bloom 1.9s cubic-bezier(.2, .8, .3, 1) 3.2s both;
+}
+@keyframes flower-bloom {
+    0%   { transform: scale(0)    rotate(-12deg); opacity: 0; }
+    60%  { transform: scale(1.18) rotate(4deg);   opacity: 1; }
+    100% { transform: scale(1)    rotate(0deg);   opacity: 1; }
+}
 
 /* Petals drifting down, swaying and slowly spinning */
 [data-theme="garden"] .petal {
@@ -331,34 +369,11 @@
     100% { transform: translateY(102vh)  translateX(-2rem) rotate(430deg); opacity: 0;  }
 }
 
-/* Flowers that bloom open when the screen loads (one-shot, then hold) */
-[data-theme="garden"] .bloom {
-    position: absolute;
-    font-size: 2rem;
-    transform: scale(0) rotate(-40deg);
-    opacity: 0;
-    transform-origin: center bottom;
-    animation: bloom 1.2s cubic-bezier(.2, .85, .3, 1) both;
-    filter: drop-shadow(0 2px 5px #000);
-}
-[data-theme="garden"] .bloom-1 { top: 16%; left: 9%;  font-size: 2.4rem; animation-delay: .15s; }
-[data-theme="garden"] .bloom-2 { top: 27%; right: 11%;                  animation-delay: .45s; }
-[data-theme="garden"] .bloom-3 { top: 52%; left: 6%;                    animation-delay: .75s; }
-[data-theme="garden"] .bloom-4 { top: 63%; right: 8%;  font-size: 2.6rem; animation-delay: .3s;  }
-[data-theme="garden"] .bloom-5 { bottom: 14%; left: 14%; font-size: 2.2rem; animation-delay: .6s;  }
-[data-theme="garden"] .bloom-6 { top: 40%; right: 22%; font-size: 1.7rem; animation-delay: .9s;  }
-[data-theme="garden"] .bloom-7 { bottom: 22%; right: 28%; font-size: 1.8rem; animation-delay: 1.05s; }
-
-@keyframes bloom {
-    0%   { transform: scale(0)    rotate(-40deg); opacity: 0;   }
-    55%  { transform: scale(1.18) rotate(10deg);  opacity: 1;   }
-    75%  { transform: scale(.95)  rotate(-4deg);                }
-    100% { transform: scale(1)    rotate(0deg);   opacity: .94; }
-}
-
 @media (prefers-reduced-motion: reduce) {
     [data-theme="garden"] .petal { animation: none; opacity: 0; }
-    [data-theme="garden"] .bloom { animation: none; transform: none; opacity: .9; }
+    [data-theme="garden"] .vine-stem { animation: none; stroke-dashoffset: 0; }
+    [data-theme="garden"] .vine-leaf,
+    [data-theme="garden"] .vine-flower { animation: none; transform: scale(1); opacity: 1; }
 }
 
 /* ── Reset ────────────────────────────────────────────────────────────────── */
