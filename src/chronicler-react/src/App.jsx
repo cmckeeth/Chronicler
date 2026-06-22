@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { isLoggedIn } from './api';
 import Login from './pages/Login';
@@ -9,10 +10,27 @@ function Protected({ children }) {
   return isLoggedIn() ? children : <Navigate to="/login" replace />;
 }
 
-function VersionBadge() {
+function CornerControls() {
+  const [theme, setTheme] = useState(() => localStorage.getItem('chronicler_theme') || 'tesla');
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('chronicler_theme', theme);
+  }, [theme]);
   return (
-    <div className="version-badge" title={`Built ${__BUILD_TIME__} UTC`}>
-      v{__APP_VERSION__} · {__BUILD_TIME__}
+    <div className="corner-controls">
+      <div className="version-badge" title={`Built ${__BUILD_TIME__} UTC`}>
+        v{__APP_VERSION__} · {__BUILD_TIME__}
+      </div>
+      <select
+        className="theme-select"
+        value={theme}
+        onChange={e => setTheme(e.target.value)}
+        aria-label="Theme"
+        title="Switch theme"
+      >
+        <option value="tesla">⚡ Tesla</option>
+        <option value="steampunk">⚙ Steampunk</option>
+      </select>
     </div>
   );
 }
@@ -27,7 +45,7 @@ export default function App() {
         <Route path="/downloads" element={<Protected><Downloads /></Protected>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      <VersionBadge />
+      <CornerControls />
     </BrowserRouter>
   );
 }
