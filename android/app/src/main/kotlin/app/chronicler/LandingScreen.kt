@@ -70,9 +70,12 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
             }
         }
 
-        TextButton(onClick = { auth.clear() },
-            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).alpha(0.5f)) {
-            Text("Sign Out", color = Theme.parchmentDim, fontSize = 11.sp)
+        Column(Modifier.align(Alignment.TopEnd).padding(8.dp),
+            horizontalAlignment = Alignment.End) {
+            TextButton(onClick = { auth.clear() }, modifier = Modifier.alpha(0.5f)) {
+                Text("Sign Out", color = Theme.parchmentDim, fontSize = 11.sp)
+            }
+            ThemeSwitcher(auth)
         }
 
         UpdateBanner(auth.api, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp))
@@ -82,6 +85,34 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
 @Composable
 private fun gear() {
     Text("⚙", color = Theme.border, fontSize = 26.sp, modifier = Modifier.alpha(0.6f))
+}
+
+// Two-option theme selector. Sets Theme.themeMode (recomposes the app) and persists it.
+@Composable
+private fun ThemeSwitcher(auth: AuthStore) {
+    val active = Theme.themeMode
+    Row(
+        Modifier.clip(RoundedCornerShape(6.dp)).background(Theme.surface),
+        horizontalArrangement = Arrangement.spacedBy(0.dp)
+    ) {
+        themeChip("⚡ Tesla", active == ThemeMode.TESLA) { auth.setThemeMode(ThemeMode.TESLA) }
+        themeChip("⚙ Steampunk", active == ThemeMode.STEAMPUNK) { auth.setThemeMode(ThemeMode.STEAMPUNK) }
+    }
+}
+
+@Composable
+private fun themeChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Text(
+        label,
+        color = if (selected) Theme.ink else Theme.parchmentDim,
+        fontSize = 11.sp,
+        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+        fontFamily = Theme.serif,
+        modifier = Modifier
+            .clickable { onClick() }
+            .background(if (selected) Theme.brass else Theme.surface)
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+    )
 }
 
 // Status bar + self-update prompt, ported from the Blazor UpdateBanner.

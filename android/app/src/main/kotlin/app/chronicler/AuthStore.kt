@@ -32,6 +32,16 @@ class AuthStore(context: Context) {
         prefs.edit().putBoolean("volumeBoost", v).apply()
     }
 
+    // Persisted: the active visual theme (Tesla vs. Steampunk). Stored as the enum name.
+    fun loadThemeMode(): ThemeMode =
+        runCatching { ThemeMode.valueOf(prefs.getString("theme", null) ?: "") }
+            .getOrDefault(ThemeMode.TESLA)
+
+    fun setThemeMode(mode: ThemeMode) {
+        Theme.themeMode = mode
+        prefs.edit().putString("theme", mode.name).apply()
+    }
+
     init {
         prefs.getString("token", null)?.let {
             api.token = it

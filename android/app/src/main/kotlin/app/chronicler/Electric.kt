@@ -160,12 +160,19 @@ private fun DrawScope.strokeBolt(pts: List<Offset>, alpha: Float, scale: Float) 
 // energized without the full panel treatment (e.g. every chapter row). Mirrors iOS charged().
 fun Modifier.charged(): Modifier = composed {
     val shape = RoundedCornerShape(4.dp)
-    val tr = rememberInfiniteTransition(label = "charge")
-    val p by tr.animateFloat(
-        initialValue = 0.12f, targetValue = 0.42f,
-        animationSpec = infiniteRepeatable(tween(2000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "c")
-    this
-        .shadow((3f + 8f * p).dp, shape, spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
-        .border(1.dp, Theme.verdigris.copy(alpha = p), shape)
+    if (Theme.themeMode == ThemeMode.STEAMPUNK) {
+        // No electricity: a steady, faint brass edge.
+        this
+            .shadow(4.dp, shape, spotColor = Theme.brass, ambientColor = Theme.brass)
+            .border(1.dp, Theme.borderBrass.copy(alpha = 0.35f), shape)
+    } else {
+        val tr = rememberInfiniteTransition(label = "charge")
+        val p by tr.animateFloat(
+            initialValue = 0.12f, targetValue = 0.42f,
+            animationSpec = infiniteRepeatable(tween(2000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+            label = "c")
+        this
+            .shadow((3f + 8f * p).dp, shape, spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
+            .border(1.dp, Theme.verdigris.copy(alpha = p), shape)
+    }
 }

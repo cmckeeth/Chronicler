@@ -30,6 +30,8 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
         enableEdgeToEdge()
         requestNotificationPermission()
         val auth = AuthStore(applicationContext)
+        // Restore the saved theme before first composition so the app paints the right look.
+        Theme.themeMode = auth.loadThemeMode()
         setContent { App(auth) }
     }
 
@@ -55,7 +57,8 @@ fun App(auth: AuthStore) {
           Box(Modifier.fillMaxSize()) {
             // Full-screen electric backdrop behind every screen — the whole app buzzes.
             // Suppressed on the book page until playback starts (see BookPlayerScreen).
-            if (!ElectricState.suppressed) {
+            // STEAMPUNK has NO electricity, so the animated backdrop only runs in TESLA mode.
+            if (Theme.themeMode == ThemeMode.TESLA && !ElectricState.suppressed) {
                 ElectricBackground(intensity = 1.4f, modifier = Modifier.fillMaxSize())
             }
             // Inset content below the status bar / camera cutout and above the nav bar.
