@@ -115,6 +115,74 @@ struct ElectricBackground: View {
     }
 }
 
+// Steampunk-only: lush rising STEAM. ~9 soft white/cream plumes, each a blurred radial-
+// gradient blob that rises from below the bottom edge, growing and fading as it climbs,
+// then loops. Fully deterministic from a continuous TimelineView clock (no Date()/RNG) so
+// it's resume-safe; each plume is varied purely by its index. Non-interactive — it may
+// drift over content. Peak opacity reads clearly so the theme looks genuinely steamy.
+struct SteamOverlay: View {
+    private let count = 9
+
+    var body: some View {
+        if Theme.mode != .steampunk {
+            Color.clear
+        } else {
+            GeometryReader { geo in
+                TimelineView(.animation) { tl in
+                    let t = tl.date.timeIntervalSinceReferenceDate
+                    ZStack {
+                        ForEach(0..<count, id: \.self) { i in
+                            plume(i, in: geo.size, t: t)
+                        }
+                    }
+                }
+            }
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+            // Normal compositing (not .screen) so the soft white plumes read as distinct,
+            // billowing steam over the warm brass void rather than a faint glow.
+        }
+    }
+
+    // One plume: rises through a looping 0..1 cycle, fading in low, peaking mid-rise,
+    // fading out high; scales up as it climbs so it billows. Phase/size/lane vary per i.
+    @ViewBuilder
+    private func plume(_ i: Int, in size: CGSize, t: Double) -> some View {
+        let fi = Double(i)
+        // Per-plume traits, all deterministic from the index.
+        let lane = (fi + 0.5) / Double(count)                 // horizontal lane 0..1
+        let wobble = 0.05 * sin(t * (0.25 + 0.04 * fi) + fi)  // gentle horizontal drift
+        let xFrac = lane + wobble
+        let period = 9.0 + Double(i % 4) * 2.5                // 9..16.5s rise loops
+        let phase = fi / Double(count)                        // staggered starts
+        let cycle = ((t / period) + phase).truncatingRemainder(dividingBy: 1)
+
+        // Vertical travel: start just below the bottom, climb past the top.
+        let y = size.height * (1.15 - 1.35 * cycle)
+        let x = size.width * xFrac
+
+        // Envelope: fade in, hold bright through the middle, fade out near the top.
+        let fade = sin(cycle * .pi)                           // 0→1→0 over the cycle
+        let opacity = 0.6 * pow(fade, 0.6)
+        // Grow as it rises (billowing), with size also varied per plume.
+        let baseD = size.width * (0.34 + 0.10 * Double(i % 3))
+        let diameter = baseD * (0.7 + 0.9 * cycle)
+
+        Circle()
+            .fill(RadialGradient(
+                gradient: Gradient(colors: [
+                    Color(hex: 0xFFFDF6).opacity(0.85),  // bright near-white core
+                    Color(hex: 0xF4ECDC).opacity(0.4),   // warm cream mid
+                    Color(hex: 0xF4ECDC).opacity(0.12),
+                    .clear]),
+                center: .center, startRadius: 0, endRadius: diameter / 2))
+            .frame(width: diameter, height: diameter)
+            .blur(radius: 22)
+            .opacity(opacity)
+            .position(x: x, y: y)
+    }
+}
+
 // Full themed backdrop for every screen. Steampunk: a quiet warm brass void (just the
 // base color — no electricity). Tesla: a cold blue-black field with a soft cyan radial
 // glow and a faint circuit grid, with the roving lightning on top. Replaces the old

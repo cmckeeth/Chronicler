@@ -21,6 +21,11 @@ struct LandingView: View {
                 VineGrowOverlay()   // vines grow up, vector flowers bloom at the tips
             }
 
+            // Steampunk: lush rising steam billowing up over the brass void.
+            if themeStore.mode == .steampunk {
+                SteamOverlay()
+            }
+
             // Gear corners (⚙ in tl/tr/bl/br)
             VStack {
                 HStack { gear; Spacer(); gear }
