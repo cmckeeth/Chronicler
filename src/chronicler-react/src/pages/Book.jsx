@@ -26,8 +26,39 @@ export default function Book() {
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [speed, setSpeed] = useState(1);
+  const [autoplay, setAutoplay] = useState(() => localStorage.getItem('chronicler_autoplay') !== '0');
+  const [boost, setBoost] = useState(() => localStorage.getItem('chronicler_volumeBoost') === '1');
   const lastSave = useRef(Date.now() - 15000);
   const started = useRef(false);
+  const autoplayRef = useRef(autoplay);
+  const audioCtxRef = useRef(null);
+  const gainRef = useRef(null);
+
+  // Web Audio graph for volume boost (~12 dB). Created lazily on first play
+  // (a user gesture is required to construct/resume an AudioContext).
+  function ensureAudioGraph() {
+    if (audioCtxRef.current || !audioRef.current) return;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const source = ctx.createMediaElementSource(audioRef.current);
+    const gain = ctx.createGain();
+    gain.gain.value = boost ? 4 : 1;
+    source.connect(gain);
+    gain.connect(ctx.destination);
+    audioCtxRef.current = ctx;
+    gainRef.current = gain;
+  }
+
+  useEffect(() => {
+    autoplayRef.current = autoplay;
+    localStorage.setItem('chronicler_autoplay', autoplay ? '1' : '0');
+  }, [autoplay]);
+
+  useEffect(() => {
+    localStorage.setItem('chronicler_volumeBoost', boost ? '1' : '0');
+    if (gainRef.current) gainRef.current.gain.value = boost ? 4 : 1;
+  }, [boost]);
 
   useEffect(() => {
     async function load() {
@@ -88,7 +119,7 @@ export default function Book() {
     };
     const onEnded = () => {
       setProgresses(prev => prev.map((p, i) => i === currentIdx ? { ...p, isListened: true } : p));
-      if (currentIdx < chapters.length - 1) setCurrentIdx(i => i + 1);
+      if (autoplayRef.current && currentIdx < chapters.length - 1) setCurrentIdx(i => i + 1);
     };
     const onMeta = () => setDuration(audio.duration);
 
@@ -111,6 +142,8 @@ export default function Book() {
     if (!audio) return;
     if (playing) { audio.pause(); saveProgress(audio.currentTime); }
     else {
+      ensureAudioGraph();
+      audioCtxRef.current?.resume?.();
       if (!started.current) {
         const startPos = progresses[currentIdx]?.positionSeconds ?? 0;
         if (startPos > 1) audio.currentTime = startPos;
@@ -119,6 +152,30 @@ export default function Book() {
       audio.play();
     }
   }
+
+  // Lock-screen / hardware media controls (Now Playing)
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !chapter || !book) return;
+    const ms = navigator.mediaSession;
+    ms.metadata = new window.MediaMetadata({
+      title: chapter.title,
+      artist: book.author,
+      album: book.title,
+      artwork: book.hasCover ? [{ src: booksApi.coverUrl(book.id), sizes: '512x512', type: 'image/jpeg' }] : [],
+    });
+    const audio = audioRef.current;
+    const set = (action, handler) => { try { ms.setActionHandler(action, handler); } catch {} };
+    set('play', () => audio?.play());
+    set('pause', () => { audio?.pause(); if (audio) saveProgress(audio.currentTime); });
+    set('seekbackward', () => skip(-30));
+    set('seekforward', () => skip(30));
+    set('previoustrack', () => { if (currentIdx > 0) { setCurrentIdx(i => i - 1); started.current = false; } });
+    set('nexttrack', () => { if (currentIdx < chapters.length - 1) { setCurrentIdx(i => i + 1); started.current = false; } });
+  }, [chapter?.id, book, currentIdx, chapters.length, saveProgress]);
+
+  useEffect(() => {
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
+  }, [playing]);
 
   function seek(e) { if (audioRef.current) audioRef.current.currentTime = Number(e.target.value); }
   function skip(sec) { if (audioRef.current) audioRef.current.currentTime = Math.max(0, Math.min(duration, audioRef.current.currentTime + sec)); }
@@ -182,7 +239,8 @@ export default function Book() {
               <option value={1.5}>1.5×</option>
               <option value={2}>2×</option>
             </select>
-            <button className="btn-icon" onClick={() => setShowBmInput(true)}>🔖</button>
+            <button className={`btn-icon toggle${autoplay ? ' toggle-on' : ''}`} onClick={() => setAutoplay(v => !v)} title="Autoplay next chapter">↻</button>
+            <button className={`btn-icon toggle${boost ? ' toggle-on' : ''}`} onClick={() => setBoost(v => !v)} title="Volume boost">🔊</button>
           </div>
           {duration > 0 && (
             <div className="player-progress">

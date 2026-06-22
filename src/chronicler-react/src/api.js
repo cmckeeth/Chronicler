@@ -55,6 +55,10 @@ export const booksApi = {
     return res.json();
   },
   coverUrl: (id) => `/api/books/${id}/cover`,
+  async favorite(id) {
+    const res = await apiFetch(`/api/books/${id}/favorite`, { method: 'POST' });
+    return res.json(); // { isFavorite }
+  },
   async chapters(id) {
     const res = await apiFetch(`/api/books/${id}/chapters`);
     return res.json();

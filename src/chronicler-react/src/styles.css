@@ -524,6 +524,37 @@ select {
     filter: sepia(.2) brightness(.95) contrast(1.05);
 }
 
+.fav-btn {
+    position: absolute;
+    top: .35rem;
+    right: .35rem;
+    width: 1.9rem;
+    height: 1.9rem;
+    padding: 0;
+    line-height: 1;
+    font-size: 1.05rem;
+    border-radius: 50%;
+    border: 1px solid var(--border-brass);
+    background: rgba(18,10,2,.6);
+    color: var(--parchment-dim);
+    opacity: 0;
+    transition: opacity .2s, color .2s, box-shadow .2s;
+    cursor: pointer;
+    z-index: 2;
+}
+.book-card:hover .fav-btn { opacity: 1; }
+.fav-btn.fav-active {
+    opacity: 1;
+    color: var(--brass);
+    box-shadow: 0 0 10px rgba(232,160,16,.6);
+}
+
+.btn-icon.toggle-on {
+    color: #e8ffd0;
+    border-color: var(--verdigris);
+    box-shadow: 0 0 8px rgba(143,212,74,.5);
+}
+
 .book-cover-placeholder {
     font-size: 3rem;
     opacity: .15;

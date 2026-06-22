@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { booksApi, auth } from '../api';
 import BookCard from '../components/BookCard';
 import ScanPreview from '../components/ScanPreview';
 
 export default function Library() {
+  const nav = useNavigate();
   const [books, setBooks] = useState([]);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('name');
@@ -37,7 +39,7 @@ export default function Library() {
     }
 
     if (filter === 'inprogress') q = q.filter(b => b.listenedCount > 0 && b.listenedCount < b.chapterCount);
-    else if (filter === 'completed') q = q.filter(b => b.chapterCount > 0 && b.listenedCount >= b.chapterCount);
+    else if (filter === 'favorites') q = q.filter(b => b.isFavorite);
 
     if (sort === 'date') return [...q].sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
     if (sort === 'progress') return [...q].sort((a, b) => {
@@ -55,6 +57,12 @@ export default function Library() {
   );
 
   async function scan() { setScanning(true); await booksApi.scan(); await loadBooks(search); setScanning(false); }
+
+  const toggleFav = useCallback(async (bookId) => {
+    setBooks(prev => prev.map(b => b.id === bookId ? { ...b, isFavorite: !b.isFavorite } : b));
+    try { await booksApi.favorite(bookId); }
+    catch { setBooks(prev => prev.map(b => b.id === bookId ? { ...b, isFavorite: !b.isFavorite } : b)); }
+  }, []);
 
   return (
     <div className="library-browser">
@@ -79,7 +87,7 @@ export default function Library() {
             <span className="control-label">Show</span>
             <button className={`chip${filter==='all'?' chip-active':''}`} onClick={() => setFilter('all')}>All</button>
             <button className={`chip${filter==='inprogress'?' chip-active':''}`} onClick={() => setFilter('inprogress')}>In Progress</button>
-            <button className={`chip${filter==='completed'?' chip-active':''}`} onClick={() => setFilter('completed')}>Done</button>
+            <button className={`chip${filter==='favorites'?' chip-active':''}`} onClick={() => setFilter('favorites')}>★ Favorites</button>
           </div>
         </div>
       </div>
@@ -95,7 +103,7 @@ export default function Library() {
         </div>
       ) : (
         <div className="book-grid">
-          {filtered.map(book => <BookCard key={book.id} book={book} />)}
+          {filtered.map(book => <BookCard key={book.id} book={book} onToggleFav={toggleFav} />)}
         </div>
       )}
 

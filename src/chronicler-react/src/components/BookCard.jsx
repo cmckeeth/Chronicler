@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { booksApi } from '../api';
 
-export default function BookCard({ book }) {
+export default function BookCard({ book, onToggleFav }) {
   const nav = useNavigate();
   return (
     <div className="book-card" onClick={() => nav(`/book/${book.id}`)}>
@@ -10,6 +10,11 @@ export default function BookCard({ book }) {
           ? <img src={booksApi.coverUrl(book.id)} alt={book.title} loading="lazy" />
           : <div className="book-cover-placeholder">📚</div>
         }
+        <button
+          className={`fav-btn${book.isFavorite ? ' fav-active' : ''}`}
+          title={book.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+          onClick={e => { e.stopPropagation(); onToggleFav?.(book.id); }}
+        >★</button>
       </div>
       <div className="book-meta">
         <span className="book-title">{book.title}</span>

@@ -18,7 +18,6 @@ export default function MetaEditor({ book, onClose, onSaved }) {
       if (coverFile) {
         const formData = new FormData();
         formData.append('cover', coverFile, coverFile.name);
-        const { getToken } = await import('../api');
         await fetch(`/api/books/${book.id}/cover/upload`, {
           method: 'PUT',
           headers: { 'Authorization': `Bearer ${localStorage.getItem('chronicler_token')}` },
