@@ -549,6 +549,20 @@ select {
     box-shadow: 0 0 10px rgba(232,160,16,.6);
 }
 
+.version-badge {
+    position: fixed;
+    bottom: .4rem;
+    right: .55rem;
+    font-size: .62rem;
+    letter-spacing: .04em;
+    color: var(--parchment-dim);
+    opacity: .4;
+    pointer-events: none;
+    user-select: none;
+    z-index: 200;
+    font-family: 'Cinzel', serif;
+}
+
 .btn-icon.toggle-on {
     color: #e8ffd0;
     border-color: var(--verdigris);

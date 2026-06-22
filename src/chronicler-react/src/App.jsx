@@ -9,6 +9,14 @@ function Protected({ children }) {
   return isLoggedIn() ? children : <Navigate to="/login" replace />;
 }
 
+function VersionBadge() {
+  return (
+    <div className="version-badge" title={`Built ${__BUILD_TIME__} UTC`}>
+      v{__APP_VERSION__} · {__BUILD_TIME__}
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -19,6 +27,7 @@ export default function App() {
         <Route path="/downloads" element={<Protected><Downloads /></Protected>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <VersionBadge />
     </BrowserRouter>
   );
 }
