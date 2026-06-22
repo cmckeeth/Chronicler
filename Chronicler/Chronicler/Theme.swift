@@ -159,11 +159,13 @@ private struct ElectricPanelStyle: ViewModifier {
     @State private var on = false
     func body(content: Content) -> some View {
         if Theme.mode == .garden {
-            // Garden: soft SOLID green panel, generous corner radius, gentle green border
-            // + soft bloom. No glass, no rivets, no current.
+            // Garden: a frosted-TRANSLUCENT green panel — a faint green tint over thin
+            // material so the vector-flower wallpaper reads softly through it. Generous
+            // corner radius, gentle green border + soft bloom. No rivets, no current.
             let gardenCorner = max(corner, 16)
             content
-                .background(bg.opacity(0.92))
+                .background(bg.opacity(0.5))
+                .background(.ultraThinMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: gardenCorner))
                 .overlay(RoundedRectangle(cornerRadius: gardenCorner)
                     .stroke(Theme.glow.opacity(min(1, alpha)), lineWidth: 1.4))
