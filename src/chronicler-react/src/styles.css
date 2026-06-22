@@ -351,8 +351,9 @@
 [data-theme="garden"] .petal {
     position: absolute;
     top: -3rem;
-    font-size: 1.5rem;
+    font-size: 2.3rem;
     opacity: 0;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,.5));
     will-change: transform, opacity;
 }
 [data-theme="garden"] .petal-1 { left:  8%; animation: petal-fall 13s linear infinite;        }
@@ -362,11 +363,11 @@
 [data-theme="garden"] .petal-5 { left: 85%; animation: petal-fall 19s linear infinite 1.5s;   }
 
 @keyframes petal-fall {
-    0%   { transform: translateY(-3rem)  translateX(0)    rotate(0deg);   opacity: 0;   }
-    10%  {                                                                opacity: .9;  }
-    50%  { transform: translateY(45vh)   translateX(4rem) rotate(220deg); opacity: .8;  }
-    90%  {                                                                opacity: .55; }
-    100% { transform: translateY(102vh)  translateX(-2rem) rotate(430deg); opacity: 0;  }
+    0%   { transform: translateY(-3rem)  translateX(0)    rotate(0deg);   opacity: 0; }
+    8%   {                                                                opacity: 1; }
+    50%  { transform: translateY(45vh)   translateX(4rem) rotate(220deg); opacity: 1; }
+    92%  {                                                                opacity: 1; }
+    100% { transform: translateY(102vh)  translateX(-2rem) rotate(430deg); opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
