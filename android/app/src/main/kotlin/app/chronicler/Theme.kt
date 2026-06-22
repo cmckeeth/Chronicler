@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -39,37 +40,61 @@ object Theme {
 
     private val tesla get() = themeMode == ThemeMode.TESLA
 
-    val bg: Color get() = if (tesla) Color(0xFF120A02) else Color(0xFF160D03)
-    val bg2: Color get() = if (tesla) Color(0xFF1A1005) else Color(0xFF1E1206)
-    val leather: Color get() = if (tesla) Color(0xFF221408) else Color(0xFF281809)
-    val surface: Color get() = if (tesla) Color(0xFF2A1A0A) else Color(0xFF32200C)
-    val surface2: Color get() = if (tesla) Color(0xFF341F0C) else Color(0xFF3E280E)
-    val surface3: Color get() = if (tesla) Color(0xFF3E260E) else Color(0xFF4A3012)
-    val border: Color get() = if (tesla) Color(0xFF5A3418) else Color(0xFF6B4420)
-    val borderBrass: Color get() = if (tesla) Color(0xFFB87C20) else Color(0xFFC08828)
-    val brass: Color get() = if (tesla) Color(0xFFE8A010) else Color(0xFFE09808)
-    val brassLight: Color get() = if (tesla) Color(0xFFFFC030) else Color(0xFFFFC838)
-    val brassPale: Color get() = if (tesla) Color(0xFFFFE060) else Color(0xFFFFE878)
-    val copper: Color get() = if (tesla) Color(0xFFD07020) else Color(0xFFC86818)
-    val rust: Color get() = if (tesla) Color(0xFFC03010) else Color(0xFFB82C0C)
+    // TESLA — cold futuristic glass/electric (dark blue-black, electric-blue "metal").
+    // STEAMPUNK — warm Victorian brass/gold/leather, green accent (unchanged).
+    val bg: Color get() = if (tesla) Color(0xFF05080F) else Color(0xFF160D03)
+    val bg2: Color get() = if (tesla) Color(0xFF090E1A) else Color(0xFF1E1206)
+    val leather: Color get() = if (tesla) Color(0xFF0B1424) else Color(0xFF281809)
+    val surface: Color get() = if (tesla) Color(0xFF0F1A2E) else Color(0xFF32200C)
+    val surface2: Color get() = if (tesla) Color(0xFF142440) else Color(0xFF3E280E)
+    val surface3: Color get() = if (tesla) Color(0xFF1B3052) else Color(0xFF4A3012)
+    val border: Color get() = if (tesla) Color(0xFF21405F) else Color(0xFF6B4420)
+    val borderBrass: Color get() = if (tesla) Color(0xFF3F86B8) else Color(0xFFC08828)
+    // "brass"/metal token (~used everywhere for buttons, wordmark). TESLA = electric blue/chrome.
+    val brass: Color get() = if (tesla) Color(0xFF2BC4FF) else Color(0xFFE09808)
+    val brassLight: Color get() = if (tesla) Color(0xFF7FE0FF) else Color(0xFFFFC838)
+    val brassPale: Color get() = if (tesla) Color(0xFFD6F4FF) else Color(0xFFFFE878)
+    val copper: Color get() = if (tesla) Color(0xFF1F9FD8) else Color(0xFFC86818)
+    val rust: Color get() = if (tesla) Color(0xFFFF5470) else Color(0xFFB82C0C)
     // Accent / "electric" token. Name kept (used ~35 places). TESLA = electric blue,
     // STEAMPUNK = verdigris green — the key accent flip.
     val verdigris: Color get() = if (tesla) Color(0xFF2BC4FF) else Color(0xFF8FD44A)
-    val parchment: Color get() = if (tesla) Color(0xFFFFF4D8) else Color(0xFFF6ECD0)
-    val parchmentMid: Color get() = if (tesla) Color(0xFFE8C878) else Color(0xFFE0BC6C)
-    val parchmentDim: Color get() = if (tesla) Color(0xFFC8A048) else Color(0xFFC09838)
-    val ink: Color get() = if (tesla) Color(0xFF1A0C02) else Color(0xFF1A0C02)
+    val parchment: Color get() = if (tesla) Color(0xFFE6F3FF) else Color(0xFFF6ECD0)
+    val parchmentMid: Color get() = if (tesla) Color(0xFFA6C8E2) else Color(0xFFE0BC6C)
+    val parchmentDim: Color get() = if (tesla) Color(0xFF6F93B4) else Color(0xFFC09838)
+    val ink: Color get() = if (tesla) Color(0xFF04101E) else Color(0xFF1A0C02)
 
     val brassGradient: Brush get() = Brush.verticalGradient(listOf(brassLight, brass, borderBrass))
 
-    // Fonts (shared by both themes; not re-bundled per theme — known gap vs. CSS Cinzel/Lora).
-    val display = FontFamily(
+    // Per-theme fonts. STEAMPUNK = ornate serif (Cinzel/Lora). TESLA = clean geometric
+    // sans (Orbitron display + Rajdhani body) for a cold, futuristic feel. Orbitron ships
+    // as a variable font — map weights via FontVariation (minSdk 26 supports it).
+    private val cinzelDisplay = FontFamily(
         Font(R.font.cinzel_decorative_regular, FontWeight.Normal),
         Font(R.font.cinzel_decorative_bold, FontWeight.Bold),
         Font(R.font.cinzel_decorative_black, FontWeight.Black),
     )
-    val serif = FontFamily(Font(R.font.cinzel))
-    val body = FontFamily(Font(R.font.lora))
+    @OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
+    private val orbitronDisplay = FontFamily(
+        Font(R.font.orbitron, FontWeight.Normal, variationSettings = FontVariation.Settings(FontVariation.weight(400))),
+        Font(R.font.orbitron, FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(700))),
+        Font(R.font.orbitron, FontWeight.Black, variationSettings = FontVariation.Settings(FontVariation.weight(900))),
+    )
+    private val cinzelSerif = FontFamily(Font(R.font.cinzel))
+    private val rajdhaniSerif = FontFamily(
+        Font(R.font.rajdhani_semibold, FontWeight.Normal),
+        Font(R.font.rajdhani_semibold, FontWeight.Bold),
+    )
+    private val loraBody = FontFamily(Font(R.font.lora))
+    private val rajdhaniBody = FontFamily(
+        Font(R.font.rajdhani_regular, FontWeight.Normal),
+        Font(R.font.rajdhani_medium, FontWeight.Medium),
+        Font(R.font.rajdhani_semibold, FontWeight.Bold),
+    )
+
+    val display: FontFamily get() = if (tesla) orbitronDisplay else cinzelDisplay
+    val serif: FontFamily get() = if (tesla) rajdhaniSerif else cinzelSerif
+    val body: FontFamily get() = if (tesla) rajdhaniBody else loraBody
 
     // Glows read the themed colors via get() so they re-evaluate when the mode flips.
     // STEAMPUNK headings get a warm brass halo; TESLA gets the bright electric-blue one.
@@ -81,10 +106,13 @@ object Theme {
             Shadow(color = brass.copy(alpha = 0.7f), offset = Offset.Zero, blurRadius = 18f)
 }
 
-// Themed panel with a glowing border + drop shadow.
-//   TESLA     — a BREATHING electric-blue border: stroke alpha, width and glow elevation
-//               all pulse forever via an infinite transition.
-//   STEAMPUNK — a STATIC brass border + steady drop shadow (no pulse, no electricity).
+// Themed panel.
+//   TESLA     — a GLASSY panel: translucent low-alpha surface fill + faint top-down gradient
+//               sheen + thin bright cyan border + soft rounded corners, plus a BREATHING
+//               electric-blue edge (stroke alpha/width + glow elevation pulse forever).
+//               (Compose has no cheap backdrop blur, so glass is faked with translucency.)
+//   STEAMPUNK — a SOLID opaque brass panel with tight 2.dp corners + static brass border
+//               and a steady drop shadow (no pulse, no electricity, no glass).
 // Built with composed {} so it can hold the infinite transition (TESLA) while keeping a plain
 // Modifier signature (no call-site changes).
 fun Modifier.electricPanel(
@@ -93,23 +121,33 @@ fun Modifier.electricPanel(
     alpha: Float = 0.6f,
     elevation: Dp = 14.dp,
 ): Modifier = composed {
-    val shape = RoundedCornerShape(corner)
     if (Theme.themeMode == ThemeMode.STEAMPUNK) {
-        // Steady brass — no animation.
+        // Solid opaque brass panel, tight 2.dp corners — no animation, no glass.
+        val shape = RoundedCornerShape(2.dp)
         this
             .shadow(elevation, shape, spotColor = Theme.brass, ambientColor = Theme.brass)
             .background(bg, shape)
             .border(1.6.dp, Theme.borderBrass.copy(alpha = (alpha + 0.2f).coerceAtMost(1f)), shape)
     } else {
+        // Glassy Tesla panel: soft 10.dp corners, translucent fill + sheen, breathing cyan edge.
+        val shape = RoundedCornerShape(10.dp)
         val t = rememberInfiniteTransition(label = "panel")
         val p by t.animateFloat(
             initialValue = 0f, targetValue = 1f,
             animationSpec = infiniteRepeatable(tween(1700, easing = FastOutSlowInEasing), RepeatMode.Reverse),
             label = "pulse")
+        val glass = Brush.verticalGradient(
+            listOf(
+                Color.White.copy(alpha = 0.06f),
+                bg.copy(alpha = 0.34f),
+                bg.copy(alpha = 0.50f),
+            )
+        )
         this
             .shadow(elevation * (1.3f + 1.0f * p), shape, spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
-            .background(bg, shape)
-            .border((1.8f + 1.0f * p).dp, Theme.verdigris.copy(alpha = (alpha * (0.9f + 0.6f * p)).coerceAtMost(1f)), shape)
+            .background(bg.copy(alpha = 0.30f), shape)
+            .background(glass, shape)
+            .border((1.4f + 0.8f * p).dp, Theme.verdigris.copy(alpha = (0.55f + 0.45f * p).coerceAtMost(1f)), shape)
     }
 }
 

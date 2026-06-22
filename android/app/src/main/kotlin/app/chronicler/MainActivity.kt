@@ -58,8 +58,12 @@ fun App(auth: AuthStore) {
             // Full-screen electric backdrop behind every screen — the whole app buzzes.
             // Suppressed on the book page until playback starts (see BookPlayerScreen).
             // STEAMPUNK has NO electricity, so the animated backdrop only runs in TESLA mode.
-            if (Theme.themeMode == ThemeMode.TESLA && !ElectricState.suppressed) {
-                ElectricBackground(intensity = 1.4f, modifier = Modifier.fillMaxSize())
+            if (Theme.themeMode == ThemeMode.TESLA) {
+                // Static cold backdrop (cyan radial glow + circuit grid) under the bolts.
+                TeslaBackdrop(modifier = Modifier.fillMaxSize())
+                if (!ElectricState.suppressed) {
+                    ElectricBackground(intensity = 1.4f, modifier = Modifier.fillMaxSize())
+                }
             }
             // Inset content below the status bar / camera cutout and above the nav bar.
             Box(Modifier.fillMaxSize().systemBarsPadding()) {

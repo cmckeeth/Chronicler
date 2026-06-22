@@ -7,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -59,6 +60,40 @@ fun ElectricBackground(intensity: Float = 1f, modifier: Modifier = Modifier) {
         }
     }
     Canvas(modifier) { drawField(t, intensity) }
+}
+
+// Static Tesla backdrop: a dark blue-black field with a subtle cyan radial glow centred
+// high, plus a faint circuit-grid of thin cyan lines. Drawn once (no animation) behind the
+// animated lightning so the whole app reads as cold/electric/glassy. TESLA only.
+@Composable
+fun TeslaBackdrop(modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+        val w = size.width; val h = size.height
+        // Base wash so edges stay deep blue-black even over the app bg.
+        drawRect(Color(0xFF05080F))
+        // Cyan radial glow, upper-centre.
+        val gc = Offset(w * 0.5f, h * 0.30f)
+        val gr = hypot(w, h) * 0.7f
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color(0xFF2BC4FF).copy(alpha = 0.16f), Color(0x002BC4FF)),
+                center = gc, radius = gr),
+            radius = gr, center = gc)
+        // Faint circuit grid.
+        val step = 64f
+        val line = Color(0xFF2BC4FF).copy(alpha = 0.05f)
+        var x = 0f
+        while (x <= w) { drawLine(line, Offset(x, 0f), Offset(x, h), strokeWidth = 1f); x += step }
+        var y = 0f
+        while (y <= h) { drawLine(line, Offset(0f, y), Offset(w, y), strokeWidth = 1f); y += step }
+        // A few brighter node dots at random-ish grid intersections to suggest circuitry.
+        val node = Color(0xFF2BC4FF).copy(alpha = 0.18f)
+        for (i in 0 until 9) {
+            val nx = ((i * 3 + 1) % ((w / step).toInt().coerceAtLeast(1))) * step
+            val ny = ((i * 5 + 2) % ((h / step).toInt().coerceAtLeast(1))) * step
+            drawCircle(node, radius = 2.2f, center = Offset(nx, ny))
+        }
+    }
 }
 
 private fun DrawScope.drawField(t: Float, intensity: Float) {
@@ -159,13 +194,15 @@ private fun DrawScope.strokeBolt(pts: List<Offset>, alpha: Float, scale: Float) 
 // A light electric "charge" — faint pulsing border. For elements that should feel
 // energized without the full panel treatment (e.g. every chapter row). Mirrors iOS charged().
 fun Modifier.charged(): Modifier = composed {
-    val shape = RoundedCornerShape(4.dp)
     if (Theme.themeMode == ThemeMode.STEAMPUNK) {
-        // No electricity: a steady, faint brass edge.
+        // No electricity, no glass: a steady, faint brass edge with tight 2.dp corners.
+        val shape = RoundedCornerShape(2.dp)
         this
             .shadow(4.dp, shape, spotColor = Theme.brass, ambientColor = Theme.brass)
             .border(1.dp, Theme.borderBrass.copy(alpha = 0.35f), shape)
     } else {
+        // Glassy Tesla edge: soft 10.dp corners, faint translucent cyan fill + pulsing border.
+        val shape = RoundedCornerShape(10.dp)
         val tr = rememberInfiniteTransition(label = "charge")
         val p by tr.animateFloat(
             initialValue = 0.12f, targetValue = 0.42f,
@@ -173,6 +210,7 @@ fun Modifier.charged(): Modifier = composed {
             label = "c")
         this
             .shadow((3f + 8f * p).dp, shape, spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
-            .border(1.dp, Theme.verdigris.copy(alpha = p), shape)
+            .background(Theme.surface.copy(alpha = 0.22f), shape)
+            .border(1.dp, Theme.verdigris.copy(alpha = 0.3f + p), shape)
     }
 }
