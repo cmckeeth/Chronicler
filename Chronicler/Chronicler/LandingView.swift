@@ -13,6 +13,12 @@ struct LandingView: View {
         ZStack {
             ThemedBackground(intensity: 2.2)   // homepage should be buzzin
 
+            // Steampunk: an industrial factory skyline pinned to the bottom, behind the
+            // content. The 5 smokestacks line up with SteamOverlay's rising plumes.
+            if themeStore.mode == .steampunk {
+                FactorySkyline()
+            }
+
             // Garden: large hand-built VECTOR flowers as a soft (~50%) background
             // wallpaper, plus the growing vine stems (now tipped with vector blooms).
             // No emoji — and non-interactive so it never blocks the content above.

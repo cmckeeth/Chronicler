@@ -172,8 +172,11 @@ private struct ElectricPanelStyle: ViewModifier {
                 .shadow(color: Theme.glow.opacity(0.32), radius: glowRadius * 1.3)
                 .shadow(color: Theme.glow.opacity(0.14), radius: glowRadius * 2.4)
         } else if Theme.mode == .steampunk {
+            // Slightly translucent: a lower brass-fill alpha over thin material so the
+            // factory skyline + steam read softly through the panel, while staying legible.
             content
-                .background(bg.opacity(0.6))
+                .background(bg.opacity(0.42))
+                .background(.ultraThinMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: corner))
                 .overlay(RoundedRectangle(cornerRadius: corner)
                     .stroke(Theme.glow.opacity(min(1, alpha * 1.2)), lineWidth: 1.8))

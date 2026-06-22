@@ -115,13 +115,32 @@ struct ElectricBackground: View {
     }
 }
 
-// Steampunk-only: lush rising STEAM. ~9 soft white/cream plumes, each a blurred radial-
-// gradient blob that rises from below the bottom edge, growing and fading as it climbs,
-// then loops. Fully deterministic from a continuous TimelineView clock (no Date()/RNG) so
-// it's resume-safe; each plume is varied purely by its index. Non-interactive — it may
-// drift over content. Peak opacity reads clearly so the theme looks genuinely steamy.
+// The x-fractions of the 5 smokestacks in FactorySkyline. SteamOverlay anchors its
+// plumes to these so the steam visibly puffs out of the chimney mouths.
+let kFactoryStackX: [CGFloat] = [0.09, 0.30, 0.50, 0.69, 0.90]
+// Chimney-mouth height as a fraction of screen height (just above the skyline). The
+// skyline is pinned to the bottom ~210pt; the tall stacks rise above the low buildings,
+// so the mouths sit roughly here. Steam starts climbing from this y.
+private let kFactoryMouthYFrac: CGFloat = 0.78
+
+// Steampunk-only: lush rising STEAM puffing out of the factory smokestacks. ~9 soft
+// white/cream plumes, each a blurred radial-gradient blob that rises from a chimney
+// mouth, growing and fading as it climbs, then loops. Fully deterministic from a
+// continuous TimelineView clock (no Date()/RNG) so it's resume-safe; each plume is varied
+// purely by its index. Non-interactive — drifts up over content. Peak opacity reads
+// clearly so the theme looks genuinely steamy.
 struct SteamOverlay: View {
-    private let count = 9
+    // 9 plumes mapped onto the 5 stacks: the wider central stacks emit two each.
+    // (stackIndex, lateral offset within the mouth in x-fractions).
+    private let emitters: [(stack: Int, dx: CGFloat)] = [
+        (0,  0.0),
+        (1, -0.025), (1, 0.03),
+        (2, -0.03),  (2, 0.03),
+        (3, -0.025), (3, 0.025),
+        (4,  0.0),
+        (2,  0.0),   // an extra central wisp
+    ]
+    private var count: Int { emitters.count }
 
     var body: some View {
         if Theme.mode != .steampunk {
@@ -144,29 +163,32 @@ struct SteamOverlay: View {
         }
     }
 
-    // One plume: rises through a looping 0..1 cycle, fading in low, peaking mid-rise,
-    // fading out high; scales up as it climbs so it billows. Phase/size/lane vary per i.
+    // One plume: rises from its chimney mouth through a looping 0..1 cycle, fading in low,
+    // peaking mid-rise, fading out high; scales up as it climbs so it billows. Phase/size
+    // vary per i; horizontal anchor is the assigned smokestack.
     @ViewBuilder
     private func plume(_ i: Int, in size: CGSize, t: Double) -> some View {
         let fi = Double(i)
-        // Per-plume traits, all deterministic from the index.
-        let lane = (fi + 0.5) / Double(count)                 // horizontal lane 0..1
-        let wobble = 0.05 * sin(t * (0.25 + 0.04 * fi) + fi)  // gentle horizontal drift
-        let xFrac = lane + wobble
+        // Horizontal anchor: the assigned smokestack mouth, plus a small lateral offset
+        // and gentle drift so paired plumes don't perfectly overlap.
+        let e = emitters[i]
+        let wobble = 0.03 * sin(t * (0.25 + 0.04 * fi) + fi)  // gentle horizontal drift
+        let xFrac = kFactoryStackX[e.stack] + e.dx + CGFloat(wobble)
         let period = 9.0 + Double(i % 4) * 2.5                // 9..16.5s rise loops
         let phase = fi / Double(count)                        // staggered starts
         let cycle = ((t / period) + phase).truncatingRemainder(dividingBy: 1)
 
-        // Vertical travel: start just below the bottom, climb past the top.
-        let y = size.height * (1.15 - 1.35 * cycle)
+        // Vertical travel: start at the chimney mouth, climb past the top of the screen.
+        let mouthY = kFactoryMouthYFrac
+        let y = size.height * (mouthY - (mouthY + 0.2) * CGFloat(cycle))
         let x = size.width * xFrac
 
         // Envelope: fade in, hold bright through the middle, fade out near the top.
         let fade = sin(cycle * .pi)                           // 0→1→0 over the cycle
         let opacity = 0.6 * pow(fade, 0.6)
         // Grow as it rises (billowing), with size also varied per plume.
-        let baseD = size.width * (0.34 + 0.10 * Double(i % 3))
-        let diameter = baseD * (0.7 + 0.9 * cycle)
+        let baseD = size.width * (0.28 + 0.09 * Double(i % 3))
+        let diameter = baseD * (0.55 + 0.9 * cycle)
 
         Circle()
             .fill(RadialGradient(
@@ -180,6 +202,117 @@ struct SteamOverlay: View {
             .blur(radius: 22)
             .opacity(opacity)
             .position(x: x, y: y)
+    }
+}
+
+// Steampunk-only: an OLD-TIMEY INDUSTRIAL FACTORY SKYLINE pinned to the bottom of the
+// screen. A dark silhouette (low factory buildings + 5 tall smokestacks + a big cogwheel)
+// drawn with a single Canvas: a near-black fill with a thin warm rim, topped by a soft
+// warm glow so it reads against the brass void. The 5 stacks sit at `kFactoryStackX` so
+// SteamOverlay's plumes line up with the chimney mouths. Non-interactive; sits behind the
+// Landing content. Mirrors the web factory skyline.
+struct FactorySkyline: View {
+    var body: some View {
+        if Theme.mode != .steampunk {
+            Color.clear
+        } else {
+            GeometryReader { geo in
+                let w = geo.size.width
+                let skyH: CGFloat = 210
+                ZStack(alignment: .bottom) {
+                    Color.clear
+                    Canvas { ctx, size in draw(ctx, size) }
+                        .frame(width: w, height: skyH)
+                        // Soft warm glow on top so the silhouette reads against the field.
+                        .shadow(color: Color(hex: 0xC8731E).opacity(0.45), radius: 18, y: -2)
+                        .shadow(color: Color(hex: 0x5A3414).opacity(0.5), radius: 6, y: -1)
+                }
+                .frame(width: geo.size.width, height: geo.size.height, alignment: .bottom)
+            }
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+        }
+    }
+
+    private func draw(_ ctx: GraphicsContext, _ size: CGSize) {
+        let w = size.width, h = size.height
+        let fill = GraphicsContext.Shading.color(Color(hex: 0x0C0702))
+        let rim  = Color(hex: 0x5A3414)
+
+        // The skyline mouth height (top of the stacks) — keep in sync with the steam
+        // mouth fraction. Stacks rise to ~22% of the skyline band from the top.
+        let stackTop = h * 0.10
+        let stackBottom = h
+        let stackW = w * 0.05
+
+        var solids: [Path] = []
+
+        // --- Low factory buildings across the bottom (varied heights). ---
+        let buildings: [(x: CGFloat, w: CGFloat, top: CGFloat)] = [
+            (0.00, 0.20, 0.58), (0.18, 0.16, 0.46), (0.33, 0.16, 0.66),
+            (0.47, 0.18, 0.50), (0.62, 0.15, 0.62), (0.74, 0.16, 0.44),
+            (0.86, 0.16, 0.56),
+        ]
+        for b in buildings {
+            let bx = w * b.x, bw = w * b.w, bt = h * b.top
+            var p = Path(CGRect(x: bx, y: bt, width: bw, height: h - bt))
+            // A couple of stepped roof ridges for an industrial silhouette.
+            p.addRect(CGRect(x: bx + bw * 0.1, y: bt - h * 0.06, width: bw * 0.3, height: h * 0.06))
+            solids.append(p)
+        }
+
+        // --- 5 tall smokestacks at the canonical x-fractions, each with a flared cap. ---
+        for fx in kFactoryStackX {
+            let cx = w * fx
+            // Slightly tapered chimney body.
+            var body = Path()
+            let halfTop = stackW * 0.5, halfBot = stackW * 0.62
+            body.move(to: CGPoint(x: cx - halfBot, y: stackBottom))
+            body.addLine(to: CGPoint(x: cx - halfTop, y: stackTop + h * 0.05))
+            body.addLine(to: CGPoint(x: cx + halfTop, y: stackTop + h * 0.05))
+            body.addLine(to: CGPoint(x: cx + halfBot, y: stackBottom))
+            body.closeSubpath()
+            solids.append(body)
+            // Flared cap (wider lip at the mouth).
+            let capH = h * 0.05, capHalf = stackW * 0.72
+            solids.append(Path(CGRect(x: cx - capHalf, y: stackTop, width: capHalf * 2, height: capH)))
+        }
+
+        // --- Big cogwheel sitting between the stacks (left-of-center). ---
+        let cogCx = w * 0.20, cogCy = h * 0.62, cogR = h * 0.24
+        solids.append(cogwheel(center: CGPoint(x: cogCx, y: cogCy), radius: cogR, teeth: 12))
+
+        // Fill all solids, then stroke a thin warm rim on top.
+        for p in solids { ctx.fill(p, with: fill) }
+        for p in solids {
+            ctx.stroke(p, with: .color(rim.opacity(0.85)), lineWidth: 1.2)
+        }
+        // Hub hole in the cog (punch a brass ring so it reads as a gear).
+        let hubR = cogR * 0.34
+        ctx.stroke(Path(ellipseIn: CGRect(x: cogCx - hubR, y: cogCy - hubR, width: hubR * 2, height: hubR * 2)),
+                   with: .color(rim.opacity(0.9)), lineWidth: 1.4)
+    }
+
+    // A gear silhouette: an outer ring with `teeth` trapezoidal teeth.
+    private func cogwheel(center c: CGPoint, radius r: CGFloat, teeth: Int) -> Path {
+        var p = Path()
+        let inner = r * 0.78
+        let toothHalf = (.pi / Double(teeth)) * 0.5   // angular half-width of a tooth tip
+        for k in 0..<teeth {
+            let a0 = (Double(k) / Double(teeth)) * 2 * .pi
+            let a1 = a0 + toothHalf
+            let a2 = a0 + (.pi / Double(teeth)) - toothHalf
+            let a3 = a0 + (.pi / Double(teeth))
+            func pt(_ ang: Double, _ rad: CGFloat) -> CGPoint {
+                CGPoint(x: c.x + cos(ang) * rad, y: c.y + sin(ang) * rad)
+            }
+            if k == 0 { p.move(to: pt(a0, r)) } else { p.addLine(to: pt(a0, r)) }
+            p.addLine(to: pt(a1, r))            // tooth outer edge
+            p.addLine(to: pt(a2, inner))        // dip to valley
+            p.addLine(to: pt(a3, inner))
+        }
+        p.closeSubpath()
+        return p
     }
 }
 
