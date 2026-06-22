@@ -298,9 +298,9 @@ private fun SteamOverlay() {
 @Composable
 private fun VineGrowOverlay() {
     Box(Modifier.fillMaxSize()) {
-        Vine(Alignment.BottomStart,  xDp = 6,   heightDp = 250, hue = FlowerHue.ROSE,  growMs = 3200)
-        Vine(Alignment.BottomEnd,    xDp = -6,  heightDp = 250, hue = FlowerHue.WHITE, growMs = 3700)
-        Vine(Alignment.BottomCenter, xDp = 0,   heightDp = 185, hue = FlowerHue.GOLD,  growMs = 3000)
+        Vine(Alignment.BottomStart,  xDp = 6,   heightDp = 250, hue = FlowerHue.ROSE,    growMs = 3200)
+        Vine(Alignment.BottomEnd,    xDp = -6,  heightDp = 250, hue = FlowerHue.CRIMSON, growMs = 3700)
+        Vine(Alignment.BottomCenter, xDp = 0,   heightDp = 185, hue = FlowerHue.RED,     growMs = 3000)
     }
 }
 

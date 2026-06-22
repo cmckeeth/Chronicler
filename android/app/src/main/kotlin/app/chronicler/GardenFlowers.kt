@@ -26,81 +26,74 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.rotateRad
 import androidx.compose.ui.unit.dp
-import kotlin.math.cos
-import kotlin.math.sin
 
-// Flower hues (light -> saturated), ported 1:1 from the web app's FLOWER_HUES.
-enum class FlowerHue(val light: Color, val dark: Color) {
-    ROSE(Color(0xFFFFD6E6), Color(0xFFFF4F8E)),
-    GOLD(Color(0xFFFFF0BF), Color(0xFFFFA61F)),
-    LILAC(Color(0xFFECD6FF), Color(0xFF9B54FF)),
-    WHITE(Color(0xFFFFFFFF), Color(0xFFCFE0E6)),
-    CORAL(Color(0xFFFFD9BF), Color(0xFFFF6A3C)),
+// Rose hues (light -> mid -> deep). All garden flowers are roses now; mirrors the web's
+// ROSE-family FLOWER_HUES. Outer/mid petals use light->mid; inner/center use mid->deep.
+enum class FlowerHue(val light: Color, val mid: Color, val deep: Color) {
+    ROSE(Color(0xFFFFD9E8), Color(0xFFF0497F), Color(0xFFA81450)),
+    RED(Color(0xFFFF9FB2), Color(0xFFE21F3C), Color(0xFF860F24)),
+    BLUSH(Color(0xFFFFE6EE), Color(0xFFFF8FB0), Color(0xFFD2658A)),
+    CRIMSON(Color(0xFFFF86A4), Color(0xFFC81545), Color(0xFF760A2A)),
+    CORAL(Color(0xFFFFC1C0), Color(0xFFFF5A6E), Color(0xFFA01530)),
 }
 
-// Golden center radial gradient (#FFE784 -> #F0A800 -> #9C6400), ported from the web.
-private val CENTER_LIGHT = Color(0xFFFFE784)
-private val CENTER_MID = Color(0xFFF0A800)
-private val CENTER_DARK = Color(0xFF9C6400)
-
-// Draw one hand-built vector bloom centred in this DrawScope: a golden center circle
-// surrounded by two offset rings of gradient-shaded elliptical petals. Mirrors the web
-// SVG <Flower>: petals are elongated ellipses (rx = 0.38 * ry) laid out in a ring.
+// Draw one hand-built top-down ROSE centred in this DrawScope: concentric rings of broad,
+// rounded, overlapping petals (rounded ovals, rx ≈ 0.68·ry, pointing outward), getting
+// smaller toward the middle, finished with a small rolled-bud center dot. No golden disc.
+// Outer/mid rings are LIGHT→MID radial-shaded; inner/center rings are MID→DEEP (darker).
+// Mirrors the web's rose <Flower>.
 fun DrawScope.drawFlower(hue: FlowerHue, petals: Int = 13) {
     val w = size.width
     val cx = w * 0.5f
     val cy = w * 0.5f
-    val unit = w / 100f          // the web art is authored on a 100x100 viewBox
+    val half = w * 0.5f
 
-    // petalBrush: light center -> saturated edge (cx 50%, cy 84%) per the web gradient.
-    fun ring(count: Int, ry: Float, ovalCy: Float, rotOffsetDeg: Float) {
-        val rx = ry * 0.38f
+    // One ring of broad rounded petals pointing outward from the center.
+    // ryFrac/offsetFrac are fractions of the half-size; deep=true uses the MID→DEEP gradient.
+    fun ring(count: Int, ryFrac: Float, offsetFrac: Float, rotOffsetDeg: Float, deep: Boolean) {
+        val ry = half * ryFrac
+        val rx = ry * 0.68f
+        val ovalCenterDist = half * offsetFrac   // petal center distance outward from middle
+        val inner = if (deep) hue.mid else hue.light
+        val outer = if (deep) hue.deep else hue.mid
         for (k in 0 until count) {
             val angDeg = rotOffsetDeg + (360f / count) * k
             rotateRad(Math.toRadians(angDeg.toDouble()).toFloat(), pivot = Offset(cx, cy)) {
-                val ovalW = rx * 2 * unit
-                val ovalH = ry * 2 * unit
-                val topLeft = Offset(cx - ovalW / 2f, ovalCy * unit - ovalH / 2f)
+                val ovalW = rx * 2f
+                val ovalH = ry * 2f
+                // Petal center sits above the middle (pointing "up"); the rotate fans it out.
+                val petalCy = cy - ovalCenterDist
+                val topLeft = Offset(cx - ovalW / 2f, petalCy - ovalH / 2f)
                 drawOval(
                     brush = Brush.radialGradient(
-                        colorStops = arrayOf(
-                            0f to hue.light,
-                            0.62f to hue.dark,
-                            1f to hue.dark.copy(alpha = 0.85f),
-                        ),
-                        center = Offset(topLeft.x + ovalW * 0.5f, topLeft.y + ovalH * 0.84f),
-                        radius = ovalH * 0.78f,
+                        colorStops = arrayOf(0f to inner, 1f to outer),
+                        center = Offset(cx, petalCy + ovalH * 0.28f),
+                        radius = ovalH * 0.72f,
                     ),
                     topLeft = topLeft,
                     size = Size(ovalW, ovalH),
-                    alpha = 0.95f,
+                    alpha = 0.96f,
                 )
             }
         }
     }
 
-    ring(petals, ry = 26f, ovalCy = 26f, rotOffsetDeg = 0f)
-    ring(petals, ry = 19f, ovalCy = 33f, rotOffsetDeg = 360f / petals / 2f)
+    // Outermost first so inner rings overlap on top.
+    ring(8, ryFrac = 0.38f, offsetFrac = 0.20f, rotOffsetDeg = 0f, deep = false)
+    ring(7, ryFrac = 0.32f, offsetFrac = 0.26f, rotOffsetDeg = 360f / 7f / 2f, deep = false)
+    ring(6, ryFrac = 0.26f, offsetFrac = 0.32f, rotOffsetDeg = 360f / 6f / 3f, deep = true)
+    ring(5, ryFrac = 0.20f, offsetFrac = 0.38f, rotOffsetDeg = 360f / 5f / 2f, deep = true)
 
-    // Golden textured center.
-    val centerR = 13f * unit
+    // Small rolled-bud center dot.
     drawCircle(
         brush = Brush.radialGradient(
-            colorStops = arrayOf(0f to CENTER_LIGHT, 0.55f to CENTER_MID, 1f to CENTER_DARK),
-            center = Offset(cx, cy - centerR * 0.16f),
-            radius = centerR * 1.2f,
+            colorStops = arrayOf(0f to hue.mid, 1f to hue.deep),
+            center = Offset(cx, cy),
+            radius = half * 0.14f,
         ),
-        radius = centerR,
+        radius = half * 0.12f,
         center = Offset(cx, cy),
     )
-    // Speckle dots, like the web's seed cluster.
-    for (k in 0 until 10) {
-        drawCircle(
-            color = Color(0xFF7A4E00).copy(alpha = 0.5f),
-            radius = 1.5f * unit,
-            center = Offset(cx + 7f * unit * cos(k * 2.4f), cy + 7f * unit * sin(k * 2.4f)),
-        )
-    }
 }
 
 // A single swaying flower placed at an alignment + offset. Non-interactive.
@@ -141,11 +134,11 @@ fun GardenPetalOverlay(modifier: Modifier = Modifier) {
         val fallMs: Int, val swayMs: Int, val spinMs: Int, val phase: Float, val petals: Int,
     )
     val petalDefs = listOf(
-        Petal(FlowerHue.ROSE,  38, 0.14f, 16000, 5200, 20000, 0.00f, 13),
-        Petal(FlowerHue.GOLD,  30, 0.38f, 13000, 4300, 17000, 0.30f, 15),
-        Petal(FlowerHue.LILAC, 46, 0.58f, 19000, 6100, 24000, 0.55f, 13),
-        Petal(FlowerHue.CORAL, 34, 0.78f, 14500, 4800, 19000, 0.18f, 14),
-        Petal(FlowerHue.WHITE, 32, 0.90f, 17500, 5600, 22000, 0.72f, 14),
+        Petal(FlowerHue.ROSE,    38, 0.14f, 16000, 5200, 20000, 0.00f, 13),
+        Petal(FlowerHue.RED,     30, 0.38f, 13000, 4300, 17000, 0.30f, 15),
+        Petal(FlowerHue.BLUSH,   46, 0.58f, 19000, 6100, 24000, 0.55f, 13),
+        Petal(FlowerHue.CORAL,   34, 0.78f, 14500, 4800, 19000, 0.18f, 14),
+        Petal(FlowerHue.CRIMSON, 32, 0.90f, 17500, 5600, 22000, 0.72f, 14),
     )
     val t = rememberInfiniteTransition(label = "petals")
     Box(modifier.fillMaxSize().alpha(0.55f)) {
@@ -191,9 +184,9 @@ fun GardenPetalOverlay(modifier: Modifier = Modifier) {
 fun GardenFlowerBackdrop(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize().alpha(0.5f)) {
         SwayFlower(FlowerHue.ROSE, sizeDp = 320, align = Alignment.TopStart, xDp = -90, yDp = -60, swayMs = 9000, reverse = false)
-        SwayFlower(FlowerHue.GOLD, sizeDp = 230, align = Alignment.TopEnd, xDp = 60, yDp = 150, swayMs = 11000, reverse = true, petals = 15)
-        SwayFlower(FlowerHue.LILAC, sizeDp = 260, align = Alignment.BottomStart, xDp = 90, yDp = 60, swayMs = 13000, reverse = false)
+        SwayFlower(FlowerHue.RED, sizeDp = 230, align = Alignment.TopEnd, xDp = 60, yDp = 150, swayMs = 11000, reverse = true, petals = 15)
+        SwayFlower(FlowerHue.BLUSH, sizeDp = 260, align = Alignment.BottomStart, xDp = 90, yDp = 60, swayMs = 13000, reverse = false)
         SwayFlower(FlowerHue.CORAL, sizeDp = 185, align = Alignment.CenterStart, xDp = -45, yDp = 40, swayMs = 10000, reverse = true)
-        SwayFlower(FlowerHue.WHITE, sizeDp = 200, align = Alignment.Center, xDp = 30, yDp = -80, swayMs = 12000, reverse = false, petals = 14)
+        SwayFlower(FlowerHue.CRIMSON, sizeDp = 200, align = Alignment.Center, xDp = 30, yDp = -80, swayMs = 12000, reverse = false, petals = 14)
     }
 }
