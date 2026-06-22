@@ -20,8 +20,17 @@ struct BookPlayerView: View {
 
     var body: some View {
         ZStack {
-            Theme.bg.ignoresSafeArea()
-            if audio.isPlaying { ElectricBackground(intensity: 0.9) }   // crackle only during playback
+            // Tesla glass/grid backdrop always; lightning crackle only during playback.
+            if audio.isPlaying {
+                ThemedBackground(intensity: 0.9)
+            } else {
+                Theme.bg.ignoresSafeArea()
+                if Theme.mode == .tesla {
+                    RadialGradient(colors: [Theme.verdigris.opacity(0.16), Theme.bg2.opacity(0.0)],
+                                   center: .center, startRadius: 0, endRadius: 520)
+                        .ignoresSafeArea()
+                }
+            }
             if book == nil {
                 Text("Consulting the archive...")
                     .font(Theme.serif(15)).foregroundColor(Theme.parchmentDim)

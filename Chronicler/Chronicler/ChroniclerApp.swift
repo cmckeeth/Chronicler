@@ -25,11 +25,17 @@ struct ChroniclerApp: App {
     // them without an Info.plist UIAppFonts entry (this project has no Info.plist).
     private static func registerFonts() {
         let names = [
+            // Steampunk: ornate serif.
             "CinzelDecorative-Regular",
             "CinzelDecorative-Bold",
             "CinzelDecorative-Black",
             "Cinzel",
             "Lora",
+            // Tesla: clean geometric sans (Orbitron display, Rajdhani UI/body).
+            "Orbitron-Bold",
+            "Orbitron-Medium",
+            "Rajdhani-Regular",
+            "Rajdhani-Medium",
         ]
         for name in names {
             guard let url = Bundle.main.url(forResource: name, withExtension: "ttf") else { continue }

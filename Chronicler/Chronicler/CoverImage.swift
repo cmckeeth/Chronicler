@@ -25,6 +25,7 @@ struct CoverImage: View {
         Group {
             if let image {
                 Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
+                    .coverTreatment()
             } else if book.hasCover {
                 placeholder(symbol: "⚙", opacity: 0.15)
             } else {
@@ -38,10 +39,29 @@ struct CoverImage: View {
         }
     }
 
+    // Steampunk gives covers a warm sepia/aged wash; Tesla leaves them crisp + cool
+    // (a touch of saturation/contrast so they read sharp against the blue glass).
     private func placeholder(symbol: String, opacity: Double) -> some View {
         ZStack {
             Theme.surface2
             Text(symbol).font(.system(size: 40 * placeholderScale)).opacity(opacity)
+        }
+    }
+}
+
+extension View {
+    // Per-theme cover look. Steampunk = aged sepia (warm tint + slight desaturation).
+    // Tesla = crisp/cool (no sepia; faintly punchier so it pops against the glass).
+    @ViewBuilder func coverTreatment() -> some View {
+        if Theme.mode == .steampunk {
+            self
+                .saturation(0.55)
+                .colorMultiply(Color(hex: 0xd8b070))
+                .contrast(1.05)
+        } else {
+            self
+                .saturation(1.08)
+                .contrast(1.04)
         }
     }
 }

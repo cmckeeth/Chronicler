@@ -11,8 +11,7 @@ struct LoginView: View {
 
     var body: some View {
         ZStack {
-            Theme.bg.ignoresSafeArea()
-            ElectricBackground(intensity: 1.2)
+            ThemedBackground(intensity: 1.2)
             VStack(spacing: 16) {
                 Text("Chronicler")
                     .font(Theme.display(34))

@@ -11,8 +11,7 @@ struct LandingView: View {
 
     var body: some View {
         ZStack {
-            Theme.bg.ignoresSafeArea()
-            ElectricBackground(intensity: 2.2)   // homepage should be buzzin
+            ThemedBackground(intensity: 2.2)   // homepage should be buzzin
 
             // Gear corners (⚙ in tl/tr/bl/br)
             VStack {

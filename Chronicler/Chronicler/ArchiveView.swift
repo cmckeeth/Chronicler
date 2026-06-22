@@ -43,8 +43,7 @@ struct ArchiveView: View {
 
     var body: some View {
         ZStack {
-            Theme.bg.ignoresSafeArea()
-            ElectricBackground(intensity: 0.9)
+            ThemedBackground(intensity: 0.9)
             VStack(spacing: 14) {
                 // Cinzel (serif), NOT Cinzel Decorative; verdigris electric glow.
                 Text("The Archive")

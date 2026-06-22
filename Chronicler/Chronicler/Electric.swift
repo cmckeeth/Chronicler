@@ -115,6 +115,63 @@ struct ElectricBackground: View {
     }
 }
 
+// Full themed backdrop for every screen. Steampunk: a quiet warm brass void (just the
+// base color — no electricity). Tesla: a cold blue-black field with a soft cyan radial
+// glow and a faint circuit grid, with the roving lightning on top. Replaces the old
+// `Theme.bg + ElectricBackground` pair so the whole identity branches in one place.
+struct ThemedBackground: View {
+    var intensity: Double = 1.0
+
+    var body: some View {
+        ZStack {
+            Theme.bg.ignoresSafeArea()
+            if Theme.mode == .tesla {
+                // Cyan radial glow rising from center.
+                RadialGradient(
+                    colors: [Theme.verdigris.opacity(0.16), Theme.bg2.opacity(0.0)],
+                    center: .center, startRadius: 0, endRadius: 520)
+                    .ignoresSafeArea()
+                CircuitGrid()
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+            }
+            ElectricBackground(intensity: intensity)
+        }
+    }
+}
+
+// A faint cyan circuit grid: thin lattice lines with brighter "node" dots at a subset
+// of intersections. Cheap single-pass Canvas, static (no animation needed).
+private struct CircuitGrid: View {
+    var body: some View {
+        Canvas { ctx, size in
+            let step: CGFloat = 46
+            let line = Theme.verdigris.opacity(0.06)
+            var x: CGFloat = 0
+            while x <= size.width { ctx.stroke(Path { $0.move(to: .init(x: x, y: 0)); $0.addLine(to: .init(x: x, y: size.height)) }, with: .color(line), lineWidth: 0.6); x += step }
+            var y: CGFloat = 0
+            while y <= size.height { ctx.stroke(Path { $0.move(to: .init(x: 0, y: y)); $0.addLine(to: .init(x: size.width, y: y)) }, with: .color(line), lineWidth: 0.6); y += step }
+            // Sparse brighter nodes at deterministic intersections.
+            var iy: CGFloat = step
+            var row = 0
+            while iy < size.height {
+                var ix: CGFloat = step
+                var col = 0
+                while ix < size.width {
+                    if (row + col) % 3 == 0 {
+                        let r: CGFloat = 1.6
+                        ctx.fill(Path(ellipseIn: CGRect(x: ix - r, y: iy - r, width: r * 2, height: r * 2)),
+                                 with: .color(Theme.verdigris.opacity(0.22)))
+                    }
+                    ix += step; col += 1
+                }
+                iy += step; row += 1
+            }
+        }
+        .blendMode(.screen)
+    }
+}
+
 // A bright arc of "current" racing around a rounded-rect border. Layered over the
 // electricPanel stroke so every panel looks energized.
 struct TravelingCurrent: ViewModifier {
