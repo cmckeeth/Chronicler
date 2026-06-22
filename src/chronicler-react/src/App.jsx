@@ -11,6 +11,35 @@ function Protected({ children }) {
 }
 
 // Steampunk-only decorative backdrop: exposed turning cogs + rising steam.
+// Steampunk background: an old-timey industrial skyline of factories + smokestacks
+// pinned to the bottom. The steam plumes (in SteampunkFX) are positioned to rise
+// out of the chimney mouths. Shown only under [data-theme="steampunk"].
+// Stack mouths sit at x ≈ 9% / 30% / 50% / 69% / 90% of width (see steam-* CSS).
+function SteampunkBG() {
+  return (
+    <div className="steampunk-bg" aria-hidden="true">
+      <svg className="factory-skyline" viewBox="0 0 1000 420" preserveAspectRatio="xMidYMax slice">
+        <g className="sky-fill">
+          {/* low industrial buildings */}
+          <rect x="0"   y="250" width="150" height="170" />
+          <rect x="150" y="205" width="115" height="215" />
+          <rect x="420" y="270" width="130" height="150" />
+          <rect x="600" y="235" width="135" height="185" />
+          <rect x="845" y="215" width="155" height="205" />
+          {/* a big factory cogwheel */}
+          <circle cx="372" cy="338" r="58" />
+          {/* smokestacks: tall chimney + flared cap + two brick bands */}
+          <g><rect x="78"  y="120" width="36" height="300" /><rect x="70"  y="112" width="52" height="20" /><rect x="78"  y="160" width="36" height="8" opacity="0.5" /></g>
+          <g><rect x="286" y="68"  width="34" height="352" /><rect x="278" y="60"  width="50" height="20" /><rect x="286" y="110" width="34" height="8" opacity="0.5" /></g>
+          <g><rect x="486" y="98"  width="36" height="322" /><rect x="478" y="90"  width="52" height="20" /><rect x="486" y="140" width="36" height="8" opacity="0.5" /></g>
+          <g><rect x="676" y="56"  width="34" height="364" /><rect x="668" y="48"  width="50" height="20" /><rect x="676" y="98"  width="34" height="8" opacity="0.5" /></g>
+          <g><rect x="886" y="128" width="36" height="292" /><rect x="878" y="120" width="52" height="20" /><rect x="886" y="168" width="36" height="8" opacity="0.5" /></g>
+        </g>
+      </svg>
+    </div>
+  );
+}
+
 // Always rendered; CSS reveals it only under [data-theme="steampunk"].
 const GEAR = '⚙︎'; // ⚙ forced to text (not emoji) presentation so it takes brass color
 function SteampunkFX() {
@@ -20,6 +49,7 @@ function SteampunkFX() {
       <span className="gear gear-b">{GEAR}</span>
       <span className="gear gear-c">{GEAR}</span>
       <span className="gear gear-d">{GEAR}</span>
+      {/* Steam puffing out of the chimney mouths (anchored to the five stacks). */}
       <span className="steam steam-1" />
       <span className="steam steam-2" />
       <span className="steam steam-3" />
@@ -153,6 +183,7 @@ function CornerControls() {
 export default function App() {
   return (
     <BrowserRouter>
+      <SteampunkBG />
       <SteampunkFX />
       <GardenFX />
       <Routes>
