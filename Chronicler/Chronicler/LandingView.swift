@@ -7,6 +7,7 @@ enum Route: Hashable {
 
 struct LandingView: View {
     @EnvironmentObject var auth: AuthStore
+    @EnvironmentObject var themeStore: ThemeStore
 
     var body: some View {
         ZStack {
@@ -57,7 +58,8 @@ struct LandingView: View {
             .padding()
 
             VStack {
-                HStack {
+                HStack(spacing: 12) {
+                    themePicker
                     Spacer()
                     Button("Sign Out") { auth.clear() }
                         .font(Theme.body(11)).foregroundColor(Theme.parchmentDim).opacity(0.5)
@@ -73,6 +75,27 @@ struct LandingView: View {
 
     private var gear: some View {
         Text("⚙").font(.system(size: 26)).foregroundColor(Theme.border).opacity(0.6)
+    }
+
+    // Runtime theme switcher: ⚡ Tesla (electric blue) vs ⚙ Steampunk (brass, no
+    // electricity). Persisted by ThemeStore; the root re-renders via `.id(mode)`.
+    private var themePicker: some View {
+        Menu {
+            Picker("Theme", selection: $themeStore.mode) {
+                Text("⚡ Tesla").tag(ThemeMode.tesla)
+                Text("⚙ Steampunk").tag(ThemeMode.steampunk)
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Text(themeStore.mode == .tesla ? "⚡" : "⚙")
+                Text(themeStore.mode == .tesla ? "Tesla" : "Steampunk")
+            }
+            .font(Theme.body(11))
+            .foregroundColor(Theme.parchmentMid)
+            .padding(.horizontal, 10).padding(.vertical, 5)
+            .overlay(RoundedRectangle(cornerRadius: 4)
+                .stroke(Theme.borderBrass.opacity(0.6), lineWidth: 1))
+        }
     }
 }
 

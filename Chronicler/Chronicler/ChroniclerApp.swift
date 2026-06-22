@@ -4,6 +4,7 @@ import CoreText
 @main
 struct ChroniclerApp: App {
     @StateObject private var auth = AuthStore()
+    @StateObject private var themeStore = ThemeStore()
 
     init() {
         Self.registerFonts()
@@ -13,6 +14,10 @@ struct ChroniclerApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(auth)
+                .environmentObject(themeStore)
+                // Static computed theme colors won't recompose on their own — key the
+                // whole tree on the mode so switching forces a full re-render.
+                .id(themeStore.mode)
         }
     }
 

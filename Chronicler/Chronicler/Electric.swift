@@ -8,14 +8,19 @@ struct ElectricBackground: View {
     var intensity: Double = 1.0
 
     var body: some View {
-        TimelineView(.animation) { tl in
-            let t = tl.date.timeIntervalSinceReferenceDate
-            Canvas { ctx, size in draw(ctx, size, t) }
-                .blendMode(.screen)
-                .drawingGroup()
+        // No electricity in steampunk — the background stays a quiet brass void.
+        if Theme.mode == .steampunk {
+            Color.clear
+        } else {
+            TimelineView(.animation) { tl in
+                let t = tl.date.timeIntervalSinceReferenceDate
+                Canvas { ctx, size in draw(ctx, size, t) }
+                    .blendMode(.screen)
+                    .drawingGroup()
+            }
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
         }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
     }
 
     private func draw(_ ctx: GraphicsContext, _ size: CGSize, _ t: Double) {
@@ -145,11 +150,19 @@ extension View {
 struct ChargedRow: ViewModifier {
     @State private var on = false
     func body(content: Content) -> some View {
-        content
-            .overlay(RoundedRectangle(cornerRadius: 4)
-                .stroke(Theme.verdigris.opacity(on ? 0.38 : 0.12), lineWidth: 1))
-            .shadow(color: Theme.verdigris.opacity(on ? 0.35 : 0.12), radius: on ? 7 : 3)
-            .onAppear { withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) { on = true } }
+        if Theme.mode == .steampunk {
+            // Steady brass-edged row — no pulsing charge.
+            content
+                .overlay(RoundedRectangle(cornerRadius: 4)
+                    .stroke(Theme.glow.opacity(0.22), lineWidth: 1))
+                .shadow(color: Theme.glow.opacity(0.18), radius: 4)
+        } else {
+            content
+                .overlay(RoundedRectangle(cornerRadius: 4)
+                    .stroke(Theme.glow.opacity(on ? 0.38 : 0.12), lineWidth: 1))
+                .shadow(color: Theme.glow.opacity(on ? 0.35 : 0.12), radius: on ? 7 : 3)
+                .onAppear { withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) { on = true } }
+        }
     }
 }
 
