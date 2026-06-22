@@ -168,11 +168,12 @@ fun Modifier.electricPanel(
             .background(bg.copy(alpha = 0.72f), shape)
             .border(1.4.dp, Theme.borderBrass.copy(alpha = (alpha * 0.7f).coerceAtMost(1f)), shape)
     } else if (Theme.themeMode == ThemeMode.STEAMPUNK) {
-        // Solid opaque brass panel, tight 2.dp corners — no animation, no glass.
+        // Brass panel, tight 2.dp corners — slightly translucent so the factory skyline
+        // backdrop reads through while staying legible. No animation, no glass.
         val shape = RoundedCornerShape(2.dp)
         this
             .shadow(elevation, shape, spotColor = Theme.brass, ambientColor = Theme.brass)
-            .background(bg, shape)
+            .background(bg.copy(alpha = 0.5f), shape)
             .border(1.6.dp, Theme.borderBrass.copy(alpha = (alpha + 0.2f).coerceAtMost(1f)), shape)
     } else {
         // Glassy Tesla panel: soft 10.dp corners, translucent fill + sheen, breathing cyan edge.
