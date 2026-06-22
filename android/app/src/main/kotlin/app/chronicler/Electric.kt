@@ -96,6 +96,33 @@ fun TeslaBackdrop(modifier: Modifier = Modifier) {
     }
 }
 
+// Calm GARDEN backdrop: a dark green field with a single soft green radial glow centred
+// high. No lightning, no circuit grid, no animation — verdant and organic. GARDEN only.
+@Composable
+fun GardenBackdrop(modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+        val w = size.width; val h = size.height
+        // Deep green field wash.
+        drawRect(Color(0xFF0B1410))
+        // Soft green radial bloom, upper-centre.
+        val gc = Offset(w * 0.5f, h * 0.32f)
+        val gr = hypot(w, h) * 0.75f
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color(0xFF7CC24A).copy(alpha = 0.14f), Color(0x007CC24A)),
+                center = gc, radius = gr),
+            radius = gr, center = gc)
+        // A second, lower bloom in floral pink for warmth — very faint.
+        val pc = Offset(w * 0.5f, h * 0.85f)
+        val pr = hypot(w, h) * 0.5f
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color(0xFFFF8FB8).copy(alpha = 0.06f), Color(0x00FF8FB8)),
+                center = pc, radius = pr),
+            radius = pr, center = pc)
+    }
+}
+
 private fun DrawScope.drawField(t: Float, intensity: Float) {
     val w = size.width; val h = size.height
 
@@ -194,7 +221,13 @@ private fun DrawScope.strokeBolt(pts: List<Offset>, alpha: Float, scale: Float) 
 // A light electric "charge" — faint pulsing border. For elements that should feel
 // energized without the full panel treatment (e.g. every chapter row). Mirrors iOS charged().
 fun Modifier.charged(): Modifier = composed {
-    if (Theme.themeMode == ThemeMode.STEAMPUNK) {
+    if (Theme.themeMode == ThemeMode.GARDEN) {
+        // No electricity, no glass: a steady, soft green edge with generous 16.dp corners.
+        val shape = RoundedCornerShape(16.dp)
+        this
+            .shadow(4.dp, shape, spotColor = Theme.brass, ambientColor = Theme.brass)
+            .border(1.dp, Theme.borderBrass.copy(alpha = 0.3f), shape)
+    } else if (Theme.themeMode == ThemeMode.STEAMPUNK) {
         // No electricity, no glass: a steady, faint brass edge with tight 2.dp corners.
         val shape = RoundedCornerShape(2.dp)
         this

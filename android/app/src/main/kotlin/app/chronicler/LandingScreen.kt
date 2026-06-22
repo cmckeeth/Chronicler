@@ -52,7 +52,8 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
             Text("Your Audiobook Library", color = Theme.parchmentDim, fontSize = 15.sp,
                 fontFamily = Theme.serif)
             Spacer(Modifier.height(8.dp))
-            Text("⚙ ───────── ⚙", color = Theme.borderBrass, fontSize = 14.sp)
+            Text(if (Theme.themeMode == ThemeMode.GARDEN) "🌿 ───────── 🌿" else "⚙ ───────── ⚙",
+                color = Theme.borderBrass, fontSize = 14.sp)
             Spacer(Modifier.height(40.dp))
 
             Column(
@@ -84,7 +85,9 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
 
 @Composable
 private fun gear() {
-    Text("⚙", color = Theme.border, fontSize = 26.sp, modifier = Modifier.alpha(0.6f))
+    // Garden trades the steampunk gear for a leaf; Tesla/Steampunk keep the gear.
+    val glyph = if (Theme.themeMode == ThemeMode.GARDEN) "🌿" else "⚙"
+    Text(glyph, color = Theme.border, fontSize = 26.sp, modifier = Modifier.alpha(0.6f))
 }
 
 // Two-option theme selector. Sets Theme.themeMode (recomposes the app) and persists it.
@@ -97,6 +100,7 @@ private fun ThemeSwitcher(auth: AuthStore) {
     ) {
         themeChip("⚡ Tesla", active == ThemeMode.TESLA) { auth.setThemeMode(ThemeMode.TESLA) }
         themeChip("⚙ Steampunk", active == ThemeMode.STEAMPUNK) { auth.setThemeMode(ThemeMode.STEAMPUNK) }
+        themeChip("🌿 Garden", active == ThemeMode.GARDEN) { auth.setThemeMode(ThemeMode.GARDEN) }
     }
 }
 

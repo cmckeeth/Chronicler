@@ -64,6 +64,9 @@ fun App(auth: AuthStore) {
                 if (!ElectricState.suppressed) {
                     ElectricBackground(intensity = 1.4f, modifier = Modifier.fillMaxSize())
                 }
+            } else if (Theme.themeMode == ThemeMode.GARDEN) {
+                // Calm verdant backdrop: dark green field + soft green/pink blooms, no electricity.
+                GardenBackdrop(modifier = Modifier.fillMaxSize())
             }
             // Inset content below the status bar / camera cutout and above the nav bar.
             Box(Modifier.fillMaxSize().systemBarsPadding()) {
