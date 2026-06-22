@@ -132,11 +132,11 @@
     --font-display: 'Dancing Script', 'Segoe UI', cursive;
     --font-serif:   'Quicksand', 'Segoe UI', sans-serif;
     --font-body:    'Quicksand', 'Segoe UI', system-ui, sans-serif;
-    /* Solid leafy panels, lush covers, no glass */
+    /* Translucent leafy panels so the background flowers read through the UI */
     --metal-hi:    210,255,180;
     --tint:        124,194,74;
-    --panel-bg:    var(--surface);
-    --panel-blur:  none;
+    --panel-bg:    rgba(20,44,28,.4);
+    --panel-blur:  blur(9px);
     --cover-filter: saturate(1.12) contrast(1.03) brightness(1.0);
     /* Accent = floral bloom (badges, active chapter, chips) */
     --verdigris:      #ff8fb8;
@@ -292,10 +292,50 @@
     display: block;
     position: fixed;
     inset: 0;
-    z-index: 5;
+    z-index: 0;             /* above the body backdrop... */
+    opacity: .5;            /* soft, ~50% — ambiance, not foreground */
     overflow: hidden;
     pointer-events: none;
 }
+/* ...and the page content sits above the flower layer (which then shows through
+   the translucent garden panels). */
+[data-theme="garden"] .auth-page,
+[data-theme="garden"] .library-browser,
+[data-theme="garden"] .book-player-page { position: relative; z-index: 1; }
+[data-theme="garden"] .garden-defs { position: absolute; width: 0; height: 0; }
+[data-theme="garden"] .vine-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+[data-theme="garden"] .bg-flower svg,
+[data-theme="garden"] .fall-flower svg,
+[data-theme="garden"] .vine-bloom svg { width: 100%; height: auto; display: block; filter: drop-shadow(0 4px 10px rgba(0,0,0,.45)); }
+
+/* Large, soft background blooms that gently sway */
+[data-theme="garden"] .bg-flower { position: absolute; }
+[data-theme="garden"] .bf-1 { width: 21rem; top: -4rem;   left: -6rem;  animation: sway 9s ease-in-out infinite; }
+[data-theme="garden"] .bf-2 { width: 15rem; top: 22%;     right: -4rem; animation: sway 11s ease-in-out infinite reverse; }
+[data-theme="garden"] .bf-3 { width: 17rem; bottom: -4rem; left: 28%;   animation: sway 13s ease-in-out infinite; }
+[data-theme="garden"] .bf-4 { width: 12rem; top: 44%;     left: -3rem;  animation: sway 10s ease-in-out infinite reverse; }
+[data-theme="garden"] .bf-5 { width: 13rem; top: 30%;     left: 30%;    animation: sway 12s ease-in-out infinite; }
+
+/* Flower blooms slowly at the vine tip (after the stem finishes drawing) */
+[data-theme="garden"] .vine-bloom {
+    position: absolute;
+    left: 50%;
+    top: -2.5rem;
+    width: 7rem;
+    margin-left: -3.5rem;
+    transform: scale(0);
+    transform-origin: center bottom;
+    animation: flower-bloom 2s cubic-bezier(.2, .8, .3, 1) 3.2s both;
+}
+
+/* A few flowers drifting down */
+[data-theme="garden"] .fall-flower { position: absolute; top: -7rem; width: 5rem; opacity: 0; will-change: transform, opacity; }
+[data-theme="garden"] .ff-1 { left: 10%; width: 5.5rem; animation: petal-fall 14s linear infinite; }
+[data-theme="garden"] .ff-2 { left: 38%;                 animation: petal-fall 18s linear infinite 5s; }
+[data-theme="garden"] .ff-3 { left: 64%; width: 4.5rem; animation: petal-fall 12s linear infinite 2s; }
+[data-theme="garden"] .ff-4 { left: 86%; width: 6rem;   animation: petal-fall 16s linear infinite 8s; }
+
+@keyframes sway { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
 /* Growing vines: the stem draws itself up from the bottom, leaves pop in along
    the way, then a flower blooms slowly at the tip. */
 [data-theme="garden"] .vine-grow {
