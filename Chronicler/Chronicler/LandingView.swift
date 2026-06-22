@@ -37,30 +37,24 @@ struct LandingView: View {
 
             VStack(spacing: 0) {
                 Spacer()
-                Text("Chronicler")
-                    .font(Theme.display(56))
-                    .foregroundStyle(Theme.brassGradient)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.4)
-                    .glowVerdigris()
-                Text("Your Audiobook Library")
-                    .font(Theme.serif(15)).foregroundColor(Theme.parchmentDim)
-                    .padding(.top, 4)
-                Text("⚙ ───────── ⚙")
-                    .font(Theme.serif(14)).foregroundColor(Theme.borderBrass)
-                    .padding(.top, 10)
-
-                Spacer().frame(height: 40)
 
                 NavigationLink(value: Route.archive) {
-                    VStack(spacing: 6) {
-                        Image("logo").resizable().scaledToFit().frame(width: 190, height: 190)
+                    VStack(spacing: 4) {
+                        Text("Chronicler")
+                            .font(Theme.display(48))
+                            .foregroundStyle(Theme.brassGradient)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.4)
                             .glowVerdigris()
+                        Text("Your Audiobook Library")
+                            .font(Theme.serif(15)).foregroundColor(Theme.parchmentDim)
                         Text("Enter the Archive")
-                            .font(Theme.serif(20)).foregroundColor(Theme.brassPale)
+                            .font(Theme.serif(16)).foregroundColor(Theme.brassPale)
+                            .padding(.top, 16)
                             .glowVerdigris()
                     }
-                    .padding(28)
+                    .padding(.horizontal, 34)
+                    .padding(.vertical, 30)
                     .electricPanel(bg: Theme.surface, corner: 6, alpha: 0.8, glowRadius: 20)
                 }
 

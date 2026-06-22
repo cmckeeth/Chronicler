@@ -27,7 +27,6 @@ export default function Login() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <img src="/favicon.png" alt="Chronicler" style={{width:'80px',height:'80px',margin:'0 auto .5rem',display:'block',borderRadius:'18px'}} />
         <h1>Chronicler</h1>
         <p className="auth-subtitle">Your audiobook library</p>
 
