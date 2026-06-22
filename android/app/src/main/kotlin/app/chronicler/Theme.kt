@@ -159,12 +159,13 @@ fun Modifier.electricPanel(
     elevation: Dp = 14.dp,
 ): Modifier = composed {
     if (Theme.themeMode == ThemeMode.GARDEN) {
-        // Soft SOLID green panel: generous 16.dp radius, gentle green border + soft bloom.
-        // No animation, no glass — calm and organic.
+        // Frosted-translucent green panel: generous 16.dp radius, gentle green border + soft
+        // bloom. Lowered fill alpha so the vector-flower wallpaper reads through (real backdrop
+        // blur is unavailable in Compose — translucency stands in). No animation, no glass.
         val shape = RoundedCornerShape(16.dp)
         this
             .shadow(elevation, shape, spotColor = Theme.brass, ambientColor = Theme.brass)
-            .background(bg, shape)
+            .background(bg.copy(alpha = 0.72f), shape)
             .border(1.4.dp, Theme.borderBrass.copy(alpha = (alpha * 0.7f).coerceAtMost(1f)), shape)
     } else if (Theme.themeMode == ThemeMode.STEAMPUNK) {
         // Solid opaque brass panel, tight 2.dp corners — no animation, no glass.

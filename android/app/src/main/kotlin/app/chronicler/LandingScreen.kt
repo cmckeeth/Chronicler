@@ -5,10 +5,13 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -44,6 +47,9 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
     androidx.compose.runtime.LaunchedEffect(Unit) { StartupSound.play(context) }
 
     Box(Modifier.fillMaxSize()) {   // transparent: the app-wide electric backdrop shows through
+        // Garden-only: a soft vector-flower wallpaper at ~50% opacity, BEHIND all content.
+        if (Theme.themeMode == ThemeMode.GARDEN) GardenFlowerBackdrop()
+
         // Gear corners
         Column(Modifier.fillMaxSize().padding(20.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -101,18 +107,18 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
 }
 
 // GARDEN only: vines grow up from the bottom (the stem "draws" itself via PathMeasure),
-// leaves pop in along the way, then a big opaque flower blooms slowly at the tip.
+// then a hand-built VECTOR flower blooms slowly at the tip (no emoji).
 @Composable
 private fun VineGrowOverlay() {
     Box(Modifier.fillMaxSize()) {
-        Vine(Alignment.BottomStart,  xDp = 6,   heightDp = 250, flower = "🌸", growMs = 3200)
-        Vine(Alignment.BottomEnd,    xDp = -6,  heightDp = 250, flower = "🌷", growMs = 3700)
-        Vine(Alignment.BottomCenter, xDp = 0,   heightDp = 185, flower = "🌼", growMs = 3000)
+        Vine(Alignment.BottomStart,  xDp = 6,   heightDp = 250, hue = FlowerHue.ROSE,  growMs = 3200)
+        Vine(Alignment.BottomEnd,    xDp = -6,  heightDp = 250, hue = FlowerHue.WHITE, growMs = 3700)
+        Vine(Alignment.BottomCenter, xDp = 0,   heightDp = 185, hue = FlowerHue.GOLD,  growMs = 3000)
     }
 }
 
 @Composable
-private fun BoxScope.Vine(align: Alignment, xDp: Int, heightDp: Int, flower: String, growMs: Int) {
+private fun BoxScope.Vine(align: Alignment, xDp: Int, heightDp: Int, hue: FlowerHue, growMs: Int) {
     var started by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { started = true }
     val grow by animateFloatAsState(
@@ -140,30 +146,15 @@ private fun BoxScope.Vine(align: Alignment, xDp: Int, heightDp: Int, flower: Str
             pm.getSegment(0f, grow * pm.length, seg, true)
             drawPath(seg, color = stem, style = Stroke(width = 8f, cap = StrokeCap.Round))
         }
-        VineLeaf("🍃", Alignment.BottomStart, 22, -78, started, 1100)
-        VineLeaf("🍃", Alignment.CenterEnd,  -16,  16, started, 1900)
-        VineLeaf("🍃", Alignment.TopStart,    30,  74, started, 2500)
-        // Big, fully-opaque flower at the tip — blooms after the stem finishes.
-        Text(
-            flower,
-            fontSize = 52.sp,
+        // Hand-built VECTOR flower at the tip — blooms after the stem finishes (no emoji).
+        Canvas(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .offset(y = (-10).dp)
+                .size(72.dp)
                 .scale(flowerScale)
-        )
+        ) { drawFlower(hue) }
     }
-}
-
-@Composable
-private fun BoxScope.VineLeaf(glyph: String, align: Alignment, xDp: Int, yDp: Int, started: Boolean, delayMs: Long) {
-    var show by remember { mutableStateOf(false) }
-    LaunchedEffect(started) { if (started) { delay(delayMs); show = true } }
-    val s by animateFloatAsState(
-        targetValue = if (show) 1f else 0f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "vineLeaf")
-    Text(glyph, fontSize = 22.sp, modifier = Modifier.align(align).offset(x = xDp.dp, y = yDp.dp).scale(s))
 }
 
 @Composable
@@ -173,33 +164,53 @@ private fun gear() {
     Text(glyph, color = Theme.border, fontSize = 26.sp, modifier = Modifier.alpha(0.6f))
 }
 
-// Two-option theme selector. Sets Theme.themeMode (recomposes the app) and persists it.
+private fun ThemeMode.label(): String = when (this) {
+    ThemeMode.TESLA -> "⚡ Tesla"
+    ThemeMode.STEAMPUNK -> "⚙ Steampunk"
+    ThemeMode.GARDEN -> "🌿 Garden"
+}
+
+// Theme selector as a compact DROPDOWN: a themed outlined field shows the current theme;
+// tapping it opens a Material3 DropdownMenu listing all three. Selecting one sets
+// Theme.themeMode (recomposes the app) and persists it via AuthStore.
 @Composable
 private fun ThemeSwitcher(auth: AuthStore) {
     val active = Theme.themeMode
-    Row(
-        Modifier.clip(RoundedCornerShape(6.dp)).background(Theme.surface),
-        horizontalArrangement = Arrangement.spacedBy(0.dp)
-    ) {
-        themeChip("⚡ Tesla", active == ThemeMode.TESLA) { auth.setThemeMode(ThemeMode.TESLA) }
-        themeChip("⚙ Steampunk", active == ThemeMode.STEAMPUNK) { auth.setThemeMode(ThemeMode.STEAMPUNK) }
-        themeChip("🌿 Garden", active == ThemeMode.GARDEN) { auth.setThemeMode(ThemeMode.GARDEN) }
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(Theme.surface)
+                .border(1.dp, Theme.borderBrass.copy(alpha = 0.6f), RoundedCornerShape(6.dp))
+                .clickable { expanded = true }
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(active.label(), color = Theme.brassPale, fontSize = 11.sp,
+                fontWeight = FontWeight.Bold, fontFamily = Theme.serif)
+            Text("▾", color = Theme.parchmentDim, fontSize = 11.sp)
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(Theme.surface)
+        ) {
+            ThemeMode.entries.forEach { mode ->
+                DropdownMenuItem(
+                    text = {
+                        Text(mode.label(),
+                            color = if (mode == active) Theme.brass else Theme.parchmentDim,
+                            fontSize = 12.sp,
+                            fontWeight = if (mode == active) FontWeight.Bold else FontWeight.Normal,
+                            fontFamily = Theme.serif)
+                    },
+                    onClick = { auth.setThemeMode(mode); expanded = false }
+                )
+            }
+        }
     }
-}
-
-@Composable
-private fun themeChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    Text(
-        label,
-        color = if (selected) Theme.ink else Theme.parchmentDim,
-        fontSize = 11.sp,
-        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-        fontFamily = Theme.serif,
-        modifier = Modifier
-            .clickable { onClick() }
-            .background(if (selected) Theme.brass else Theme.surface)
-            .padding(horizontal = 10.dp, vertical = 6.dp)
-    )
 }
 
 // Status bar + self-update prompt, ported from the Blazor UpdateBanner.
