@@ -31,7 +31,7 @@
     --glow-brass:   0 0 16px #2bc4ff70, 0 0 32px #2bc4ff30;
     --glow-copper:  0 0 12px #2bc4ff66;
     --shadow-deep:  0 8px 32px rgba(0,0,0,.7), 0 2px 8px rgba(0,0,0,.5);
-    --radius:       7px;        /* sleeker rounding */
+    --radius:       10px;       /* sleek but matches native's 10pt/dp */
     --font-display: 'Orbitron', 'Segoe UI', sans-serif;
     --font-serif:   'Rajdhani', 'Segoe UI', sans-serif;
     --font-body:    'Rajdhani', 'Segoe UI', system-ui, sans-serif;
@@ -41,7 +41,7 @@
     --tint:        43,196,255;           /* subtle bg/texture tint channels */
     --panel-bg:    rgba(15,26,46,.55);   /* glassy translucent panel */
     --panel-blur:  blur(10px);           /* glassmorphism (none in steampunk) */
-    --cover-filter: saturate(1.06) contrast(1.06) brightness(.98);  /* crisp, cool */
+    --cover-filter: saturate(1.08) contrast(1.05) brightness(.98);  /* crisp, cool */
 
     /* Accent + "electric" lightning (Tesla = blue) */
     --verdigris:      #2bc4ff;
@@ -87,7 +87,7 @@
     --tint:        200,134,10;
     --panel-bg:    rgba(50,32,12,.62);
     --panel-blur:  blur(3px);
-    --cover-filter: sepia(.35) brightness(.85) contrast(1.05);
+    --cover-filter: sepia(.4) saturate(.7) brightness(.88) contrast(1.05);
     /* Accent = verdigris green */
     --verdigris:      #8fd44a;
     --verdigris-rgb:  143,212,74;
@@ -135,9 +135,9 @@
     /* Translucent leafy panels so the background flowers read through the UI */
     --metal-hi:    210,255,180;
     --tint:        124,194,74;
-    --panel-bg:    rgba(20,44,28,.4);
+    --panel-bg:    rgba(20,44,28,.48);
     --panel-blur:  blur(9px);
-    --cover-filter: saturate(1.12) contrast(1.03) brightness(1.0);
+    --cover-filter: saturate(1.15) contrast(1.04) brightness(1.0);
     /* Accent = floral bloom (badges, active chapter, chips) */
     --verdigris:      #ff8fb8;
     --verdigris-rgb:  255,143,184;
@@ -183,6 +183,18 @@
     animation: none !important;
     text-shadow: 0 0 6px rgba(var(--elec-3), .5);
 }
+
+/* ── Tesla lightning canvas (behind content) ───────────────────────────────── */
+.tesla-fx { display: none; }
+[data-theme="tesla"] .tesla-fx {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+/* Lift page content above the fixed FX layers (tesla canvas / steampunk skyline / garden flowers) */
+.auth-page, .library-browser, .book-player-page { position: relative; z-index: 1; }
 
 /* ── Factory skyline (background, behind content) ──────────────────────────── */
 .steampunk-bg { display: none; }
@@ -488,6 +500,15 @@ body {
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
     background-size: auto;
     background-attachment: scroll;
+}
+
+/* Garden: soft green radial bloom up top + faint floral-pink bloom low (matches native) */
+[data-theme="garden"] body {
+    background-image:
+        radial-gradient(ellipse at 50% 0%,   rgba(124,194,74,.14) 0%, transparent 55%),
+        radial-gradient(ellipse at 50% 100%, rgba(255,143,184,.07) 0%, transparent 50%);
+    background-size: auto;
+    background-attachment: fixed;
 }
 
 /* Tesla (default): sleek glowing power rail across the top */

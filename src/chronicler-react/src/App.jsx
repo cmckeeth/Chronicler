@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { isLoggedIn } from './api';
 import Login from './pages/Login';
@@ -8,6 +8,64 @@ import Downloads from './pages/Downloads';
 
 function Protected({ children }) {
   return isLoggedIn() ? children : <Navigate to="/login" replace />;
+}
+
+// Tesla-only: roving fractal lightning bolts on a canvas (matches the native apps).
+// Animates only while the Tesla theme is active; the canvas is CSS-hidden otherwise.
+function TeslaFX() {
+  const ref = useRef(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let raf, W, H;
+    const resize = () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; };
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Fractal midpoint-displacement bolt between two points.
+    const makeBolt = () => {
+      const x = Math.random() * W;
+      let pts = [{ x, y: -20 }, { x: x + (Math.random() - 0.5) * W * 0.5, y: H + 20 }];
+      let disp = W * 0.14;
+      for (let d = 0; d < 6; d++) {
+        const np = [];
+        for (let i = 0; i < pts.length - 1; i++) {
+          const a = pts[i], b = pts[i + 1];
+          np.push(a, { x: (a.x + b.x) / 2 + (Math.random() - 0.5) * disp, y: (a.y + b.y) / 2 });
+        }
+        np.push(pts[pts.length - 1]);
+        pts = np; disp *= 0.5;
+      }
+      return { pts, life: 1 };
+    };
+
+    let bolts = [];
+    const stroke = (pts) => {
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (const p of pts) ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    };
+    const frame = () => {
+      ctx.clearRect(0, 0, W, H);
+      const active = document.documentElement.dataset.theme === 'tesla';
+      if (active && Math.random() < 0.05) bolts.push(makeBolt());
+      bolts = bolts.filter(b => (b.life -= 0.07) > 0);
+      if (active) {
+        ctx.lineCap = 'round';
+        for (const b of bolts) {
+          const a = Math.max(0, b.life);
+          ctx.lineWidth = 5; ctx.strokeStyle = `rgba(43,196,255,${a * 0.35})`; stroke(b.pts);
+          ctx.lineWidth = 1.4; ctx.strokeStyle = `rgba(210,244,255,${a})`; stroke(b.pts);
+        }
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
+  }, []);
+  return <canvas ref={ref} className="tesla-fx" aria-hidden="true" />;
 }
 
 // Steampunk-only decorative backdrop: exposed turning cogs + rising steam.
@@ -20,9 +78,10 @@ function SteampunkBG() {
     <div className="steampunk-bg" aria-hidden="true">
       <svg className="factory-skyline" viewBox="0 0 1000 420" preserveAspectRatio="xMidYMax slice">
         <g className="sky-fill">
-          {/* low industrial buildings */}
+          {/* low industrial buildings (6) */}
           <rect x="0"   y="250" width="150" height="170" />
           <rect x="150" y="205" width="115" height="215" />
+          <rect x="265" y="285" width="120" height="135" />
           <rect x="420" y="270" width="130" height="150" />
           <rect x="600" y="235" width="135" height="185" />
           <rect x="845" y="215" width="155" height="205" />
@@ -183,6 +242,7 @@ function CornerControls() {
 export default function App() {
   return (
     <BrowserRouter>
+      <TeslaFX />
       <SteampunkBG />
       <SteampunkFX />
       <GardenFX />
