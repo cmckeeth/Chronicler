@@ -122,54 +122,54 @@ function SteampunkFX() {
   );
 }
 
-// Shared gradient defs for the vector flowers (referenced by id across instances).
+// Rose-family hues (light edge → mid → deep center) for the vector ROSES.
 const FLOWER_HUES = [
-  { id: 'rose',  light: '#ffd6e6', dark: '#ff4f8e' },
-  { id: 'gold',  light: '#fff0bf', dark: '#ffa61f' },
-  { id: 'lilac', light: '#ecd6ff', dark: '#9b54ff' },
-  { id: 'white', light: '#ffffff', dark: '#cfe0e6' },
-  { id: 'coral', light: '#ffd9bf', dark: '#ff6a3c' },
+  { id: 'rose',    light: '#ffd9e8', mid: '#f0497f', deep: '#a81450' },
+  { id: 'red',     light: '#ff9fb2', mid: '#e21f3c', deep: '#860f24' },
+  { id: 'blush',   light: '#ffe6ee', mid: '#ff8fb0', deep: '#d2658a' },
+  { id: 'crimson', light: '#ff86a4', mid: '#c81545', deep: '#760a2a' },
+  { id: 'coral',   light: '#ffc1c0', mid: '#ff5a6e', deep: '#a01530' },
 ];
 function FlowerDefs() {
   return (
     <svg className="garden-defs" width="0" height="0" aria-hidden="true">
       <defs>
         {FLOWER_HUES.map(h => (
-          <radialGradient key={h.id} id={`pg-${h.id}`} cx="50%" cy="84%" r="78%">
-            <stop offset="0%" stopColor={h.light} />
-            <stop offset="62%" stopColor={h.dark} />
-            <stop offset="100%" stopColor={h.dark} stopOpacity="0.85" />
-          </radialGradient>
+          <g key={h.id}>
+            {/* outer petals: light edge → mid */}
+            <radialGradient id={`pg-${h.id}`} cx="50%" cy="50%" r="62%">
+              <stop offset="0%" stopColor={h.mid} />
+              <stop offset="100%" stopColor={h.light} />
+            </radialGradient>
+            {/* inner petals: mid → deep (shadowed throat) */}
+            <radialGradient id={`pg-${h.id}-d`} cx="50%" cy="50%" r="62%">
+              <stop offset="0%" stopColor={h.deep} />
+              <stop offset="100%" stopColor={h.mid} />
+            </radialGradient>
+          </g>
         ))}
-        <radialGradient id="pg-center" cx="50%" cy="42%" r="62%">
-          <stop offset="0%" stopColor="#ffe784" />
-          <stop offset="55%" stopColor="#f0a800" />
-          <stop offset="100%" stopColor="#9c6400" />
-        </radialGradient>
       </defs>
     </svg>
   );
 }
 
-// A realistic-ish bloom: two offset rings of gradient-shaded petals + a textured
-// golden center. `petals` controls density.
-function Flower({ hue = 'rose', petals = 13 }) {
-  const ring = (count, ry, cy, op, rot) =>
+// A top-down ROSE: concentric rings of rounded, overlapping petals — broad/light on
+// the outside, smaller/darker toward a rolled bud center.
+function Flower({ hue = 'rose' }) {
+  const out = `url(#pg-${hue})`, inr = `url(#pg-${hue}-d)`;
+  const ring = (count, rx, ry, cy, rot, fill) =>
     Array.from({ length: count }).map((_, k) => (
-      <ellipse key={`${ry}-${k}`} cx="50" cy={cy} rx={ry * 0.38} ry={ry}
-        fill={`url(#pg-${hue})`} opacity={op}
+      <ellipse key={`${cy}-${k}`} cx="50" cy={cy} rx={rx} ry={ry} fill={fill}
         transform={`rotate(${rot + (360 / count) * k} 50 50)`} />
     ));
   return (
     <svg viewBox="0 0 100 100" aria-hidden="true">
       <g className="flower-art">
-        {ring(petals, 26, 26, 0.95, 0)}
-        {ring(petals, 19, 33, 0.95, 360 / petals / 2)}
-        <circle cx="50" cy="50" r="13" fill="url(#pg-center)" />
-        {Array.from({ length: 10 }).map((_, k) => (
-          <circle key={`d-${k}`} cx={50 + 7 * Math.cos(k * 2.4)} cy={50 + 7 * Math.sin(k * 2.4)}
-            r="1.5" fill="#7a4e00" opacity="0.5" />
-        ))}
+        {ring(8, 13, 19, 30, 0,    out)}
+        {ring(7, 11, 16, 24, 25,   out)}
+        {ring(6, 9.5, 13, 18, 50,  inr)}
+        {ring(5, 7,  10, 12, 18,   inr)}
+        <circle cx="50" cy="50" r="6" fill={inr} />
       </g>
     </svg>
   );
@@ -198,16 +198,16 @@ function GardenFX() {
     <div className="garden-fx" aria-hidden="true">
       <FlowerDefs />
       <span className="bg-flower bf-1"><Flower hue="rose" /></span>
-      <span className="bg-flower bf-2"><Flower hue="gold" petals={15} /></span>
-      <span className="bg-flower bf-3"><Flower hue="lilac" /></span>
+      <span className="bg-flower bf-2"><Flower hue="red" /></span>
+      <span className="bg-flower bf-3"><Flower hue="blush" /></span>
       <span className="bg-flower bf-4"><Flower hue="coral" /></span>
-      <span className="bg-flower bf-5"><Flower hue="white" petals={14} /></span>
+      <span className="bg-flower bf-5"><Flower hue="crimson" /></span>
       <Vine cls="vg-bl" hue="rose" />
-      <Vine cls="vg-br" hue="white" />
-      <Vine cls="vg-bm" hue="gold" />
+      <Vine cls="vg-br" hue="blush" />
+      <Vine cls="vg-bm" hue="red" />
       <span className="fall-flower ff-1"><Flower hue="rose" /></span>
-      <span className="fall-flower ff-2"><Flower hue="lilac" /></span>
-      <span className="fall-flower ff-3"><Flower hue="white" /></span>
+      <span className="fall-flower ff-2"><Flower hue="blush" /></span>
+      <span className="fall-flower ff-3"><Flower hue="crimson" /></span>
       <span className="fall-flower ff-4"><Flower hue="coral" /></span>
     </div>
   );
