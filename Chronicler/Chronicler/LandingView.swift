@@ -16,7 +16,7 @@ struct LandingView: View {
             // Garden: a few drifting petals/leaves on the backdrop (no electricity).
             if themeStore.mode == .garden {
                 PetalDrift()
-                BloomOverlay()   // flowers bloom open on appear (garden only)
+                VineGrowOverlay()   // vines grow up, flowers bloom at the tips (garden only)
             }
 
             // Gear corners (⚙ in tl/tr/bl/br)
@@ -138,8 +138,8 @@ private struct PetalDrift: View {
                         let x = geo.size.width * (0.08 + 0.84 * (0.5 + 0.5 * sin(t * 0.12 + p)))
                         let y = geo.size.height * fall
                         Text(glyphs[i])
-                            .font(.system(size: 22 + CGFloat(i % 3) * 6))
-                            .opacity(0.5)
+                            .font(.system(size: 34 + CGFloat(i % 3) * 8))
+                            .shadow(color: .black.opacity(0.5), radius: 2, y: 1)
                             .rotationEffect(.degrees(sin(t * 0.4 + p) * 30))
                             .position(x: x, y: y)
                     }
@@ -151,48 +151,122 @@ private struct PetalDrift: View {
     }
 }
 
-// Garden-only: flowers bloom open on appear. Each glyph is positioned around the
-// edges/corners (so it doesn't cover the main controls) and springs from a closed
-// bud (scale 0) past a slight overshoot to full size, with a small rotation and a
-// staggered start delay. Blooms once and holds. Non-interactive (no tap blocking).
-private struct BloomOverlay: View {
-    // glyph, relative position (0..1), size, target rotation degrees, stagger delay
-    private struct Flower {
-        let glyph: String
-        let x: CGFloat
-        let y: CGFloat
-        let size: CGFloat
-        let rotation: Double
-        let delay: Double
+// Garden-only: a curvy vine stem rising from the bottom edge. The path is built in a
+// unit rect (0..1, y inverted so it climbs upward) and scaled to the given size, so it
+// can be `.trim`-animated to "draw" itself growing. `sway` shifts the horizontal
+// control points to give each vine its own gentle lean.
+private struct VineStem: Shape {
+    var sway: CGFloat   // -1..1, leans the curve left/right
+
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width, h = rect.height
+        // y: 1 = bottom of rect, 0 = top. Climb from bottom-center up with two S-curves.
+        func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+            CGPoint(x: rect.minX + x * w, y: rect.minY + (1 - y) * h)
+        }
+        var p = Path()
+        p.move(to: pt(0.5, 0.0))
+        p.addCurve(to: pt(0.5 + 0.18 * sway, 0.5),
+                   control1: pt(0.5 - 0.22 * sway, 0.18),
+                   control2: pt(0.5 + 0.30 * sway, 0.34))
+        p.addCurve(to: pt(0.5 - 0.04 * sway, 1.0),
+                   control1: pt(0.5 + 0.10 * sway, 0.66),
+                   control2: pt(0.5 - 0.26 * sway, 0.84))
+        return p
     }
-    private let flowers: [Flower] = [
-        Flower(glyph: "🌸", x: 0.10, y: 0.12, size: 40, rotation: -12, delay: 0.10),
-        Flower(glyph: "🌷", x: 0.90, y: 0.14, size: 38, rotation:  10, delay: 0.30),
-        Flower(glyph: "🌼", x: 0.08, y: 0.86, size: 36, rotation:  14, delay: 0.50),
-        Flower(glyph: "🌺", x: 0.92, y: 0.84, size: 42, rotation: -10, delay: 0.70),
-        Flower(glyph: "🌻", x: 0.50, y: 0.06, size: 34, rotation:   8, delay: 0.90),
+}
+
+// Garden-only: a few vine stems grow upward from the bottom edge on appear. Each stem
+// draws itself in via `.trim` over ~3s (easeOut), small leaves (🍃) fade/scale in along
+// the way at staggered delays, and once the stem finishes a flower blooms at its tip
+// with a slow, gently-overshooting spring. Grows once and holds. Non-interactive.
+private struct VineGrowOverlay: View {
+    private struct Vine {
+        let xFraction: CGFloat   // horizontal anchor of the stem base (0..1)
+        let heightFraction: CGFloat   // stem height as fraction of screen height
+        let width: CGFloat   // stem bounding-box width in points
+        let sway: CGFloat   // lean for VineStem
+        let flower: String
+        let leaves: [CGFloat]   // positions along the stem (0 = base, 1 = tip)
+    }
+
+    // bottom-left, bottom-center, bottom-right — varied heights.
+    private let vines: [Vine] = [
+        Vine(xFraction: 0.16, heightFraction: 0.34, width: 80, sway:  1.0,
+             flower: "🌸", leaves: [0.32, 0.62]),
+        Vine(xFraction: 0.84, heightFraction: 0.42, width: 90, sway: -1.0,
+             flower: "🌷", leaves: [0.28, 0.55, 0.78]),
+        Vine(xFraction: 0.50, heightFraction: 0.28, width: 70, sway:  0.5,
+             flower: "🌼", leaves: [0.40, 0.70]),
     ]
+
+    private let growDuration: Double = 3.0
+
+    @State private var grow = false
     @State private var bloomed = false
 
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                ForEach(flowers.indices, id: \.self) { i in
-                    let f = flowers[i]
-                    Text(f.glyph)
-                        .font(.system(size: f.size))
-                        .scaleEffect(bloomed ? 1.0 : 0.0)
-                        .rotationEffect(.degrees(bloomed ? f.rotation : -90))
-                        .position(x: geo.size.width * f.x, y: geo.size.height * f.y)
-                        .animation(
-                            .spring(response: 0.6, dampingFraction: 0.6).delay(f.delay),
-                            value: bloomed)
+                ForEach(vines.indices, id: \.self) { i in
+                    vineView(vines[i], in: geo.size)
                 }
             }
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
-        .onAppear { bloomed = true }
+        .onAppear {
+            withAnimation(.easeOut(duration: growDuration)) { grow = true }
+            // bloom only after the stem finishes drawing.
+            withAnimation(.spring(response: 0.7, dampingFraction: 0.6)
+                .delay(growDuration)) { bloomed = true }
+        }
+    }
+
+    @ViewBuilder
+    private func vineView(_ v: Vine, in size: CGSize) -> some View {
+        let stemW = v.width
+        let stemH = size.height * v.heightFraction
+        let baseX = size.width * v.xFraction
+        let baseY = size.height                // bottom edge
+        let tipX = baseX + (0.5 - 0.04 * v.sway - 0.5) * stemW   // matches VineStem tip x
+        let tipY = baseY - stemH
+
+        ZStack {
+            VineStem(sway: v.sway)
+                .trim(from: 0, to: grow ? 1 : 0)
+                .stroke(Color(red: 0x6F/255, green: 0xAE/255, blue: 0x5F/255),
+                        style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
+                .frame(width: stemW, height: stemH)
+                .position(x: baseX, y: baseY - stemH / 2)
+
+            // leaves staggered along the grow.
+            ForEach(v.leaves.indices, id: \.self) { j in
+                let f = v.leaves[j]
+                let lx = baseX + (0.5 - 0.5) * stemW + leafOffsetX(v.sway, f) * stemW
+                let ly = baseY - stemH * f
+                Text("🍃")
+                    .font(.system(size: 24))
+                    .scaleEffect(grow ? 1 : 0)
+                    .opacity(grow ? 1 : 0)
+                    .rotationEffect(.degrees(j.isMultiple(of: 2) ? -25 : 25))
+                    .position(x: lx, y: ly)
+                    .animation(.easeOut(duration: 0.5).delay(growDuration * Double(f) * 0.9),
+                               value: grow)
+            }
+
+            // flower at the tip — blooms after the stem finishes.
+            Text(v.flower)
+                .font(.system(size: 60))
+                .shadow(color: .black.opacity(0.5), radius: 3, y: 1)
+                .scaleEffect(bloomed ? 1 : 0)
+                .position(x: tipX, y: tipY)
+        }
+    }
+
+    // approximate horizontal offset of the stem at fraction f (rough lean toward sway).
+    private func leafOffsetX(_ sway: CGFloat, _ f: CGFloat) -> CGFloat {
+        0.10 * sway * sin(f * .pi)
     }
 }
 
