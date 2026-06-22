@@ -64,14 +64,19 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
         // BEHIND all content. Steam below rises out of its smokestacks.
         if (Theme.themeMode == ThemeMode.STEAMPUNK) FactorySkyline()
 
-        // Gear corners
-        Column(Modifier.fillMaxSize().padding(20.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                gear(); gear()
-            }
-            Spacer(Modifier.weight(1f))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                gear(); gear()
+        // Corner ornaments. STEAMPUNK gets large, slowly-rotating brass cogs (below); TESLA
+        // and GARDEN keep the small static glyphs in the four corners.
+        if (Theme.themeMode == ThemeMode.STEAMPUNK) {
+            SteampunkCogs()
+        } else {
+            Column(Modifier.fillMaxSize().padding(20.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    gear(); gear()
+                }
+                Spacer(Modifier.weight(1f))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    gear(); gear()
+                }
             }
         }
 
@@ -117,6 +122,9 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
 
         // Garden-only: vines grow up, then a flower blooms slowly at each tip.
         if (Theme.themeMode == ThemeMode.GARDEN) VineGrowOverlay()
+
+        // Garden-only: small vector flowers slowly drifting down over everything.
+        if (Theme.themeMode == ThemeMode.GARDEN) GardenPetalOverlay()
 
         // Steampunk-only: lush rising steam plumes drifting over everything (non-interactive).
         if (Theme.themeMode == ThemeMode.STEAMPUNK) SteamOverlay()
@@ -224,7 +232,7 @@ private fun FactorySkyline() {
     }
 }
 
-// STEAMPUNK only: ~8-9 soft steam plumes that EMIT FROM the factory smokestacks. Each plume
+// STEAMPUNK only: 9 soft steam plumes that EMIT FROM the factory smokestacks. Each plume
 // starts near a chimney mouth (just above the skyline) at one of the 5 stack x-fractions —
 // some stacks emit two — then billows up the screen, growing and fading. Several looping
 // timelines with different durations/phases keep them from pulsing in unison. Each plume is
@@ -245,8 +253,8 @@ private fun SteamOverlay() {
     // emit a second plume → 7 here; the per-plume phase fill keeps the column busy.
     val sources = floatArrayOf(
         STACK_XS[0], STACK_XS[1], STACK_XS[2], STACK_XS[3], STACK_XS[4],
-        STACK_XS[0], STACK_XS[4], STACK_XS[2])
-    val plumes = sources.size   // 8
+        STACK_XS[0], STACK_XS[4], STACK_XS[2], STACK_XS[1])
+    val plumes = sources.size   // 9
     val cream = Color(0xFFFFF6E6)
 
     Canvas(Modifier.fillMaxSize().blur(24.dp)) {
@@ -334,6 +342,48 @@ private fun BoxScope.Vine(align: Alignment, xDp: Int, heightDp: Int, hue: Flower
                 .scale(flowerScale)
         ) { drawFlower(hue) }
     }
+}
+
+// STEAMPUNK only: four large brass cogs pinned to the corners, each rotating slowly and
+// continuously (alternating CW/CCW, ~15-36s per turn) at low alpha so they read as
+// background ornament. Mirrors the web app's rotating-cog corners. Non-interactive.
+@Composable
+private fun SteampunkCogs() {
+    val t = rememberInfiniteTransition(label = "cogs")
+    @Composable
+    fun spin(periodMs: Int, cw: Boolean): Float {
+        val deg by t.animateFloat(
+            initialValue = 0f,
+            targetValue = if (cw) 360f else -360f,
+            animationSpec = infiniteRepeatable(tween(periodMs, easing = LinearEasing), RepeatMode.Restart),
+            label = "spin$periodMs",
+        )
+        return deg
+    }
+    val r1 = spin(36000, cw = true)
+    val r2 = spin(22000, cw = false)
+    val r3 = spin(28000, cw = false)
+    val r4 = spin(15000, cw = true)
+    Box(Modifier.fillMaxSize()) {
+        Cog(Alignment.TopStart,     sizeDp = 150, xDp = -46, yDp = -34, deg = r1, alpha = 0.20f)
+        Cog(Alignment.TopEnd,       sizeDp = 120, xDp = 40,  yDp = -28, deg = r2, alpha = 0.18f)
+        Cog(Alignment.BottomStart,  sizeDp = 128, xDp = -40, yDp = 36,  deg = r3, alpha = 0.18f)
+        Cog(Alignment.BottomEnd,    sizeDp = 150, xDp = 46,  yDp = 40,  deg = r4, alpha = 0.22f)
+    }
+}
+
+@Composable
+private fun BoxScope.Cog(
+    align: Alignment, sizeDp: Int, xDp: Int, yDp: Int, deg: Float, alpha: Float,
+) {
+    Text(
+        "⚙", color = Theme.borderBrass, fontSize = (sizeDp * 0.9f).sp, softWrap = false,
+        modifier = Modifier
+            .align(align)
+            .offset(x = xDp.dp, y = yDp.dp)
+            .alpha(alpha)
+            .rotate(deg),
+    )
 }
 
 @Composable

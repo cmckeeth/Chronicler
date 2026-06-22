@@ -15,6 +15,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -22,6 +24,50 @@ import androidx.compose.ui.unit.sp
 import java.util.concurrent.ConcurrentHashMap
 
 private val coverCache = ConcurrentHashMap<Int, ImageBitmap>()
+
+// Per-theme color treatment for book covers, mirroring the web app's cover filters.
+//   TESLA     — cool/crisp: saturation ~1.08 + a slight contrast bump, no tint.
+//   STEAMPUNK — aged sepia: desaturated (~.5), warm #d8b070 multiply, brightness ~.88.
+//   GARDEN    — lush: saturation ~1.15 + a slight contrast bump.
+// Returns null only if we ever add a "no filter" theme; callers apply it to Image.
+fun coverColorFilter(): ColorFilter {
+    fun saturate(m: ColorMatrix, s: Float) = m.apply { setToSaturation(s) }
+    // contrast around 0.5 mid-grey: out = (in - 0.5) * c + 0.5, scaled to 0..255.
+    fun contrast(c: Float): ColorMatrix {
+        val t = (1f - c) * 0.5f * 255f
+        return ColorMatrix(floatArrayOf(
+            c, 0f, 0f, 0f, t,
+            0f, c, 0f, 0f, t,
+            0f, 0f, c, 0f, t,
+            0f, 0f, 0f, 1f, 0f,
+        ))
+    }
+    return when (Theme.themeMode) {
+        ThemeMode.TESLA -> {
+            val m = ColorMatrix().also { saturate(it, 1.08f) }
+            m.timesAssign(contrast(1.05f))
+            ColorFilter.colorMatrix(m)
+        }
+        ThemeMode.STEAMPUNK -> {
+            // desaturate, warm-tint multiply (#d8b070 ≈ 0.847,0.690,0.439), dim brightness.
+            val m = ColorMatrix().also { saturate(it, 0.5f) }
+            val b = 0.88f
+            val tint = ColorMatrix(floatArrayOf(
+                0.847f * b, 0f, 0f, 0f, 0f,
+                0f, 0.690f * b, 0f, 0f, 0f,
+                0f, 0f, 0.439f * b, 0f, 0f,
+                0f, 0f, 0f, 1f, 0f,
+            ))
+            m.timesAssign(tint)
+            ColorFilter.colorMatrix(m)
+        }
+        ThemeMode.GARDEN -> {
+            val m = ColorMatrix().also { saturate(it, 1.15f) }
+            m.timesAssign(contrast(1.04f))
+            ColorFilter.colorMatrix(m)
+        }
+    }
+}
 
 @Composable
 fun CoverImage(book: Book, api: ApiClient, modifier: Modifier = Modifier) {
@@ -44,7 +90,8 @@ fun CoverImage(book: Book, api: ApiClient, modifier: Modifier = Modifier) {
         val img = image
         if (img != null) {
             Image(bitmap = img, contentDescription = book.title,
-                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop,
+                colorFilter = coverColorFilter())
         } else {
             Text(if (book.hasCover) "⚙" else "📚", fontSize = 36.sp)
         }

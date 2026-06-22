@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
@@ -128,6 +129,59 @@ private fun BoxScope.SwayFlower(
             .size(sizeDp.dp)
             .rotate(deg),
     ) { drawFlower(hue, petals) }
+}
+
+// GARDEN only: ~5 small vector flowers slowly drifting DOWN the full screen, looping,
+// staggered, with a gentle horizontal sway + slow rotation, semi-transparent. Reuses the
+// shared drawFlower at small size. Mirrors the web app's drifting-petal layer. Non-interactive.
+@Composable
+fun GardenPetalOverlay(modifier: Modifier = Modifier) {
+    data class Petal(
+        val hue: FlowerHue, val sizeDp: Int, val xFrac: Float,
+        val fallMs: Int, val swayMs: Int, val spinMs: Int, val phase: Float, val petals: Int,
+    )
+    val petalDefs = listOf(
+        Petal(FlowerHue.ROSE,  38, 0.14f, 16000, 5200, 20000, 0.00f, 13),
+        Petal(FlowerHue.GOLD,  30, 0.38f, 13000, 4300, 17000, 0.30f, 15),
+        Petal(FlowerHue.LILAC, 46, 0.58f, 19000, 6100, 24000, 0.55f, 13),
+        Petal(FlowerHue.CORAL, 34, 0.78f, 14500, 4800, 19000, 0.18f, 14),
+        Petal(FlowerHue.WHITE, 32, 0.90f, 17500, 5600, 22000, 0.72f, 14),
+    )
+    val t = rememberInfiniteTransition(label = "petals")
+    Box(modifier.fillMaxSize().alpha(0.55f)) {
+        for (p in petalDefs) {
+            val fall by t.animateFloat(
+                0f, 1f,
+                infiniteRepeatable(tween(p.fallMs, easing = LinearEasing), RepeatMode.Restart),
+                label = "fall",
+            )
+            val sway by t.animateFloat(
+                -1f, 1f,
+                infiniteRepeatable(tween(p.swayMs, easing = LinearEasing), RepeatMode.Reverse),
+                label = "sway",
+            )
+            val spin by t.animateFloat(
+                0f, 360f,
+                infiniteRepeatable(tween(p.spinMs, easing = LinearEasing), RepeatMode.Restart),
+                label = "spin",
+            )
+            // Stagger each petal's fall progress so they don't drop in lockstep.
+            val prog = (fall + p.phase).let { it - kotlin.math.floor(it) }
+            BoxWithConstraints {
+                val h = maxHeight
+                Canvas(
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .offset(
+                            x = (maxWidth * p.xFrac) + (sway * 18).dp,
+                            y = (-(p.sizeDp).dp) + (h + p.sizeDp.dp) * prog,
+                        )
+                        .size(p.sizeDp.dp)
+                        .rotate(spin),
+                ) { drawFlower(p.hue, p.petals) }
+            }
+        }
+    }
 }
 
 // GARDEN-only soft BACKGROUND wallpaper: several large vector flowers at ~50% opacity,

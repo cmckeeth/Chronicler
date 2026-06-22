@@ -165,7 +165,7 @@ fun Modifier.electricPanel(
         val shape = RoundedCornerShape(16.dp)
         this
             .shadow(elevation, shape, spotColor = Theme.brass, ambientColor = Theme.brass)
-            .background(bg.copy(alpha = 0.72f), shape)
+            .background(bg.copy(alpha = 0.5f), shape)
             .border(1.4.dp, Theme.borderBrass.copy(alpha = (alpha * 0.7f).coerceAtMost(1f)), shape)
     } else if (Theme.themeMode == ThemeMode.STEAMPUNK) {
         // Brass panel, tight 2.dp corners — slightly translucent so the factory skyline
