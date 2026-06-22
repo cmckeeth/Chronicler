@@ -10,6 +10,24 @@ function Protected({ children }) {
   return isLoggedIn() ? children : <Navigate to="/login" replace />;
 }
 
+// Steampunk-only decorative backdrop: exposed turning cogs + rising steam.
+// Always rendered; CSS reveals it only under [data-theme="steampunk"].
+const GEAR = '⚙︎'; // ⚙ forced to text (not emoji) presentation so it takes brass color
+function SteampunkFX() {
+  return (
+    <div className="steampunk-fx" aria-hidden="true">
+      <span className="gear gear-a">{GEAR}</span>
+      <span className="gear gear-b">{GEAR}</span>
+      <span className="gear gear-c">{GEAR}</span>
+      <span className="gear gear-d">{GEAR}</span>
+      <span className="steam steam-1" />
+      <span className="steam steam-2" />
+      <span className="steam steam-3" />
+      <span className="steam steam-4" />
+    </div>
+  );
+}
+
 function CornerControls() {
   const [theme, setTheme] = useState(() => localStorage.getItem('chronicler_theme') || 'tesla');
   useEffect(() => {
@@ -38,6 +56,7 @@ function CornerControls() {
 export default function App() {
   return (
     <BrowserRouter>
+      <SteampunkFX />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Protected><Library /></Protected>} />
