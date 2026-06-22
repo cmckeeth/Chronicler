@@ -463,8 +463,8 @@ select {
 /* ── Book Grid ────────────────────────────────────────────────────────────── */
 .book-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: .5rem;
+    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+    gap: 1.1rem;
 }
 
 .book-card {
@@ -575,7 +575,7 @@ select {
 }
 
 .book-meta {
-    padding: .3rem .5rem .4rem;
+    padding: .65rem .8rem .8rem;
     display: flex;
     flex-direction: column;
     gap: .2rem;
@@ -583,7 +583,7 @@ select {
 }
 
 .book-title {
-    font-size: .72rem;
+    font-size: .88rem;
     font-weight: 700;
     font-family: var(--font-serif);
     color: var(--parchment);
@@ -594,7 +594,7 @@ select {
 }
 
 .book-author {
-    font-size: .7rem;
+    font-size: .82rem;
     color: var(--brass);
     white-space: nowrap;
     overflow: hidden;
@@ -603,7 +603,7 @@ select {
 }
 
 .book-narrator {
-    font-size: .65rem;
+    font-size: .76rem;
     color: var(--parchment-dim);
     white-space: nowrap;
     overflow: hidden;
@@ -929,7 +929,12 @@ select {
 /* ── Mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
     body::before { display: none; }
-    .book-grid { grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: .35rem; }
+    /* Exactly 3 cards per row on phones — matches the native apps */
+    .book-grid { grid-template-columns: repeat(3, 1fr); gap: .4rem; }
+    .book-meta { padding: .3rem .4rem .35rem; }
+    .book-title { font-size: .68rem; }
+    .book-author { font-size: .62rem; }
+    .book-narrator { display: none; }
     .library-header { flex-direction: column; align-items: stretch; }
     .library-toolbar { max-width: 100%; }
     .book-header { flex-direction: column; }
