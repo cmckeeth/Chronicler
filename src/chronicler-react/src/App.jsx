@@ -24,6 +24,11 @@ function SteampunkFX() {
       <span className="steam steam-2" />
       <span className="steam steam-3" />
       <span className="steam steam-4" />
+      <span className="steam steam-5" />
+      <span className="steam steam-6" />
+      <span className="steam steam-7" />
+      <span className="steam steam-8" />
+      <span className="steam steam-9" />
     </div>
   );
 }
