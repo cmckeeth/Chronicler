@@ -7,10 +7,17 @@ ASP.NET C# API/data layer + multiple frontends consuming it over HTTP REST.
 Moving off the single MAUI/Blazor-hybrid frontend toward **separation of concerns**: the
 C# backend stays authoritative, frontends are independent per platform.
 
+> **⚠️ FEATURE PARITY IS MANDATORY.** There are THREE active frontends — **web** (`src/chronicler-react`),
+> **iOS** (`Chronicler/`), **Android** (`android/`). Any user-facing change — a feature, a theme, a
+> font, a fix, a behavior tweak — MUST be implemented in **all three**, not just the one being worked
+> on. Do not consider a task done until web + iOS + Android all have it. If you can only do some now,
+> say so explicitly and track the rest. Themes especially: web, iOS, and Android must offer the same
+> set (currently **Tesla / Steampunk / Garden**) and look/behave equivalently per platform.
+
 - **Backend** — `src/Chronicler.Api` (.NET REST, JWT auth). Stays C#. Source of truth.
 - **iOS** — **native Swift/SwiftUI** app at repo-root `Chronicler/`. Consumes the API over HTTP. Deploys to the **Simulator**.
 - **Android** — **native Kotlin/Compose** app at `android/`. Consumes the API over HTTP. Built to an APK and shipped through the existing endpoint pipeline (`deploy.sh` → `updates/` → `/api/update/apk`, in-app self-update). Same deploy *mechanism* as before, native Kotlin app instead of MAUI.
-- **Web** — scrapped for now (`src/Chronicler.Web` Blazor + `src/chronicler-react` left untouched, not built).
+- **Web** — **native React/Vite** app at `src/chronicler-react` (active, deployed). Consumes the API over HTTP. Built + served as the `chronicler-web` container in `docker-compose.yml` (nginx on :5161, proxies `/api`); ships on every server deploy. Shows a version badge + theme switcher bottom-right. (Old `src/Chronicler.Web` Blazor is abandoned.)
 - **Legacy** — `src/Chronicler.Maui` (Blazor-in-WebView hybrid) retired now that natives exist; kept as fallback.
 
 API contract lives in `src/Chronicler.Shared/Services/ApiClient.cs` (endpoints, DTOs, JWT). Base URL `https://chronicler.mckeeth.app`.

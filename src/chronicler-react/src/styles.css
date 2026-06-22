@@ -1,6 +1,6 @@
 /* ── Imports ──────────────────────────────────────────────────────────────── */
 /* Steampunk: Cinzel/Lora (Victorian serif).  Tesla: Orbitron/Rajdhani (techno). */
-@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Caveat:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Dancing+Script:wght@600;700&display=swap');
 
 /* ── Variables ────────────────────────────────────────────────────────────── */
 /* ══ DEFAULT = TESLA: electric, futuristic — cold steel-blue, neon, glass ══════
@@ -128,8 +128,8 @@
     --glow-brass:   0 0 16px #8bd45080, 0 0 32px #8bd45033;
     --glow-copper:  0 0 12px #e88fa870;
     --radius:       16px;       /* soft, organic rounding */
-    /* Friendly, organic type: handwritten wordmark + rounded humanist body */
-    --font-display: 'Caveat', 'Segoe UI', cursive;
+    /* Signature script wordmark + rounded humanist body */
+    --font-display: 'Dancing Script', 'Segoe UI', cursive;
     --font-serif:   'Quicksand', 'Segoe UI', sans-serif;
     --font-body:    'Quicksand', 'Segoe UI', system-ui, sans-serif;
     /* Solid leafy panels, lush covers, no glass */
@@ -275,6 +275,16 @@
 [data-theme="garden"] .book-card,
 [data-theme="garden"] .chip { border-radius: 14px; }
 [data-theme="garden"] .chip { border-radius: 16px; }
+
+/* Signature wordmark: flowing script reads best in natural case, larger, not letter-spaced */
+[data-theme="garden"] h1 {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 2.6rem;
+    font-weight: 700;
+    line-height: 1.05;
+}
+[data-theme="garden"] .auth-card h1 { font-size: 2.8rem; }
 
 /* Vines + petals backdrop (always in DOM, shown only for garden) */
 .garden-fx { display: none; }
