@@ -29,6 +29,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import kotlinx.coroutines.delay
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 
 @Composable
 fun LandingScreen(auth: AuthStore, nav: NavController) {
@@ -87,70 +95,75 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
 
         UpdateBanner(auth.api, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp))
 
-        // Garden-only: flowers bloom open on first composition, then hold.
-        if (Theme.themeMode == ThemeMode.GARDEN) BloomOverlay()
+        // Garden-only: vines grow up, then a flower blooms slowly at each tip.
+        if (Theme.themeMode == ThemeMode.GARDEN) VineGrowOverlay()
     }
 }
 
-// One blooming flower positioned in the Box. Pure Text emoji — never intercepts touches.
-private data class Bloom(
-    val emoji: String,
-    val align: Alignment,
-    val x: Int,      // dp offset from the alignment anchor
-    val y: Int,
-    val rot: Float,  // small final rotation, degrees
-    val delayMs: Long,
-    val size: Int,   // sp
-)
-
-// GARDEN only: a scatter of flowers around the screen edges that bloom from a closed bud
-// (scale 0) → slight overshoot (~1.15) → settle to 1, with a tiny rotation, staggered.
-// Bouncy spring gives the "pop open" feel. Blooms once, then holds. Mirrors the web feature.
+// GARDEN only: vines grow up from the bottom (the stem "draws" itself via PathMeasure),
+// leaves pop in along the way, then a big opaque flower blooms slowly at the tip.
 @Composable
-private fun BloomOverlay() {
+private fun VineGrowOverlay() {
+    Box(Modifier.fillMaxSize()) {
+        Vine(Alignment.BottomStart,  xDp = 6,   heightDp = 250, flower = "🌸", growMs = 3200)
+        Vine(Alignment.BottomEnd,    xDp = -6,  heightDp = 250, flower = "🌷", growMs = 3700)
+        Vine(Alignment.BottomCenter, xDp = 0,   heightDp = 185, flower = "🌼", growMs = 3000)
+    }
+}
+
+@Composable
+private fun BoxScope.Vine(align: Alignment, xDp: Int, heightDp: Int, flower: String, growMs: Int) {
     var started by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { started = true }
+    val grow by animateFloatAsState(
+        targetValue = if (started) 1f else 0f,
+        animationSpec = tween(durationMillis = growMs, easing = FastOutSlowInEasing),
+        label = "vineGrow")
+    var bloom by remember { mutableStateOf(false) }
+    LaunchedEffect(started) { if (started) { delay(growMs.toLong()); bloom = true } }
+    val flowerScale by animateFloatAsState(
+        targetValue = if (bloom) 1f else 0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessVeryLow),
+        label = "vineFlower")
 
-    val flowers = remember {
-        listOf(
-            Bloom("🌸", Alignment.TopStart,     28,  96, -12f,   0,  34),
-            Bloom("🌷", Alignment.TopEnd,       -24, 120,  10f,  90,  30),
-            Bloom("🌼", Alignment.CenterStart,   16,   0,  -8f, 180,  30),
-            Bloom("🌺", Alignment.CenterEnd,    -20, -40,  14f, 130,  36),
-            Bloom("🌻", Alignment.BottomStart,   34, -96,   9f, 240,  32),
-            Bloom("🌸", Alignment.BottomEnd,    -30, -72, -10f, 300,  28),
+    val stem = Color(0xFF6FAE5F)
+    Box(Modifier.align(align).offset(x = xDp.dp).width(130.dp).height(heightDp.dp)) {
+        Canvas(Modifier.fillMaxSize()) {
+            val w = size.width; val h = size.height
+            val path = Path().apply {
+                moveTo(w * 0.5f, h)
+                cubicTo(w * 0.16f, h * 0.80f, w * 0.88f, h * 0.62f, w * 0.42f, h * 0.46f)
+                cubicTo(w * 0.08f, h * 0.30f, w * 0.82f, h * 0.18f, w * 0.52f, h * 0.05f)
+            }
+            val pm = PathMeasure().apply { setPath(path, false) }
+            val seg = Path()
+            pm.getSegment(0f, grow * pm.length, seg, true)
+            drawPath(seg, color = stem, style = Stroke(width = 8f, cap = StrokeCap.Round))
+        }
+        VineLeaf("🍃", Alignment.BottomStart, 22, -78, started, 1100)
+        VineLeaf("🍃", Alignment.CenterEnd,  -16,  16, started, 1900)
+        VineLeaf("🍃", Alignment.TopStart,    30,  74, started, 2500)
+        // Big, fully-opaque flower at the tip — blooms after the stem finishes.
+        Text(
+            flower,
+            fontSize = 52.sp,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset(y = (-10).dp)
+                .scale(flowerScale)
         )
     }
+}
 
-    Box(Modifier.fillMaxSize()) {
-        flowers.forEach { f ->
-            // Per-flower stagger: hold scale at 0 until this flower's delay elapses.
-            var bloom by remember { mutableStateOf(false) }
-            LaunchedEffect(started) {
-                if (started) { delay(f.delayMs); bloom = true }
-            }
-            val scale by animateFloatAsState(
-                targetValue = if (bloom) 1f else 0f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessLow),
-                label = "bloomScale")
-            val rot by animateFloatAsState(
-                targetValue = if (bloom) f.rot else 0f,
-                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-                label = "bloomRot")
-            Text(
-                f.emoji,
-                fontSize = f.size.sp,
-                modifier = Modifier
-                    .align(f.align)
-                    .offset(x = f.x.dp, y = f.y.dp)
-                    .scale(scale)
-                    .rotate(rot)
-                    .alpha(0.9f)
-            )
-        }
-    }
+@Composable
+private fun BoxScope.VineLeaf(glyph: String, align: Alignment, xDp: Int, yDp: Int, started: Boolean, delayMs: Long) {
+    var show by remember { mutableStateOf(false) }
+    LaunchedEffect(started) { if (started) { delay(delayMs); show = true } }
+    val s by animateFloatAsState(
+        targetValue = if (show) 1f else 0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "vineLeaf")
+    Text(glyph, fontSize = 22.sp, modifier = Modifier.align(align).offset(x = xDp.dp, y = yDp.dp).scale(s))
 }
 
 @Composable
