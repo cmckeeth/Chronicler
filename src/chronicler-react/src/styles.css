@@ -1,40 +1,49 @@
 /* ── Imports ──────────────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400;1,600&display=swap');
+/* Steampunk: Cinzel/Lora (Victorian serif).  Tesla: Orbitron/Rajdhani (techno). */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap');
 
 /* ── Variables ────────────────────────────────────────────────────────────── */
+/* ══ DEFAULT = TESLA: electric, futuristic — cold steel-blue, neon, glass ══════
+   Identity is fully token-driven: palette, fonts, radius, glass treatment and
+   texture tints all come from these vars, so the Steampunk block below repaints
+   the entire app by overriding them. Shared (non-themed): --shadow-deep.        */
 :root {
-    --bg:           #120a02;
-    --bg2:          #1a1005;
-    --leather:      #221408;
-    --surface:      #2a1a0a;
-    --surface2:     #341f0c;
-    --surface3:     #3e260e;
-    --border:       #5a3418;
-    --border-brass: #b87c20;
-    --brass:        #e8a010;
-    --brass-light:  #ffc030;
-    --brass-pale:   #ffe060;
-    --copper:       #d07020;
-    --copper-light: #f09040;
-    --rust:         #c03010;
-    --parchment:    #fff4d8;
-    --parchment-mid:#e8c878;
-    --parchment-dim:#c8a048;
-    --ink:          #1a0c02;
-    --glow-brass:   0 0 16px #d4920c80, 0 0 32px #d4920c30;
-    --glow-copper:  0 0 12px #c0682070;
-    --shadow-deep:  0 8px 32px rgba(0,0,0,.8), 0 2px 8px rgba(0,0,0,.6);
-    --radius:       2px;
-    --font-display: 'Cinzel Decorative', 'Palatino Linotype', serif;
-    --font-serif:   'Cinzel', 'Palatino Linotype', serif;
-    --font-body:    'Lora', Georgia, serif;
+    /* Cold near-black blue base + steel surfaces */
+    --bg:           #05080f;
+    --bg2:          #090e1a;
+    --leather:      #0b1424;   /* deep inset wells (inputs, tabs) */
+    --surface:      #0f1a2e;
+    --surface2:     #142440;
+    --surface3:     #1b3052;
+    --border:       #21405f;
+    --border-brass: #3f86b8;   /* "metal" trim → brushed steel */
+    /* "Brass" family repurposed as the electric action color */
+    --brass:        #2bc4ff;
+    --brass-light:  #7fe0ff;
+    --brass-pale:   #d6f4ff;
+    --copper:       #1f9fd8;
+    --copper-light: #5ac8ff;
+    --rust:         #ff5470;
+    --parchment:    #e6f3ff;   /* cool white text */
+    --parchment-mid:#a6c8e2;
+    --parchment-dim:#6f93b4;
+    --ink:          #04101e;
+    --glow-brass:   0 0 16px #2bc4ff70, 0 0 32px #2bc4ff30;
+    --glow-copper:  0 0 12px #2bc4ff66;
+    --shadow-deep:  0 8px 32px rgba(0,0,0,.7), 0 2px 8px rgba(0,0,0,.5);
+    --radius:       7px;        /* sleeker rounding */
+    --font-display: 'Orbitron', 'Segoe UI', sans-serif;
+    --font-serif:   'Rajdhani', 'Segoe UI', sans-serif;
+    --font-body:    'Rajdhani', 'Segoe UI', system-ui, sans-serif;
 
-    /* ── Themed tokens (default = Tesla / electric blue) ───────────────────────
-       --verdigris       = secondary accent (chips, badges, active chapter, ✓)
-       --verdigris-rgb   = same, as r,g,b channels for rgba()
-       --glow-verdigris  = heading wordmark + panel halo (box/text-shadow value)
-       --elec-1..4       = "electric" lightning channels (bright/core/deep/soft)
-       --elec-spark      = near-white spark color (solid)                        */
+    /* Structural/texture tokens (repainted by theme) */
+    --metal-hi:    180,232,255;          /* inset highlight channels */
+    --tint:        43,196,255;           /* subtle bg/texture tint channels */
+    --panel-bg:    rgba(15,26,46,.55);   /* glassy translucent panel */
+    --panel-blur:  blur(10px);           /* glassmorphism (none in steampunk) */
+    --cover-filter: saturate(1.06) contrast(1.06) brightness(.98);  /* crisp, cool */
+
+    /* Accent + "electric" lightning (Tesla = blue) */
     --verdigris:      #2bc4ff;
     --verdigris-rgb:  43,196,255;
     --glow-verdigris: 0 0 16px #2bc4ffcc, 0 0 36px #2bc4ff55;
@@ -68,6 +77,17 @@
     --parchment-dim:#c09838;
     --glow-brass:   0 0 16px #e8a01088, 0 0 32px #e8a01033;
     --glow-copper:  0 0 12px #c0682078;
+    --radius:       2px;        /* tight, mechanical */
+    /* Victorian serif typography */
+    --font-display: 'Cinzel Decorative', 'Palatino Linotype', serif;
+    --font-serif:   'Cinzel', 'Palatino Linotype', serif;
+    --font-body:    'Lora', Georgia, serif;
+    /* Solid, opaque, riveted — no glass, warm metal tints + sepia covers */
+    --metal-hi:    255,240,150;
+    --tint:        200,134,10;
+    --panel-bg:    var(--surface);
+    --panel-blur:  none;
+    --cover-filter: sepia(.35) brightness(.85) contrast(1.05);
     /* Accent = verdigris green */
     --verdigris:      #8fd44a;
     --verdigris-rgb:  143,212,74;
@@ -181,11 +201,6 @@
 /* ── Base ─────────────────────────────────────────────────────────────────── */
 html, body {
     background-color: var(--bg);
-    background-image:
-        radial-gradient(ellipse at 15% 40%, rgba(120,70,10,.2) 0%, transparent 55%),
-        radial-gradient(ellipse at 85% 20%, rgba(90,50,5,.15) 0%, transparent 50%),
-        radial-gradient(ellipse at 50% 90%, rgba(60,30,5,.1) 0%, transparent 40%),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
     color: var(--parchment);
     font-family: var(--font-body);
     font-size: 20px;
@@ -193,10 +208,44 @@ html, body {
     min-height: 100vh;
 }
 
-/* Riveted border along the top */
+/* Tesla (default): cool radial glow + faint circuit grid, no grunge */
+body {
+    background-image:
+        radial-gradient(ellipse at 50% -5%, rgba(43,196,255,.12) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 110%, rgba(43,196,255,.07) 0%, transparent 45%),
+        linear-gradient(rgba(63,134,184,.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(63,134,184,.05) 1px, transparent 1px);
+    background-size: auto, auto, 42px 42px, 42px 42px;
+    background-attachment: fixed;
+}
+
+/* Steampunk: warm leather radials + grayscale grain */
+[data-theme="steampunk"] body {
+    background-image:
+        radial-gradient(ellipse at 15% 40%, rgba(120,70,10,.2) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 20%, rgba(90,50,5,.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 90%, rgba(60,30,5,.1) 0%, transparent 40%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+    background-size: auto;
+    background-attachment: scroll;
+}
+
+/* Tesla (default): sleek glowing power rail across the top */
 body::before {
-    content: '⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡';
+    content: '';
     display: block;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--brass) 30%, var(--brass-light) 50%, var(--brass) 70%, transparent);
+    box-shadow: 0 0 14px var(--brass), 0 0 4px var(--brass-light);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+/* Steampunk: riveted hex border along the top */
+[data-theme="steampunk"] body::before {
+    content: '⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡  ⬡';
+    height: auto;
     background: var(--surface);
     border-bottom: 2px solid var(--border-brass);
     color: var(--border-brass);
@@ -206,9 +255,6 @@ body::before {
     overflow: hidden;
     white-space: nowrap;
     text-overflow: clip;
-    position: sticky;
-    top: 0;
-    z-index: 100;
     box-shadow: 0 2px 12px rgba(0,0,0,.6);
 }
 
@@ -333,12 +379,12 @@ button { cursor: pointer; border: none; font: inherit; }
     text-transform: uppercase;
     letter-spacing: 2px;
     transition: all .2s;
-    box-shadow: var(--glow-brass), inset 0 1px 0 rgba(255,240,150,.4), var(--shadow-deep);
+    box-shadow: var(--glow-brass), inset 0 1px 0 rgba(var(--metal-hi),.4), var(--shadow-deep);
     position: relative;
 }
 .btn-primary:hover {
     background: linear-gradient(180deg, var(--brass-pale) 0%, var(--brass-light) 40%, var(--brass) 100%);
-    box-shadow: var(--glow-brass), inset 0 1px 0 rgba(255,240,150,.6), 0 4px 20px rgba(200,134,10,.4);
+    box-shadow: var(--glow-brass), inset 0 1px 0 rgba(var(--metal-hi),.6), 0 4px 20px rgba(var(--tint),.4);
     transform: translateY(-1px);
 }
 .btn-primary:active { transform: translateY(0); }
@@ -354,12 +400,12 @@ button { cursor: pointer; border: none; font: inherit; }
     text-transform: uppercase;
     letter-spacing: 1px;
     transition: all .2s;
-    box-shadow: inset 0 1px 0 rgba(255,200,80,.1);
+    box-shadow: inset 0 1px 0 rgba(var(--metal-hi),.1);
 }
 .btn-secondary:hover {
     border-color: var(--brass);
     color: var(--brass);
-    box-shadow: var(--glow-copper), inset 0 1px 0 rgba(255,200,80,.15);
+    box-shadow: var(--glow-copper), inset 0 1px 0 rgba(var(--metal-hi),.15);
 }
 .btn-secondary:disabled { opacity: .35; cursor: default; }
 
@@ -440,10 +486,10 @@ select {
 }
 
 .auth-card {
-    background: var(--surface);
-    background-image:
-        radial-gradient(ellipse at top, rgba(200,134,10,.06) 0%, transparent 60%),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
+    background: var(--panel-bg);
+    background-image: radial-gradient(ellipse at top, rgba(var(--tint),.08) 0%, transparent 60%);
+    backdrop-filter: var(--panel-blur);
+    -webkit-backdrop-filter: var(--panel-blur);
     border: 1px solid rgba(var(--elec-2),.5);
     border-radius: var(--radius);
     padding: 2.5rem 2.2rem;
@@ -454,6 +500,13 @@ select {
     gap: 1.4rem;
     box-shadow: var(--glow-verdigris), var(--shadow-deep), inset 0 0 40px rgba(var(--elec-2),.05);
     position: relative;
+}
+
+/* Steampunk: solid panel + grayscale grain (Tesla keeps the clean glass above) */
+[data-theme="steampunk"] .auth-card {
+    background-image:
+        radial-gradient(ellipse at top, rgba(var(--tint),.06) 0%, transparent 60%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
 }
 
 /* Corner ornaments */
@@ -612,8 +665,10 @@ select {
 }
 
 .book-card {
-    background: var(--surface);
-    background-image: linear-gradient(160deg, rgba(200,134,10,.04) 0%, transparent 50%);
+    background: var(--panel-bg);
+    background-image: linear-gradient(160deg, rgba(var(--tint),.05) 0%, transparent 50%);
+    backdrop-filter: var(--panel-blur);
+    -webkit-backdrop-filter: var(--panel-blur);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     overflow: hidden;
@@ -646,7 +701,7 @@ select {
     background-image:
         repeating-linear-gradient(
             45deg,
-            rgba(200,134,10,.03) 0px, rgba(200,134,10,.03) 1px,
+            rgba(var(--tint),.03) 0px, rgba(var(--tint),.03) 1px,
             transparent 1px, transparent 8px
         );
     display: flex;
@@ -660,12 +715,12 @@ select {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    filter: sepia(.35) brightness(.85) contrast(1.05);
+    filter: var(--cover-filter);
     transition: filter .3s;
 }
 
 .book-card:hover .book-cover img {
-    filter: sepia(.2) brightness(.95) contrast(1.05);
+    filter: var(--cover-filter) brightness(1.12);
 }
 
 .fav-btn {
@@ -690,7 +745,7 @@ select {
 .fav-btn.fav-active {
     opacity: 1;
     color: var(--brass);
-    box-shadow: 0 0 10px rgba(232,160,16,.6);
+    box-shadow: 0 0 10px rgba(var(--metal-hi),.6);
 }
 
 .corner-controls {
@@ -743,7 +798,7 @@ select {
 .theme-select option { background: var(--surface); color: var(--parchment); }
 
 .btn-icon.toggle-on {
-    color: #e8ffd0;
+    color: var(--parchment);
     border-color: var(--verdigris);
     box-shadow: 0 0 8px rgba(var(--verdigris-rgb),.5);
 }
@@ -805,10 +860,12 @@ select {
     gap: 1.5rem;
     align-items: flex-start;
     padding: 1.4rem;
-    background: var(--surface);
+    background: var(--panel-bg);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    background-image: linear-gradient(135deg, rgba(200,134,10,.05) 0%, transparent 60%);
+    background-image: linear-gradient(135deg, rgba(var(--tint),.05) 0%, transparent 60%);
+    backdrop-filter: var(--panel-blur);
+    -webkit-backdrop-filter: var(--panel-blur);
     box-shadow: var(--shadow-deep);
     position: relative;
 }
@@ -824,7 +881,7 @@ select {
     flex-shrink: 0;
     border: 2px solid var(--border-brass);
     box-shadow: var(--glow-brass), 0 8px 24px rgba(0,0,0,.6);
-    filter: sepia(.3) brightness(.88) contrast(1.05);
+    filter: var(--cover-filter);
 }
 
 .book-info {
@@ -848,27 +905,29 @@ select {
 
 /* ── Audio Player ─────────────────────────────────────────────────────────── */
 .audio-player {
-    background: var(--surface);
+    background: var(--panel-bg);
     background-image:
-        linear-gradient(180deg, rgba(200,134,10,.05) 0%, transparent 30%),
+        linear-gradient(180deg, rgba(var(--tint),.05) 0%, transparent 30%),
         repeating-linear-gradient(
             90deg,
-            rgba(200,134,10,.015) 0px, rgba(200,134,10,.015) 1px,
+            rgba(var(--tint),.015) 0px, rgba(var(--tint),.015) 1px,
             transparent 1px, transparent 24px
         );
+    backdrop-filter: var(--panel-blur);
+    -webkit-backdrop-filter: var(--panel-blur);
     border: 1px solid var(--border-brass);
     border-radius: var(--radius);
     padding: 1.3rem 1.5rem 1.4rem;
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    box-shadow: var(--glow-brass), var(--shadow-deep), inset 0 1px 0 rgba(255,200,80,.1);
+    box-shadow: var(--glow-brass), var(--shadow-deep), inset 0 1px 0 rgba(var(--metal-hi),.1);
     position: relative;
 }
 
-/* Panel label */
+/* Panel label — Tesla wording; Steampunk overrides below */
 .audio-player::before {
-    content: '⚙ TRANSMISSION CONTROLS ⚙';
+    content: '⚡ PLAYBACK RELAY ⚡';
     position: absolute;
     top: -.6rem;
     left: 50%;
@@ -883,7 +942,7 @@ select {
     text-transform: uppercase;
 }
 
-/* Rivet corners */
+/* Rivet corners — Steampunk only (hidden in Tesla's clean panel) */
 .audio-player::after {
     content: '⬡                              ⬡';
     position: absolute;
@@ -891,10 +950,12 @@ select {
     color: var(--border-brass);
     font-size: .55rem;
     letter-spacing: 0;
-    display: flex;
+    display: none;
     justify-content: space-between;
     opacity: .4;
 }
+[data-theme="steampunk"] .audio-player::before { content: '⚙ TRANSMISSION CONTROLS ⚙'; }
+[data-theme="steampunk"] .audio-player::after  { display: flex; }
 
 .player-info {
     display: flex;
@@ -946,14 +1007,14 @@ select {
     align-items: center;
     justify-content: center;
     border: 2px solid var(--brass-pale);
-    box-shadow: var(--glow-brass), 0 4px 12px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,240,150,.5);
+    box-shadow: var(--glow-brass), 0 4px 12px rgba(0,0,0,.5), inset 0 1px 0 rgba(var(--metal-hi),.5);
     transition: all .15s;
     flex-shrink: 0;
 }
 
 .btn-play:hover {
-    background: radial-gradient(circle at 35% 35%, #fff8c0 0%, var(--brass-light) 40%, var(--brass) 100%);
-    box-shadow: var(--glow-brass), 0 4px 20px rgba(200,134,10,.5), inset 0 1px 0 rgba(255,240,150,.7);
+    background: radial-gradient(circle at 35% 35%, var(--brass-pale) 0%, var(--brass-light) 40%, var(--brass) 100%);
+    box-shadow: var(--glow-brass), 0 4px 20px rgba(var(--tint),.5), inset 0 1px 0 rgba(var(--metal-hi),.7);
     transform: scale(1.05);
 }
 
@@ -1040,7 +1101,7 @@ select {
 
 /* ── Metadata editor ──────────────────────────────────────────────────────── */
 .meta-editor-overlay { position:fixed; inset:0; background:rgba(0,0,0,.75); display:flex; align-items:center; justify-content:center; z-index:500; padding:1.5rem; }
-.meta-editor { background:var(--surface); border:1px solid var(--border-brass); border-radius:8px; padding:1.5rem; width:100%; max-width:360px; display:flex; flex-direction:column; gap:.5rem; box-shadow:var(--glow-brass),0 20px 60px rgba(0,0,0,.8); }
+.meta-editor { background:var(--panel-bg); backdrop-filter:var(--panel-blur); -webkit-backdrop-filter:var(--panel-blur); border:1px solid var(--border-brass); border-radius:var(--radius); padding:1.5rem; width:100%; max-width:360px; display:flex; flex-direction:column; gap:.5rem; box-shadow:var(--glow-brass),0 20px 60px rgba(0,0,0,.8); }
 .meta-label { font-family:var(--font-serif); font-size:.7rem; color:var(--parchment-dim); text-transform:uppercase; letter-spacing:1px; margin-top:.3rem; }
 
 /* ── Blazor errors ────────────────────────────────────────────────────────── */
@@ -1088,7 +1149,7 @@ select {
 .book-cover-placeholder-large { width:130px; height:195px; background:var(--leather); border:2px solid var(--border-brass); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; font-size:3.5rem; opacity:.3; }
 
 /* ── Chapter List ─────────────────────────────────────────────────────────── */
-.chapter-list { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; position:relative; }
+.chapter-list { background:var(--panel-bg); backdrop-filter:var(--panel-blur); -webkit-backdrop-filter:var(--panel-blur); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; position:relative; }
 .chapter-list-header { padding:.7rem 1.2rem .4rem; border-bottom:1px solid var(--border); background:linear-gradient(180deg,var(--surface2) 0%,var(--surface) 100%); }
 .chapter-item { display:flex; align-items:center; gap:.75rem; padding:.65rem 1rem .65rem 1.2rem; border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; font-size:.85rem; }
 .chapter-item:last-child { border-bottom:none; }
