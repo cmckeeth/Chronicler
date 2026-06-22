@@ -13,6 +13,9 @@ struct LandingView: View {
         ZStack {
             ThemedBackground(intensity: 2.2)   // homepage should be buzzin
 
+            // Garden: a few drifting petals/leaves on the backdrop (no electricity).
+            if themeStore.mode == .garden { PetalDrift() }
+
             // Gear corners (⚙ in tl/tr/bl/br)
             VStack {
                 HStack { gear; Spacer(); gear }
@@ -76,18 +79,20 @@ struct LandingView: View {
         Text("⚙").font(.system(size: 26)).foregroundColor(Theme.border).opacity(0.6)
     }
 
-    // Runtime theme switcher: ⚡ Tesla (electric blue) vs ⚙ Steampunk (brass, no
-    // electricity). Persisted by ThemeStore; the root re-renders via `.id(mode)`.
+    // Runtime theme switcher: ⚡ Tesla (electric blue), ⚙ Steampunk (brass, no
+    // electricity), 🌿 Garden (verdant green/floral, no electricity). Persisted by
+    // ThemeStore; the root re-renders via `.id(mode)`.
     private var themePicker: some View {
         Menu {
             Picker("Theme", selection: $themeStore.mode) {
                 Text("⚡ Tesla").tag(ThemeMode.tesla)
                 Text("⚙ Steampunk").tag(ThemeMode.steampunk)
+                Text("🌿 Garden").tag(ThemeMode.garden)
             }
         } label: {
             HStack(spacing: 5) {
-                Text(themeStore.mode == .tesla ? "⚡" : "⚙")
-                Text(themeStore.mode == .tesla ? "Tesla" : "Steampunk")
+                Text(themeIcon)
+                Text(themeLabel)
             }
             .font(Theme.body(11))
             .foregroundColor(Theme.parchmentMid)
@@ -95,6 +100,51 @@ struct LandingView: View {
             .overlay(RoundedRectangle(cornerRadius: 4)
                 .stroke(Theme.borderBrass.opacity(0.6), lineWidth: 1))
         }
+    }
+
+    private var themeIcon: String {
+        switch themeStore.mode {
+        case .tesla: return "⚡"
+        case .steampunk: return "⚙"
+        case .garden: return "🌿"
+        }
+    }
+    private var themeLabel: String {
+        switch themeStore.mode {
+        case .tesla: return "Tesla"
+        case .steampunk: return "Steampunk"
+        case .garden: return "Garden"
+        }
+    }
+}
+
+// Garden-only: a few petals/leaves drifting gently down the backdrop. Deterministic
+// from time (no RNG, resume-safe). One TimelineView positioning a handful of emoji —
+// cheap and clearly NOT electricity.
+private struct PetalDrift: View {
+    private let glyphs = ["🌸", "🍃", "🌿", "🌷", "🍀", "🌸", "🍃"]
+    var body: some View {
+        GeometryReader { geo in
+            TimelineView(.animation) { tl in
+                let t = tl.date.timeIntervalSinceReferenceDate
+                ZStack {
+                    ForEach(glyphs.indices, id: \.self) { i in
+                        let p = Double(i) * 1.7
+                        let fall = (t * (0.05 + 0.02 * Double(i % 3)) + Double(i) * 0.13)
+                            .truncatingRemainder(dividingBy: 1.0)
+                        let x = geo.size.width * (0.08 + 0.84 * (0.5 + 0.5 * sin(t * 0.12 + p)))
+                        let y = geo.size.height * fall
+                        Text(glyphs[i])
+                            .font(.system(size: 22 + CGFloat(i % 3) * 6))
+                            .opacity(0.5)
+                            .rotationEffect(.degrees(sin(t * 0.4 + p) * 30))
+                            .position(x: x, y: y)
+                    }
+                }
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
     }
 }
 

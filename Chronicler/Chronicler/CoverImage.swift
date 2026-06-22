@@ -58,6 +58,11 @@ extension View {
                 .saturation(0.55)
                 .colorMultiply(Color(hex: 0xd8b070))
                 .contrast(1.05)
+        } else if Theme.mode == .garden {
+            // Garden = lush/crisp: a saturation bump, no sepia, so foliage pops.
+            self
+                .saturation(1.22)
+                .contrast(1.05)
         } else {
             self
                 .saturation(1.08)

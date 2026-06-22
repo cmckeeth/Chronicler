@@ -8,8 +8,8 @@ struct ElectricBackground: View {
     var intensity: Double = 1.0
 
     var body: some View {
-        // No electricity in steampunk — the background stays a quiet brass void.
-        if Theme.mode == .steampunk {
+        // No electricity in steampunk or garden — those backgrounds stay quiet voids.
+        if Theme.mode != .tesla {
             Color.clear
         } else {
             TimelineView(.animation) { tl in
@@ -134,6 +134,13 @@ struct ThemedBackground: View {
                 CircuitGrid()
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
+            } else if Theme.mode == .garden {
+                // Garden: a dark green field with a soft GREEN radial bloom rising from
+                // center. No grid, no lightning — just a quiet verdant glow.
+                RadialGradient(
+                    colors: [Color(hex: 0x7cc24a).opacity(0.20), Theme.bg2.opacity(0.0)],
+                    center: .center, startRadius: 0, endRadius: 540)
+                    .ignoresSafeArea()
             }
             ElectricBackground(intensity: intensity)
         }
@@ -207,8 +214,8 @@ extension View {
 struct ChargedRow: ViewModifier {
     @State private var on = false
     func body(content: Content) -> some View {
-        if Theme.mode == .steampunk {
-            // Steady brass-edged row — no pulsing charge.
+        // Steampunk + Garden: steady edged row, no pulsing charge. Tesla: pulses.
+        if Theme.mode != .tesla {
             content
                 .overlay(RoundedRectangle(cornerRadius: 4)
                     .stroke(Theme.glow.opacity(0.22), lineWidth: 1))

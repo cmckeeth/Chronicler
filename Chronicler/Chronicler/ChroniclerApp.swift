@@ -36,6 +36,10 @@ struct ChroniclerApp: App {
             "Orbitron-Medium",
             "Rajdhani-Regular",
             "Rajdhani-Medium",
+            // Garden: signature script display (Dancing Script) + rounded body (Quicksand).
+            // Both variable TTFs; PS names DancingScript-Regular / Quicksand-Light.
+            "DancingScript",
+            "Quicksand",
         ]
         for name in names {
             guard let url = Bundle.main.url(forResource: name, withExtension: "ttf") else { continue }
