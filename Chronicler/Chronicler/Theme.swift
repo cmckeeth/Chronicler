@@ -174,11 +174,13 @@ private struct ElectricPanelStyle: ViewModifier {
         } else if Theme.mode == .steampunk {
             // Slightly translucent: a lower brass-fill alpha over thin material so the
             // factory skyline + steam read softly through the panel, while staying legible.
+            // Tight 2pt corners (match web/Android).
+            let steampunkCorner: CGFloat = 2
             content
                 .background(bg.opacity(0.42))
                 .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: corner))
-                .overlay(RoundedRectangle(cornerRadius: corner)
+                .clipShape(RoundedRectangle(cornerRadius: steampunkCorner))
+                .overlay(RoundedRectangle(cornerRadius: steampunkCorner)
                     .stroke(Theme.glow.opacity(min(1, alpha * 1.2)), lineWidth: 1.8))
                 .shadow(color: Theme.glow.opacity(0.4), radius: glowRadius)
                 .shadow(color: Theme.glow.opacity(0.18), radius: glowRadius * 1.8)

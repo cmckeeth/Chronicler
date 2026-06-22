@@ -55,18 +55,21 @@ extension View {
     @ViewBuilder func coverTreatment() -> some View {
         if Theme.mode == .steampunk {
             self
-                .saturation(0.55)
+                .saturation(0.5)
                 .colorMultiply(Color(hex: 0xd8b070))
+                .brightness(-0.12)        // aged ~.88 brightness
                 .contrast(1.05)
         } else if Theme.mode == .garden {
             // Garden = lush/crisp: a saturation bump, no sepia, so foliage pops.
             self
-                .saturation(1.22)
-                .contrast(1.05)
+                .saturation(1.15)
+                .contrast(1.04)
         } else {
+            // Tesla = cool/crisp.
             self
                 .saturation(1.08)
-                .contrast(1.04)
+                .brightness(-0.02)        // ~.98 brightness
+                .contrast(1.05)
         }
     }
 }

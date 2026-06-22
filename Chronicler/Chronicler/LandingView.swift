@@ -24,22 +24,16 @@ struct LandingView: View {
             // No emoji — and non-interactive so it never blocks the content above.
             if themeStore.mode == .garden {
                 GardenFlowerBackground()
-                VineGrowOverlay()   // vines grow up, vector flowers bloom at the tips
+                VineGrowOverlay()      // vines grow up, vector flowers bloom at the tips
+                FallingPetals()        // small vector flowers drifting down (web: fall-flower)
             }
 
-            // Steampunk: lush rising steam billowing up over the brass void.
+            // Steampunk: large, slowly-rotating brass cogs in the corners (subtle
+            // background machinery), plus lush rising steam over the brass void.
             if themeStore.mode == .steampunk {
+                CornerCogs()
                 SteamOverlay()
             }
-
-            // Gear corners (⚙ in tl/tr/bl/br)
-            VStack {
-                HStack { gear; Spacer(); gear }
-                Spacer()
-                HStack { gear; Spacer(); gear }
-            }
-            .padding(20)
-            .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 Spacer()
@@ -77,8 +71,8 @@ struct LandingView: View {
 
             VStack {
                 HStack(spacing: 12) {
-                    themePicker
                     Spacer()
+                    themePicker
                     Button("Sign Out") { auth.clear() }
                         .font(Theme.body(11)).foregroundColor(Theme.parchmentDim).opacity(0.5)
                 }
@@ -89,10 +83,6 @@ struct LandingView: View {
         }
         .navigationBarBackButtonHidden(true)
         .onAppear { StartupSound.shared.play() }
-    }
-
-    private var gear: some View {
-        Text("⚙").font(.system(size: 26)).foregroundColor(Theme.border).opacity(0.6)
     }
 
     // Runtime theme switcher: ⚡ Tesla (electric blue), ⚙ Steampunk (brass, no
@@ -245,6 +235,57 @@ private struct GardenFlowerBackground: View {
             }
         }
         .opacity(0.5)            // soft wallpaper — ambiance, not foreground
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+}
+
+// Garden-only: small VECTOR flowers slowly drifting DOWN the screen, looping forever
+// with staggered starts, a gentle horizontal sway and slow rotation, semi-transparent.
+// Mirrors the web app's `fall-flower`. Driven by one TimelineView clock (resume-safe,
+// no RNG). Non-interactive — drifts over the content.
+private struct FallingPetals: View {
+    private struct Petal {
+        let hue: FlowerHue
+        let size: CGFloat        // bloom width in pt (~30-46)
+        let xFrac: CGFloat       // horizontal anchor (0..1)
+        let period: Double       // seconds for one full fall
+        let swayAmp: CGFloat     // horizontal sway amplitude in pt
+        let spinPeriod: Double   // seconds per rotation
+        let cw: Bool             // spin direction
+        let opacity: Double
+    }
+    private let petals: [Petal] = [
+        Petal(hue: .rose,  size: 34, xFrac: 0.14, period: 16, swayAmp: 26, spinPeriod: 9,  cw: true,  opacity: 0.55),
+        Petal(hue: .gold,  size: 30, xFrac: 0.38, period: 21, swayAmp: 34, spinPeriod: 12, cw: false, opacity: 0.5),
+        Petal(hue: .lilac, size: 42, xFrac: 0.6,  period: 18, swayAmp: 30, spinPeriod: 11, cw: true,  opacity: 0.5),
+        Petal(hue: .white, size: 38, xFrac: 0.82, period: 24, swayAmp: 28, spinPeriod: 14, cw: false, opacity: 0.55),
+        Petal(hue: .coral, size: 46, xFrac: 0.5,  period: 19, swayAmp: 38, spinPeriod: 10, cw: true,  opacity: 0.45),
+    ]
+
+    var body: some View {
+        GeometryReader { geo in
+            TimelineView(.animation) { tl in
+                let t = tl.date.timeIntervalSinceReferenceDate
+                ZStack {
+                    ForEach(petals.indices, id: \.self) { i in
+                        let p = petals[i]
+                        let phase = Double(i) / Double(petals.count)   // staggered starts
+                        let cycle = ((t / p.period) + phase).truncatingRemainder(dividingBy: 1)
+                        // Fall from just above the top edge to just below the bottom.
+                        let y = geo.size.height * (CGFloat(cycle) * 1.2 - 0.1)
+                        let sway = sin(t * 0.6 + Double(i)) * p.swayAmp
+                        let x = geo.size.width * p.xFrac + CGFloat(sway)
+                        let spin = (t / p.spinPeriod) * (p.cw ? 1 : -1) * 360
+                        Flower(hue: p.hue, petals: 13)
+                            .frame(width: p.size, height: p.size)
+                            .rotationEffect(.degrees(spin))
+                            .opacity(p.opacity)
+                            .position(x: x, y: y)
+                    }
+                }
+            }
+        }
         .ignoresSafeArea()
         .allowsHitTesting(false)
     }

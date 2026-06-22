@@ -205,6 +205,77 @@ struct SteamOverlay: View {
     }
 }
 
+// Steampunk-only: LARGE brass cogs in the corners, slowly + continuously rotating
+// (alternating CW/CCW), at low opacity so they sit as subtle background machinery.
+// Mirrors the web app's rotating corner cogs (~4 cogs, ~120-150pt, opacity ~.18-.22,
+// ~15-36s per turn). Driven by a single TimelineView clock so it's resume-safe + cheap.
+struct CornerCogs: View {
+    // (x-fraction, y-fraction, diameter pt, period s, clockwise, teeth, opacity).
+    private let cogs: [(x: CGFloat, y: CGFloat, d: CGFloat, period: Double, cw: Bool, teeth: Int, op: Double)] = [
+        (0.02, 0.04, 150, 30, true,  14, 0.20),   // top-left
+        (0.98, 0.06, 120, 22, false, 12, 0.18),   // top-right
+        (0.04, 0.96, 130, 36, false, 13, 0.19),   // bottom-left
+        (0.97, 0.94, 140, 18, true,  14, 0.22),   // bottom-right
+    ]
+
+    var body: some View {
+        if Theme.mode != .steampunk {
+            Color.clear
+        } else {
+            GeometryReader { geo in
+                TimelineView(.animation) { tl in
+                    let t = tl.date.timeIntervalSinceReferenceDate
+                    ZStack {
+                        ForEach(cogs.indices, id: \.self) { i in
+                            let c = cogs[i]
+                            let turns = (t / c.period) * (c.cw ? 1 : -1)
+                            Cog(teeth: c.teeth)
+                                .fill(Theme.borderBrass, style: FillStyle(eoFill: true))
+                                .frame(width: c.d, height: c.d)
+                                .opacity(c.op)
+                                .rotationEffect(.degrees(turns * 360))
+                                .position(x: geo.size.width * c.x, y: geo.size.height * c.y)
+                        }
+                    }
+                }
+            }
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+        }
+    }
+}
+
+// A gear Shape: an outer ring of trapezoidal teeth with a punched-out hub hole (even-odd).
+struct Cog: Shape {
+    var teeth: Int = 13
+
+    func path(in rect: CGRect) -> Path {
+        let c = CGPoint(x: rect.midX, y: rect.midY)
+        let r = min(rect.width, rect.height) / 2
+        let inner = r * 0.78
+        let toothHalf = (.pi / Double(teeth)) * 0.5
+        var p = Path()
+        func pt(_ ang: Double, _ rad: CGFloat) -> CGPoint {
+            CGPoint(x: c.x + cos(ang) * rad, y: c.y + sin(ang) * rad)
+        }
+        for k in 0..<teeth {
+            let a0 = (Double(k) / Double(teeth)) * 2 * .pi
+            let a1 = a0 + toothHalf
+            let a2 = a0 + (.pi / Double(teeth)) - toothHalf
+            let a3 = a0 + (.pi / Double(teeth))
+            if k == 0 { p.move(to: pt(a0, r)) } else { p.addLine(to: pt(a0, r)) }
+            p.addLine(to: pt(a1, r))
+            p.addLine(to: pt(a2, inner))
+            p.addLine(to: pt(a3, inner))
+        }
+        p.closeSubpath()
+        // Hub hole — even-odd fill punches it out so the cog reads as a ring + spokes.
+        let hubR = r * 0.30
+        p.addEllipse(in: CGRect(x: c.x - hubR, y: c.y - hubR, width: hubR * 2, height: hubR * 2))
+        return p
+    }
+}
+
 // Steampunk-only: an OLD-TIMEY INDUSTRIAL FACTORY SKYLINE pinned to the bottom of the
 // screen. A dark silhouette (low factory buildings + 5 tall smokestacks + a big cogwheel)
 // drawn with a single Canvas: a near-black fill with a thin warm rim, topped by a soft
@@ -249,9 +320,8 @@ struct FactorySkyline: View {
 
         // --- Low factory buildings across the bottom (varied heights). ---
         let buildings: [(x: CGFloat, w: CGFloat, top: CGFloat)] = [
-            (0.00, 0.20, 0.58), (0.18, 0.16, 0.46), (0.33, 0.16, 0.66),
-            (0.47, 0.18, 0.50), (0.62, 0.15, 0.62), (0.74, 0.16, 0.44),
-            (0.86, 0.16, 0.56),
+            (0.00, 0.20, 0.58), (0.18, 0.17, 0.46), (0.34, 0.17, 0.66),
+            (0.50, 0.18, 0.50), (0.67, 0.16, 0.62), (0.83, 0.17, 0.44),
         ]
         for b in buildings {
             let bx = w * b.x, bw = w * b.w, bt = h * b.top
