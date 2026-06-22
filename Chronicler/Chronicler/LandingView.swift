@@ -104,76 +104,84 @@ struct LandingView: View {
     }
 }
 
-// A light→saturated hue pair for a vector flower's petals (ported from the web app's
-// FLOWER_HUES). The petal radial gradient runs light→dark; rose is the default.
+// A ROSE-family hue triple (light edge → mid → deep throat) for a vector flower's
+// petals (mirrors the web app's FLOWER_HUES). Outer/mid petals use light→mid; inner
+// petals + center use mid→deep for a shadowed throat. `rose` is the default.
 enum FlowerHue: CaseIterable {
-    case rose, gold, lilac, white, coral
+    case rose, red, blush, crimson, coral
     var light: Color {
         switch self {
-        case .rose:  return Color(hex: 0xffd6e6)
-        case .gold:  return Color(hex: 0xfff0bf)
-        case .lilac: return Color(hex: 0xecd6ff)
-        case .white: return Color(hex: 0xffffff)
-        case .coral: return Color(hex: 0xffd9bf)
+        case .rose:    return Color(hex: 0xFFD9E8)
+        case .red:     return Color(hex: 0xFF9FB2)
+        case .blush:   return Color(hex: 0xFFE6EE)
+        case .crimson: return Color(hex: 0xFF86A4)
+        case .coral:   return Color(hex: 0xFFC1C0)
         }
     }
-    var dark: Color {
+    var mid: Color {
         switch self {
-        case .rose:  return Color(hex: 0xff4f8e)
-        case .gold:  return Color(hex: 0xffa61f)
-        case .lilac: return Color(hex: 0x9b54ff)
-        case .white: return Color(hex: 0xcfe0e6)
-        case .coral: return Color(hex: 0xff6a3c)
+        case .rose:    return Color(hex: 0xF0497F)
+        case .red:     return Color(hex: 0xE21F3C)
+        case .blush:   return Color(hex: 0xFF8FB0)
+        case .crimson: return Color(hex: 0xC81545)
+        case .coral:   return Color(hex: 0xFF5A6E)
+        }
+    }
+    var deep: Color {
+        switch self {
+        case .rose:    return Color(hex: 0xA81450)
+        case .red:     return Color(hex: 0x860F24)
+        case .blush:   return Color(hex: 0xD2658A)
+        case .crimson: return Color(hex: 0x760A2A)
+        case .coral:   return Color(hex: 0xA01530)
         }
     }
 }
 
-// A hand-built VECTOR bloom (no emoji), ported from the web app's <Flower> SVG: a
-// golden gradient center ringed by tall gradient-shaded petals, with a second smaller
-// offset ring for fullness. Drawn in a 100x100 unit space and scaled to `.frame`.
-// `petals` controls density (web default 13).
+// A hand-built VECTOR ROSE (no emoji), mirroring the web app's <Flower> SVG: a top-down
+// rose of concentric rings of broad, rounded, overlapping petals that get smaller and
+// darker toward the center, finished with a small rolled-bud center dot. NO golden disc.
+// Drawn in a 100x100 unit space and scaled to `.frame`. `petals` is accepted for call
+// compatibility but the ring counts are fixed for a rose look.
 struct Flower: View {
     var hue: FlowerHue = .rose
-    var petals: Int = 13
+    var petals: Int = 13   // unused for shape; kept for call-site compatibility
 
-    // Petal radial gradient: light core → saturated edge (matches web cx 50% cy 84%).
-    private var petalFill: RadialGradient {
+    // Outer/mid petals: light edge → mid (cx 50% cy 50%).
+    private var petalFillLight: RadialGradient {
         RadialGradient(
             gradient: Gradient(stops: [
                 .init(color: hue.light, location: 0.0),
-                .init(color: hue.dark,  location: 0.62),
-                .init(color: hue.dark.opacity(0.85), location: 1.0),
+                .init(color: hue.mid,   location: 1.0),
             ]),
-            center: UnitPoint(x: 0.5, y: 0.84), startRadius: 0, endRadius: 0.78 * 100)
+            center: .center, startRadius: 0, endRadius: 0.55 * 100)
     }
-    // Golden textured center (#ffe784 → #f0a800 → #9c6400).
-    private var centerFill: RadialGradient {
+    // Inner petals + center: mid → deep, for a shadowed rose throat.
+    private var petalFillDeep: RadialGradient {
         RadialGradient(
             gradient: Gradient(stops: [
-                .init(color: Color(hex: 0xffe784), location: 0.0),
-                .init(color: Color(hex: 0xf0a800), location: 0.55),
-                .init(color: Color(hex: 0x9c6400), location: 1.0),
+                .init(color: hue.mid,  location: 0.0),
+                .init(color: hue.deep, location: 1.0),
             ]),
-            center: UnitPoint(x: 0.5, y: 0.42), startRadius: 0, endRadius: 0.62 * 26)
+            center: .center, startRadius: 0, endRadius: 0.55 * 100)
     }
 
     var body: some View {
         GeometryReader { geo in
             let s = min(geo.size.width, geo.size.height) / 100   // unit (100) → points
             ZStack {
-                ring(count: petals, ry: 26, cy: 26, rot: 0, scale: s)
-                ring(count: petals, ry: 19, cy: 33, rot: 360 / Double(petals) / 2, scale: s)
-                // Golden center.
-                Circle().fill(centerFill)
-                    .frame(width: 26 * s, height: 26 * s)
+                // outer 8 — broad rounded petals, light→mid
+                ring(count: 8, rx: 13,  ry: 19, radius: 20, rot: 0,  fill: petalFillLight, scale: s)
+                // mid 7 — slightly smaller, offset, light→mid
+                ring(count: 7, rx: 11,  ry: 16, radius: 26, rot: 25, fill: petalFillLight, scale: s)
+                // inner 6 — smaller, darker (mid→deep)
+                ring(count: 6, rx: 9.5, ry: 13, radius: 32, rot: 12, fill: petalFillDeep, scale: s)
+                // center cluster 5 — smallest, darkest (mid→deep)
+                ring(count: 5, rx: 7,   ry: 10, radius: 38, rot: 40, fill: petalFillDeep, scale: s)
+                // rolled-bud center dot
+                Circle().fill(hue.deep)
+                    .frame(width: 9 * s, height: 9 * s)
                     .position(x: 50 * s, y: 50 * s)
-                // Stamen dots.
-                ForEach(0..<10, id: \.self) { k in
-                    Circle().fill(Color(hex: 0x7a4e00).opacity(0.5))
-                        .frame(width: 3 * s, height: 3 * s)
-                        .position(x: (50 + 7 * cos(Double(k) * 2.4)) * s,
-                                  y: (50 + 7 * sin(Double(k) * 2.4)) * s)
-                }
             }
             .frame(width: 100 * s, height: 100 * s)
         }
@@ -181,13 +189,15 @@ struct Flower: View {
         .shadow(color: .black.opacity(0.45), radius: 4, y: 4)   // matches web drop-shadow
     }
 
-    // One ring of `count` tall petals (Ellipse, rx ≈ 0.38*ry) rotated around the center.
+    // One ring of `count` broad rounded petals (Ellipse rx<ry) pointing outward. Each
+    // petal sits `radius` units above center, then is rotated about center to fan around.
     @ViewBuilder
-    private func ring(count: Int, ry: Double, cy: Double, rot: Double, scale s: CGFloat) -> some View {
+    private func ring(count: Int, rx: Double, ry: Double, radius: Double, rot: Double,
+                      fill: RadialGradient, scale s: CGFloat) -> some View {
         ForEach(0..<count, id: \.self) { k in
-            Ellipse().fill(petalFill).opacity(0.95)
-                .frame(width: ry * 0.38 * 2 * s, height: ry * 2 * s)
-                .position(x: 50 * s, y: cy * s)   // anchored above center, then rotated about center
+            Ellipse().fill(fill).opacity(0.96)
+                .frame(width: rx * 2 * s, height: ry * 2 * s)
+                .position(x: 50 * s, y: (50 - radius) * s)   // above center, then rotated about center
                 .rotationEffect(.degrees(rot + (360 / Double(count)) * Double(k)),
                                 anchor: .center)
         }
@@ -207,13 +217,13 @@ private struct GardenFlowerBackground: View {
         let phase: Double        // sway offset
         let reverse: Bool
     }
-    // rose / gold / lilac / coral / white — large, edges bleeding off-screen.
+    // rose-family only — large roses, edges bleeding off-screen.
     private let blooms: [Bloom] = [
-        Bloom(hue: .rose,  petals: 13, widthFrac: 0.62, x: -0.02, y: 0.02, phase: 0.0, reverse: false),
-        Bloom(hue: .gold,  petals: 15, widthFrac: 0.44, x: 1.02,  y: 0.28, phase: 1.1, reverse: true),
-        Bloom(hue: .lilac, petals: 13, widthFrac: 0.50, x: 0.40,  y: 1.02, phase: 2.0, reverse: false),
-        Bloom(hue: .coral, petals: 13, widthFrac: 0.36, x: -0.04, y: 0.52, phase: 0.7, reverse: true),
-        Bloom(hue: .white, petals: 14, widthFrac: 0.38, x: 0.42,  y: 0.34, phase: 1.6, reverse: false),
+        Bloom(hue: .rose,    petals: 13, widthFrac: 0.62, x: -0.02, y: 0.02, phase: 0.0, reverse: false),
+        Bloom(hue: .red,     petals: 15, widthFrac: 0.44, x: 1.02,  y: 0.28, phase: 1.1, reverse: true),
+        Bloom(hue: .crimson, petals: 13, widthFrac: 0.50, x: 0.40,  y: 1.02, phase: 2.0, reverse: false),
+        Bloom(hue: .coral,   petals: 13, widthFrac: 0.36, x: -0.04, y: 0.52, phase: 0.7, reverse: true),
+        Bloom(hue: .blush,   petals: 14, widthFrac: 0.38, x: 0.42,  y: 0.34, phase: 1.6, reverse: false),
     ]
 
     var body: some View {
@@ -256,11 +266,11 @@ private struct FallingPetals: View {
         let opacity: Double
     }
     private let petals: [Petal] = [
-        Petal(hue: .rose,  size: 34, xFrac: 0.14, period: 16, swayAmp: 26, spinPeriod: 9,  cw: true,  opacity: 0.55),
-        Petal(hue: .gold,  size: 30, xFrac: 0.38, period: 21, swayAmp: 34, spinPeriod: 12, cw: false, opacity: 0.5),
-        Petal(hue: .lilac, size: 42, xFrac: 0.6,  period: 18, swayAmp: 30, spinPeriod: 11, cw: true,  opacity: 0.5),
-        Petal(hue: .white, size: 38, xFrac: 0.82, period: 24, swayAmp: 28, spinPeriod: 14, cw: false, opacity: 0.55),
-        Petal(hue: .coral, size: 46, xFrac: 0.5,  period: 19, swayAmp: 38, spinPeriod: 10, cw: true,  opacity: 0.45),
+        Petal(hue: .rose,    size: 34, xFrac: 0.14, period: 16, swayAmp: 26, spinPeriod: 9,  cw: true,  opacity: 0.55),
+        Petal(hue: .red,     size: 30, xFrac: 0.38, period: 21, swayAmp: 34, spinPeriod: 12, cw: false, opacity: 0.5),
+        Petal(hue: .crimson, size: 42, xFrac: 0.6,  period: 18, swayAmp: 30, spinPeriod: 11, cw: true,  opacity: 0.5),
+        Petal(hue: .blush,   size: 38, xFrac: 0.82, period: 24, swayAmp: 28, spinPeriod: 14, cw: false, opacity: 0.55),
+        Petal(hue: .coral,   size: 46, xFrac: 0.5,  period: 19, swayAmp: 38, spinPeriod: 10, cw: true,  opacity: 0.45),
     ]
 
     var body: some View {
@@ -335,9 +345,9 @@ private struct VineGrowOverlay: View {
         Vine(xFraction: 0.16, heightFraction: 0.34, width: 80, sway:  1.0,
              hue: .rose, leaves: [0.32, 0.62]),
         Vine(xFraction: 0.84, heightFraction: 0.42, width: 90, sway: -1.0,
-             hue: .white, leaves: [0.28, 0.55, 0.78]),
+             hue: .crimson, leaves: [0.28, 0.55, 0.78]),
         Vine(xFraction: 0.50, heightFraction: 0.28, width: 70, sway:  0.5,
-             hue: .gold, leaves: [0.40, 0.70]),
+             hue: .red, leaves: [0.40, 0.70]),
     ]
 
     private let growDuration: Double = 3.0
