@@ -14,7 +14,10 @@ struct LandingView: View {
             ThemedBackground(intensity: 2.2)   // homepage should be buzzin
 
             // Garden: a few drifting petals/leaves on the backdrop (no electricity).
-            if themeStore.mode == .garden { PetalDrift() }
+            if themeStore.mode == .garden {
+                PetalDrift()
+                BloomOverlay()   // flowers bloom open on appear (garden only)
+            }
 
             // Gear corners (⚙ in tl/tr/bl/br)
             VStack {
@@ -145,6 +148,51 @@ private struct PetalDrift: View {
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
+    }
+}
+
+// Garden-only: flowers bloom open on appear. Each glyph is positioned around the
+// edges/corners (so it doesn't cover the main controls) and springs from a closed
+// bud (scale 0) past a slight overshoot to full size, with a small rotation and a
+// staggered start delay. Blooms once and holds. Non-interactive (no tap blocking).
+private struct BloomOverlay: View {
+    // glyph, relative position (0..1), size, target rotation degrees, stagger delay
+    private struct Flower {
+        let glyph: String
+        let x: CGFloat
+        let y: CGFloat
+        let size: CGFloat
+        let rotation: Double
+        let delay: Double
+    }
+    private let flowers: [Flower] = [
+        Flower(glyph: "🌸", x: 0.10, y: 0.12, size: 40, rotation: -12, delay: 0.10),
+        Flower(glyph: "🌷", x: 0.90, y: 0.14, size: 38, rotation:  10, delay: 0.30),
+        Flower(glyph: "🌼", x: 0.08, y: 0.86, size: 36, rotation:  14, delay: 0.50),
+        Flower(glyph: "🌺", x: 0.92, y: 0.84, size: 42, rotation: -10, delay: 0.70),
+        Flower(glyph: "🌻", x: 0.50, y: 0.06, size: 34, rotation:   8, delay: 0.90),
+    ]
+    @State private var bloomed = false
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                ForEach(flowers.indices, id: \.self) { i in
+                    let f = flowers[i]
+                    Text(f.glyph)
+                        .font(.system(size: f.size))
+                        .scaleEffect(bloomed ? 1.0 : 0.0)
+                        .rotationEffect(.degrees(bloomed ? f.rotation : -90))
+                        .position(x: geo.size.width * f.x, y: geo.size.height * f.y)
+                        .animation(
+                            .spring(response: 0.6, dampingFraction: 0.6).delay(f.delay),
+                            value: bloomed)
+                }
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .onAppear { bloomed = true }
     }
 }
 
