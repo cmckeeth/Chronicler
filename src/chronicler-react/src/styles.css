@@ -1,6 +1,6 @@
 /* ── Imports ──────────────────────────────────────────────────────────────── */
 /* Steampunk: Cinzel/Lora (Victorian serif).  Tesla: Orbitron/Rajdhani (techno). */
-@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Caveat:wght@500;700&display=swap');
 
 /* ── Variables ────────────────────────────────────────────────────────────── */
 /* ══ DEFAULT = TESLA: electric, futuristic — cold steel-blue, neon, glass ══════
@@ -103,6 +103,54 @@
     --elec-spark: #ffe8a0;
 }
 
+/* ── Garden theme: verdant greens, floral accents, soft organic shapes ─────── */
+:root[data-theme="garden"] {
+    /* Deep garden-at-dusk greens */
+    --bg:           #0b1410;
+    --bg2:          #0f1c14;
+    --leather:      #12241a;   /* rich soil */
+    --surface:      #16301f;
+    --surface2:     #1d3d28;
+    --surface3:     #245031;
+    --border:       #2f5c3c;
+    --border-brass: #6fae5f;   /* leaf-stem trim */
+    /* "Metal" family reimagined as fresh foliage green */
+    --brass:        #8bd450;
+    --brass-light:  #b6f07a;
+    --brass-pale:   #e2ffc0;
+    --copper:       #e88fa8;   /* petal coral */
+    --copper-light: #ffb0c8;
+    --rust:         #d4564a;   /* poppy red */
+    --parchment:    #f0f7e8;   /* soft cream-green text */
+    --parchment-mid:#cfe4b8;
+    --parchment-dim:#9bbf88;
+    --ink:          #08130c;
+    --glow-brass:   0 0 16px #8bd45080, 0 0 32px #8bd45033;
+    --glow-copper:  0 0 12px #e88fa870;
+    --radius:       16px;       /* soft, organic rounding */
+    /* Friendly, organic type: handwritten wordmark + rounded humanist body */
+    --font-display: 'Caveat', 'Segoe UI', cursive;
+    --font-serif:   'Quicksand', 'Segoe UI', sans-serif;
+    --font-body:    'Quicksand', 'Segoe UI', system-ui, sans-serif;
+    /* Solid leafy panels, lush covers, no glass */
+    --metal-hi:    210,255,180;
+    --tint:        124,194,74;
+    --panel-bg:    var(--surface);
+    --panel-blur:  none;
+    --cover-filter: saturate(1.12) contrast(1.03) brightness(1.0);
+    /* Accent = floral bloom (badges, active chapter, chips) */
+    --verdigris:      #ff8fb8;
+    --verdigris-rgb:  255,143,184;
+    /* Heading + panel halo = soft green bloom */
+    --glow-verdigris: 0 0 16px #7cc24acc, 0 0 36px #7cc24a55;
+    /* Gentle green "energy" channels — calm, no harsh spark (de-electrified below) */
+    --elec-1: 200,255,180;
+    --elec-2: 124,194,74;
+    --elec-3: 90,150,60;
+    --elec-4: 160,220,120;
+    --elec-spark: #eaffd0;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    STEAMPUNK MODE — gears + literal steam, zero electricity
    Everything here is scoped under [data-theme="steampunk"] so Tesla is untouched.
@@ -193,6 +241,88 @@
     [data-theme="steampunk"] .gear,
     [data-theme="steampunk"] .steam { animation: none; }
     [data-theme="steampunk"] .steam { opacity: .12; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GARDEN MODE — vines + drifting petals, soft organic calm (no electricity)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* No harsh electric pulse — a gentle, steady leafy bloom instead */
+[data-theme="garden"] .btn-primary:hover,
+[data-theme="garden"] .btn-primary:focus,
+[data-theme="garden"] .btn-primary:active,
+[data-theme="garden"] .btn-secondary:hover,
+[data-theme="garden"] .btn-secondary:active,
+[data-theme="garden"] .book-card:hover,
+[data-theme="garden"] .book-card:active,
+[data-theme="garden"] .btn-play:hover,
+[data-theme="garden"] .btn-play:active,
+[data-theme="garden"] .btn-icon:hover,
+[data-theme="garden"] .btn-icon:active,
+[data-theme="garden"] input:focus,
+[data-theme="garden"] select:focus {
+    animation: none !important;
+    box-shadow: var(--glow-brass), var(--shadow-deep);
+    filter: brightness(1.05);
+}
+[data-theme="garden"] .chapter-active .chapter-title,
+[data-theme="garden"] .chapter-item:hover .chapter-title,
+[data-theme="garden"] .playing-badge {
+    animation: none !important;
+    text-shadow: 0 0 8px rgba(var(--verdigris-rgb), .5);
+}
+/* Extra-soft rounding for the organic feel */
+[data-theme="garden"] .book-card,
+[data-theme="garden"] .chip { border-radius: 14px; }
+[data-theme="garden"] .chip { border-radius: 16px; }
+
+/* Vines + petals backdrop (always in DOM, shown only for garden) */
+.garden-fx { display: none; }
+[data-theme="garden"] .garden-fx {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    overflow: hidden;
+    pointer-events: none;
+}
+/* Climbing vines framing the corners (emoji keep their natural foliage color) */
+[data-theme="garden"] .vine {
+    position: absolute;
+    font-size: 9rem;
+    opacity: .5;
+    line-height: 1;
+    filter: drop-shadow(0 2px 6px #000);
+}
+[data-theme="garden"] .vine-tl { top: -2.5rem; left: -2rem;  transform: rotate(15deg); }
+[data-theme="garden"] .vine-tr { top: -2.5rem; right: -2rem; transform: scaleX(-1) rotate(15deg); }
+[data-theme="garden"] .vine-bl { bottom: -2.5rem; left: -2rem;  transform: scaleY(-1) rotate(15deg); }
+[data-theme="garden"] .vine-br { bottom: -2.5rem; right: -2rem; transform: scale(-1) rotate(15deg); }
+
+/* Petals drifting down, swaying and slowly spinning */
+[data-theme="garden"] .petal {
+    position: absolute;
+    top: -3rem;
+    font-size: 1.5rem;
+    opacity: 0;
+    will-change: transform, opacity;
+}
+[data-theme="garden"] .petal-1 { left:  8%; animation: petal-fall 13s linear infinite;        }
+[data-theme="garden"] .petal-2 { left: 28%; animation: petal-fall 17s linear infinite 4s;     }
+[data-theme="garden"] .petal-3 { left: 47%; animation: petal-fall 11s linear infinite 2s;     }
+[data-theme="garden"] .petal-4 { left: 66%; animation: petal-fall 15s linear infinite 6s;     }
+[data-theme="garden"] .petal-5 { left: 85%; animation: petal-fall 19s linear infinite 1.5s;   }
+
+@keyframes petal-fall {
+    0%   { transform: translateY(-3rem)  translateX(0)    rotate(0deg);   opacity: 0;   }
+    10%  {                                                                opacity: .9;  }
+    50%  { transform: translateY(45vh)   translateX(4rem) rotate(220deg); opacity: .8;  }
+    90%  {                                                                opacity: .55; }
+    100% { transform: translateY(102vh)  translateX(-2rem) rotate(430deg); opacity: 0;  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-theme="garden"] .petal { animation: none; opacity: 0; }
 }
 
 /* ── Reset ────────────────────────────────────────────────────────────────── */

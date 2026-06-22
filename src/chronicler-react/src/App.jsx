@@ -28,6 +28,23 @@ function SteampunkFX() {
   );
 }
 
+// Garden-only decorative backdrop: corner vines + drifting petals.
+function GardenFX() {
+  return (
+    <div className="garden-fx" aria-hidden="true">
+      <span className="vine vine-tl">🌿</span>
+      <span className="vine vine-tr">🌿</span>
+      <span className="vine vine-bl">🌿</span>
+      <span className="vine vine-br">🌿</span>
+      <span className="petal petal-1">🌸</span>
+      <span className="petal petal-2">🌷</span>
+      <span className="petal petal-3">🍃</span>
+      <span className="petal petal-4">🌺</span>
+      <span className="petal petal-5">🌸</span>
+    </div>
+  );
+}
+
 function CornerControls() {
   const [theme, setTheme] = useState(() => localStorage.getItem('chronicler_theme') || 'tesla');
   useEffect(() => {
@@ -48,6 +65,7 @@ function CornerControls() {
       >
         <option value="tesla">⚡ Tesla</option>
         <option value="steampunk">⚙ Steampunk</option>
+        <option value="garden">🌿 Garden</option>
       </select>
     </div>
   );
@@ -57,6 +75,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <SteampunkFX />
+      <GardenFX />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Protected><Library /></Protected>} />
