@@ -34,12 +34,21 @@ import androidx.navigation.NavController
 import kotlinx.coroutines.delay
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import kotlin.math.sin
 
 @Composable
 fun LandingScreen(auth: AuthStore, nav: NavController) {
@@ -103,6 +112,62 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
 
         // Garden-only: vines grow up, then a flower blooms slowly at each tip.
         if (Theme.themeMode == ThemeMode.GARDEN) VineGrowOverlay()
+
+        // Steampunk-only: lush rising steam plumes drifting over everything (non-interactive).
+        if (Theme.themeMode == ThemeMode.STEAMPUNK) SteamOverlay()
+    }
+}
+
+// STEAMPUNK only: ~9 soft steam plumes rising from the bottom edge, billowing up the
+// full screen. Each plume is a blurred white/cream radial-gradient blob whose y rises,
+// radius grows and alpha fades over a looping progress. Several timelines with different
+// durations/phases keep it from pulsing in unison. Non-interactive (no clickable).
+@Composable
+private fun SteamOverlay() {
+    val transition = rememberInfiniteTransition(label = "steam")
+    // A few independent looping timelines so plumes don't all rise in lockstep.
+    val p1 by transition.animateFloat(0f, 1f,
+        infiniteRepeatable(tween(7000, easing = LinearEasing), RepeatMode.Restart), label = "s1")
+    val p2 by transition.animateFloat(0f, 1f,
+        infiniteRepeatable(tween(9000, easing = LinearEasing), RepeatMode.Restart), label = "s2")
+    val p3 by transition.animateFloat(0f, 1f,
+        infiniteRepeatable(tween(11000, easing = LinearEasing), RepeatMode.Restart), label = "s3")
+    val timelines = listOf(p1, p2, p3)
+
+    val plumes = 9
+    val cream = Color(0xFFFFF6E6)
+
+    Canvas(Modifier.fillMaxSize().blur(24.dp)) {
+        val w = size.width; val h = size.height
+        for (i in 0 until plumes) {
+            // Stagger each plume's phase so the column is always populated.
+            val phase = i / plumes.toFloat()
+            val raw = timelines[i % timelines.size] + phase
+            val prog = raw - kotlin.math.floor(raw)   // 0..1 looping
+
+            // Spread plumes across the width with a small horizontal sway as they rise.
+            val baseX = w * ((i + 0.5f) / plumes)
+            val sway = sin((prog + phase) * 6.2831853f) * w * 0.04f
+            val x = baseX + sway
+
+            // Rise from just below the bottom to above the top.
+            val y = h * (1.08f - 1.28f * prog)
+
+            // Grow as it rises.
+            val radius = w * (0.10f + 0.22f * prog)
+
+            // Fade in quickly, then fade out toward the top (peak ~0.55).
+            val fadeIn = (prog / 0.18f).coerceAtMost(1f)
+            val fadeOut = ((1f - prog) / 0.55f).coerceAtMost(1f)
+            val alpha = 0.55f * fadeIn * fadeOut
+            if (alpha <= 0.01f) continue
+
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(cream.copy(alpha = alpha), cream.copy(alpha = 0f)),
+                    center = Offset(x, y), radius = radius),
+                radius = radius, center = Offset(x, y))
+        }
     }
 }
 
