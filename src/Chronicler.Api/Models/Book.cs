@@ -14,5 +14,9 @@ public class Book
     public double DurationSeconds { get; set; }
     public DateTime AddedAt { get; set; } = DateTime.UtcNow;
 
+    // Null = standalone (top-level) book. Set = belongs to a Collection.
+    public int? CollectionId { get; set; }
+    public Collection? Collection { get; set; }
+
     public ICollection<Chapter> Chapters { get; set; } = [];
 }

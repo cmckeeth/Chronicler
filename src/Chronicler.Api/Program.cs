@@ -155,7 +155,7 @@ app.MapGet("/api/auth/me", (ClaimsPrincipal principal) =>
 
 // ── Books ─────────────────────────────────────────────────────────────────────
 
-app.MapGet("/api/books", [Authorize] async (string? q, ClaimsPrincipal principal, AppDbContext db) =>
+app.MapGet("/api/books", [Authorize] async (string? q, bool? root, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var userId = UserId(principal);
     var query = db.Books.AsQueryable();
@@ -165,6 +165,10 @@ app.MapGet("/api/books", [Authorize] async (string? q, ClaimsPrincipal principal
             b.Author.ToLower().Contains(q.ToLower()) ||
             (b.Narrator != null && b.Narrator.ToLower().Contains(q.ToLower())));
 
+    // root=true → only top-level (standalone) books, i.e. not inside a collection.
+    // Used by the library grid so collection books aren't shown twice.
+    if (root == true) query = query.Where(b => b.CollectionId == null);
+
     var books = await query
         .OrderBy(b => b.Author).ThenBy(b => b.Title)
         .Select(b => new BookDto(
@@ -173,10 +177,68 @@ app.MapGet("/api/books", [Authorize] async (string? q, ClaimsPrincipal principal
             b.Chapters.Count(),
             b.Chapters.Count(c => c.Progresses.Any(p => p.UserId == userId && p.IsListened)),
             b.Year,
-            db.UserBookFavorites.Any(f => f.UserId == userId && f.BookId == b.Id)))
+            db.UserBookFavorites.Any(f => f.UserId == userId && f.BookId == b.Id),
+            b.CollectionId))
         .ToListAsync();
 
     return Results.Ok(books);
+});
+
+// ── Collections ───────────────────────────────────────────────────────────────
+
+app.MapGet("/api/collections", [Authorize] async (AppDbContext db) =>
+{
+    var cols = await db.Collections
+        .OrderBy(c => c.Name)
+        .Select(c => new CollectionDto(c.Id, c.Name, c.CoverData != null, c.Books.Count(), c.AddedAt))
+        .ToListAsync();
+    return Results.Ok(cols);
+});
+
+app.MapGet("/api/collections/{id:int}", [Authorize] async (int id, AppDbContext db) =>
+{
+    var c = await db.Collections.FindAsync(id);
+    return c is null
+        ? Results.NotFound()
+        : Results.Ok(new CollectionDto(c.Id, c.Name, c.CoverData != null, await db.Books.CountAsync(b => b.CollectionId == id), c.AddedAt));
+});
+
+app.MapGet("/api/collections/{id:int}/books", [Authorize] async (int id, ClaimsPrincipal principal, AppDbContext db) =>
+{
+    var userId = UserId(principal);
+    var books = await db.Books
+        .Where(b => b.CollectionId == id)
+        .OrderBy(b => b.Author).ThenBy(b => b.Title)
+        .Select(b => new BookDto(
+            b.Id, b.Title, b.Author, b.Narrator, b.DurationSeconds,
+            b.CoverData != null, b.AddedAt,
+            b.Chapters.Count(),
+            b.Chapters.Count(c => c.Progresses.Any(p => p.UserId == userId && p.IsListened)),
+            b.Year,
+            db.UserBookFavorites.Any(f => f.UserId == userId && f.BookId == b.Id),
+            b.CollectionId))
+        .ToListAsync();
+    return Results.Ok(books);
+});
+
+// Collection cover: its own cover.* if present, else fall back to its first book's cover.
+app.MapGet("/api/collections/{id:int}/cover", async (int id, HttpContext ctx, AppDbContext db) =>
+{
+    var col = await db.Collections.Where(c => c.Id == id)
+        .Select(c => new { c.CoverData, c.CoverMimeType }).FirstOrDefaultAsync();
+    byte[]? data = col?.CoverData;
+    string? mime = col?.CoverMimeType;
+    if (data is null || data.Length == 0)
+    {
+        var bk = await db.Books.Where(b => b.CollectionId == id && b.CoverData != null)
+            .OrderBy(b => b.Title)
+            .Select(b => new { b.CoverData, b.CoverMimeType }).FirstOrDefaultAsync();
+        data = bk?.CoverData; mime = bk?.CoverMimeType;
+    }
+    if (data is null || data.Length == 0) return Results.NotFound();
+    ctx.Response.Headers["Cache-Control"] = "public, max-age=86400";
+    ctx.Response.Headers["ETag"] = $"\"col-{id}-{data.Length}\"";
+    return Results.File(data, mime ?? "image/jpeg");
 });
 
 app.MapGet("/api/books/{id:int}", [Authorize] async (int id, ClaimsPrincipal principal, AppDbContext db) =>
@@ -186,7 +248,7 @@ app.MapGet("/api/books/{id:int}", [Authorize] async (int id, ClaimsPrincipal pri
     if (b is null) return Results.NotFound();
     var isFav = await db.UserBookFavorites.FindAsync(uid, id) is not null;
     return Results.Ok(new BookDto(b.Id, b.Title, b.Author, b.Narrator, b.DurationSeconds,
-        b.CoverData != null, b.AddedAt, 0, 0, b.Year, isFav));
+        b.CoverData != null, b.AddedAt, 0, 0, b.Year, isFav, b.CollectionId));
 });
 
 app.MapGet("/api/books/{id:int}/cover", async (int id, HttpContext ctx, AppDbContext db) =>
@@ -687,7 +749,9 @@ record LoginRequest(string Email, string Password);
 record BookUpdateRequest(string? Title, string? Author, string? Narrator, string? Description);
 record DiagMessage(string Message);
 record BookDto(int Id, string Title, string Author, string? Narrator, double DurationSeconds,
-    bool HasCover, DateTime AddedAt, int ChapterCount = 0, int ListenedCount = 0, int? Year = null, bool IsFavorite = false);
+    bool HasCover, DateTime AddedAt, int ChapterCount = 0, int ListenedCount = 0, int? Year = null, bool IsFavorite = false,
+    int? CollectionId = null);
+record CollectionDto(int Id, string Name, bool HasCover, int BookCount, DateTime AddedAt);
 record ChapterDto(int Id, int BookId, string Title, int TrackNumber);
 record BookMetaRequest(string? Title, string? Author, string? Narrator, string? Description, int? Year);
 record ChapterProgressRequest(double PositionSeconds, double DurationSeconds);

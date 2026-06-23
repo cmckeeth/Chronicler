@@ -10,6 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<Chapter> Chapters => Set<Chapter>();
     public DbSet<ChapterProgress> ChapterProgresses => Set<ChapterProgress>();
     public DbSet<UserBookFavorite> UserBookFavorites => Set<UserBookFavorite>();
+    public DbSet<Collection> Collections => Set<Collection>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -37,5 +38,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
 
         builder.Entity<UserBookFavorite>()
             .HasKey(f => new { f.UserId, f.BookId });
+
+        builder.Entity<Collection>()
+            .HasIndex(c => c.FolderPath).IsUnique();
+
+        builder.Entity<Book>()
+            .HasOne(b => b.Collection)
+            .WithMany(c => c.Books)
+            .HasForeignKey(b => b.CollectionId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
