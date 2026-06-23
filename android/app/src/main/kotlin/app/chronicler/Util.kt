@@ -140,7 +140,12 @@ object StartupSound {
         if (played) return
         played = true
         runCatching {
-            MediaPlayer.create(context, R.raw.startup)?.apply {
+            // Per-theme sound (startup_tesla / startup_steampunk / startup_garden); fall
+            // back to the generic startup.mp3 if a themed raw resource isn't present yet.
+            val themed = context.resources.getIdentifier(
+                "startup_${Theme.themeMode.name.lowercase()}", "raw", context.packageName)
+            val resId = if (themed != 0) themed else R.raw.startup
+            MediaPlayer.create(context, resId)?.apply {
                 setOnCompletionListener { it.release() }
                 start()
             }

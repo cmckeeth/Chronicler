@@ -127,7 +127,11 @@ final class StartupSound {
     func play() {
         guard !played else { return }
         played = true
-        guard let url = Bundle.main.url(forResource: "startup", withExtension: "mp3") else { return }
+        // Per-theme sound (startup_tesla / startup_steampunk / startup_garden); fall back
+        // to the generic startup.mp3 if a themed file isn't bundled yet.
+        let themed = "startup_\(Theme.mode.rawValue)"
+        guard let url = Bundle.main.url(forResource: themed, withExtension: "mp3")
+                ?? Bundle.main.url(forResource: "startup", withExtension: "mp3") else { return }
         try? AVAudioSession.sharedInstance().setCategory(.ambient)
         player = try? AVAudioPlayer(contentsOf: url)
         player?.play()
