@@ -389,21 +389,45 @@ app.MapPut("/api/books/{id:int}/cover/upload", [Authorize] async (int id, HttpRe
     // Persist the upload as cover.<ext> in the book's folder so the scanner (and every
     // platform that reads covers) keeps it — otherwise a rescan, which syncs covers from
     // disk, would clear a DB-only cover.
+    string? coverPath = null;
+    bool fileWritten = false;
+    string? fileError = null;
     try
     {
         var bookDir = Path.GetDirectoryName(Path.Combine(scanner.LibraryRoot, book.FilePath));
-        if (bookDir is not null && Directory.Exists(bookDir))
+        if (bookDir is null || !Directory.Exists(bookDir))
+        {
+            fileError = $"book folder not found on disk: {bookDir}";
+        }
+        else
         {
             var ext = mime switch { "image/png" => ".png", "image/webp" => ".webp", "image/gif" => ".gif", _ => ".jpg" };
+            // Remove any existing cover.* first. Clear the read-only attribute so a delete
+            // of a file written by another user/process can still succeed where permitted.
             foreach (var old in Directory.GetFiles(bookDir)
                 .Where(f => Path.GetFileNameWithoutExtension(f).Equals("cover", StringComparison.OrdinalIgnoreCase)))
-                try { File.Delete(old); } catch { /* ignore */ }
-            await File.WriteAllBytesAsync(Path.Combine(bookDir, "cover" + ext), bytes);
+            {
+                try { File.SetAttributes(old, FileAttributes.Normal); } catch { /* best effort */ }
+                File.Delete(old);   // let a real failure surface (no longer swallowed)
+            }
+            coverPath = Path.Combine(bookDir, "cover" + ext);
+            // FileMode.Create truncates/replaces; creating a fresh file avoids needing
+            // write permission on a pre-existing file owned by someone else.
+            await using (var fs = new FileStream(coverPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                await fs.WriteAsync(bytes);
+            fileWritten = true;
         }
     }
-    catch (Exception ex) { app.Logger.LogWarning(ex, "Could not write cover file for book {Id}", id); }
+    catch (Exception ex)
+    {
+        fileError = ex.Message;
+        app.Logger.LogError(ex, "Could not write cover file for book {Id} at {Path}", id, coverPath);
+    }
 
-    return Results.Ok(new { hasCover = true });
+    if (!fileWritten)
+        app.Logger.LogWarning("Cover for book {Id} saved to DB but NOT written to disk: {Error}", id, fileError);
+
+    return Results.Ok(new { hasCover = true, fileWritten, coverPath, fileError });
 });
 
 

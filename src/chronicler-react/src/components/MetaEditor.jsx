@@ -49,11 +49,15 @@ export default function MetaEditor({ book, onClose, onSaved }) {
       if (coverFile) {
         const formData = new FormData();
         formData.append('cover', coverFile, coverFile.name);
-        await fetch(`/api/books/${book.id}/cover/upload`, {
+        const res = await fetch(`/api/books/${book.id}/cover/upload`, {
           method: 'PUT',
           headers: { 'Authorization': `Bearer ${localStorage.getItem('chronicler_token')}` },
           body: formData,
         });
+        const result = await res.json().catch(() => null);
+        if (result && result.fileWritten === false) {
+          alert(`Cover saved to the database, but the cover file could NOT be written to the audiobook folder:\n\n${result.fileError || 'unknown error'}\n\nPath: ${result.coverPath || '(book folder not found)'}`);
+        }
       }
 
       await onSaved();
