@@ -868,6 +868,9 @@ select {
     grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
     gap: 1.1rem;
 }
+.book-grid.fav-grid {
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
 
 .book-card {
     background: var(--panel-bg);
@@ -1427,6 +1430,8 @@ select {
     body::before { display: none; }
     /* Exactly 3 cards per row on phones — matches the native apps */
     .book-grid { grid-template-columns: repeat(3, 1fr); gap: .4rem; }
+    /* Favorites view: 2 per row */
+    .book-grid.fav-grid { grid-template-columns: repeat(2, 1fr); }
     .book-meta { padding: .3rem .4rem .35rem; }
     .book-title { font-size: .68rem; }
     .book-author { font-size: .62rem; }

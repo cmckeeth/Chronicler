@@ -12,8 +12,11 @@ struct ArchiveView: View {
     @State private var refreshing = false
     @State private var error: String?
 
-    // Fixed 3-up grid (phone): cards size to ~1/3 width, fonts unchanged.
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 16), count: 3)
+    // 3-up grid normally; 2-up when the favorites-only filter is on (Books tab).
+    private var columns: [GridItem] {
+        let cols = (favOnly && !showCollections) ? 2 : 3
+        return Array(repeating: GridItem(.flexible(), spacing: 16), count: cols)
+    }
 
     private var isSearching: Bool {
         !search.trimmingCharacters(in: .whitespaces).isEmpty

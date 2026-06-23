@@ -110,7 +110,7 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
                 else if (allBooks.isEmpty() && collections.isEmpty()) "The archive lies empty, traveller."
                 else "No volumes match this filter.",
                 Theme.parchmentDim)
-            else -> LazyVerticalGrid(columns = GridCells.Fixed(3),
+            else -> LazyVerticalGrid(columns = GridCells.Fixed(if (favOnly && tab == "books") 2 else 3),
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),

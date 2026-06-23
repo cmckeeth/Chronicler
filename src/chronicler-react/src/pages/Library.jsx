@@ -112,7 +112,7 @@ export default function Library() {
           <p>{books.length === 0 && collections.length === 0 ? 'The archive lies empty, traveller.' : 'No volumes match this filter.'}</p>
         </div>
       ) : (
-        <div className="book-grid">
+        <div className={`book-grid${tab==='books' && favOnly && !searching ? ' fav-grid' : ''}`}>
           {shownCollections.map(c => <CollectionCard key={`c-${c.id}`} collection={c} />)}
           {filtered.map(book => <BookCard key={book.id} book={book} onToggleFav={toggleFav} />)}
         </div>
