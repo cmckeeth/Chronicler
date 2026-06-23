@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { collectionsApi } from '../api';
 import CollectionCoverEditor from './CollectionCoverEditor';
@@ -35,14 +36,17 @@ export default function CollectionCard({ collection }) {
         <span className="book-author">{count} {count === 1 ? 'volume' : 'volumes'}</span>
       </div>
 
-      {showCover && (
-        <div onClick={e => e.stopPropagation()}>
+      {showCover && createPortal(
+        // Stop clicks inside the modal from bubbling (through the React tree) back to the
+        // card's onClick/onContextMenu, which would navigate into the collection.
+        <div onClick={e => e.stopPropagation()} onContextMenu={e => { e.preventDefault(); e.stopPropagation(); }}>
           <CollectionCoverEditor
             collection={collection}
             onClose={() => setShowCover(false)}
             onSaved={() => { setHasCover(true); setBust(`?t=${Date.now()}`); setShowCover(false); }}
           />
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
