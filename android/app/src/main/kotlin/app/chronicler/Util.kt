@@ -136,9 +136,16 @@ fun CollectionCover(collection: Collection, api: ApiClient, modifier: Modifier =
 // Startup sound (commit: "Play startup sound on app open").
 object StartupSound {
     private var played = false          // once per app launch, not every time Landing recomposes
+    // Once-per-launch chime (Landing).
     fun play(context: Context) {
         if (played) return
         played = true
+        playThemed(context)
+    }
+    // Replay on a theme switch, so each theme's sound is heard immediately.
+    fun playTheme(context: Context) = playThemed(context)
+
+    private fun playThemed(context: Context) {
         runCatching {
             // Per-theme sound (startup_tesla / startup_steampunk / startup_garden); fall
             // back to the generic startup.mp3 if a themed raw resource isn't present yet.

@@ -124,15 +124,22 @@ final class StartupSound {
     static let shared = StartupSound()
     private var player: AVAudioPlayer?
     private var played = false          // once per app launch, not every time Landing appears
-    func play() {
-        guard !played else { return }
-        played = true
+    // force == false: the once-per-launch chime (Landing onAppear).
+    // force == true: replay on a theme switch, so each theme's sound is heard immediately.
+    func play(force: Bool = false) {
+        if !force {
+            guard !played else { return }
+            played = true
+        }
         // Per-theme sound (startup_tesla / startup_steampunk / startup_garden); fall back
         // to the generic startup.mp3 if a themed file isn't bundled yet.
         let themed = "startup_\(Theme.mode.rawValue)"
         guard let url = Bundle.main.url(forResource: themed, withExtension: "mp3")
                 ?? Bundle.main.url(forResource: "startup", withExtension: "mp3") else { return }
-        try? AVAudioSession.sharedInstance().setCategory(.ambient)
+        // .playback (not .ambient) so the chime is heard even with the ring/silent switch
+        // on; mixWithOthers so it layers over any playing audio instead of stopping it.
+        try? AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
+        try? AVAudioSession.sharedInstance().setActive(true)
         player = try? AVAudioPlayer(contentsOf: url)
         player?.play()
     }

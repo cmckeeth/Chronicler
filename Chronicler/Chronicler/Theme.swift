@@ -116,6 +116,9 @@ final class ThemeStore: ObservableObject {
         didSet {
             Theme.mode = mode
             UserDefaults.standard.set(mode.rawValue, forKey: Self.key)
+            // Play the newly-selected theme's sound immediately (didSet does not fire on
+            // init, so this is only user-driven switches, not launch).
+            StartupSound.shared.play(force: true)
         }
     }
 

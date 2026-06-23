@@ -332,6 +332,7 @@ private fun ThemeMode.label(): String = when (this) {
 @Composable
 private fun ThemeSwitcher(auth: AuthStore) {
     val active = Theme.themeMode
+    val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
     Box {
         Row(
@@ -362,7 +363,7 @@ private fun ThemeSwitcher(auth: AuthStore) {
                             fontWeight = if (mode == active) FontWeight.Bold else FontWeight.Normal,
                             fontFamily = Theme.serif)
                     },
-                    onClick = { auth.setThemeMode(mode); expanded = false }
+                    onClick = { auth.setThemeMode(mode); StartupSound.playTheme(context); expanded = false }
                 )
             }
         }
