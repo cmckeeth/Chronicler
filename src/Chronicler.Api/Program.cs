@@ -514,6 +514,16 @@ app.MapPost("/api/chapters/{chapterId:int}/complete", [Authorize] async (int cha
     return Results.Ok();
 });
 
+app.MapPut("/api/chapters/{chapterId:int}", [Authorize] async (int chapterId, ChapterEditDto dto, AppDbContext db) =>
+{
+    var chapter = await db.Chapters.FindAsync(chapterId);
+    if (chapter is null) return Results.NotFound();
+    if (!string.IsNullOrWhiteSpace(dto.Title)) chapter.Title = dto.Title.Trim();
+    if (dto.TrackNumber is int tn) chapter.TrackNumber = tn;
+    await db.SaveChangesAsync();
+    return Results.Ok();
+});
+
 app.MapPost("/api/books/{bookId:int}/reset", [Authorize] async (int bookId, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var uid = UserId(principal);
@@ -794,3 +804,4 @@ record CollectionDto(int Id, string Name, bool HasCover, int BookCount, DateTime
 record ChapterDto(int Id, int BookId, string Title, int TrackNumber);
 record BookMetaRequest(string? Title, string? Author, string? Narrator, string? Description, int? Year);
 record ChapterProgressRequest(double PositionSeconds, double DurationSeconds);
+record ChapterEditDto(string? Title, int? TrackNumber);

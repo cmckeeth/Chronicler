@@ -132,6 +132,12 @@ export const chaptersApi = {
   },
   async complete(id) {
     await apiFetch(`/api/chapters/${id}/complete`, { method: 'POST' });
+  },
+  async update(id, { title, trackNumber }) {
+    await apiFetch(`/api/chapters/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ title, trackNumber })
+    });
   }
 };
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { booksApi, chaptersApi } from '../api';
 import MetaEditor from '../components/MetaEditor';
+import ChapterEditor from '../components/ChapterEditor';
 
 function fmt(s) {
   const t = Math.floor(s);
@@ -17,6 +18,7 @@ export default function Book() {
   const [book, setBook] = useState(null);
   const [coverBust, setCoverBust] = useState('');
   const [showMetaEditor, setShowMetaEditor] = useState(false);
+  const [editChapter, setEditChapter] = useState(null);
   const [coverSearching, setCoverSearching] = useState(false);
   const longPressTimer = useRef(null);
   const [chapters, setChapters] = useState([]);
@@ -261,12 +263,13 @@ export default function Book() {
               key={ch.id}
               className={`chapter-item${i === currentIdx ? ' chapter-active' : ''}${progresses[i]?.isListened ? ' chapter-listened' : ''}`}
               onClick={() => { setCurrentIdx(i); started.current = false; }}
+              onDoubleClick={e => { e.preventDefault(); setEditChapter(ch); }}
               onContextMenu={async e => {
                 e.preventDefault();
                 await chaptersApi.complete(ch.id);
                 setProgresses(prev => prev.map((p, j) => j === i ? { ...p, isListened: true } : p));
               }}
-              title="Right-click to mark completed"
+              title="Double-click to edit · right-click to mark completed"
             >
               <span className="chapter-number">{ch.trackNumber}</span>
               <span className="chapter-title">{ch.title}</span>
@@ -297,6 +300,17 @@ export default function Book() {
       <div style={{display:'flex',justifyContent:'center',padding:'.75rem 0 .25rem',borderTop:'1px solid var(--border)',marginTop:'.5rem'}}>
         <button className="btn-secondary" style={{fontSize:'.7rem',opacity:.5}} onClick={resetBook}>⚙ Reset All Progress</button>
       </div>
+
+      {editChapter && (
+        <ChapterEditor
+          chapter={editChapter}
+          onClose={() => setEditChapter(null)}
+          onSaved={(upd) => {
+            setChapters(prev => prev.map(c => c.id === editChapter.id ? { ...c, ...upd } : c));
+            setEditChapter(null);
+          }}
+        />
+      )}
 
       {showMetaEditor && (
         <MetaEditor
