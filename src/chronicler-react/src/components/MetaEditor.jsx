@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { booksApi } from '../api';
+
+const extFor = (type) => ({ 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' }[type] || 'jpg');
 
 export default function MetaEditor({ book, onClose, onSaved }) {
   const [title, setTitle] = useState(book.title || '');
@@ -8,6 +10,35 @@ export default function MetaEditor({ book, onClose, onSaved }) {
   const [year, setYear] = useState(book.year || '');
   const [coverFile, setCoverFile] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  // Paste an image straight from the clipboard (⌘/Ctrl+V anywhere while open).
+  useEffect(() => {
+    function onPaste(e) {
+      for (const item of e.clipboardData?.items ?? []) {
+        if (item.type.startsWith('image/')) {
+          const blob = item.getAsFile();
+          if (blob) { setCoverFile(new File([blob], `pasted.${extFor(blob.type)}`, { type: blob.type })); e.preventDefault(); }
+          return;
+        }
+      }
+    }
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, []);
+
+  async function pasteFromClipboard() {
+    try {
+      for (const item of await navigator.clipboard.read()) {
+        const type = item.types.find(t => t.startsWith('image/'));
+        if (type) {
+          const blob = await item.getType(type);
+          setCoverFile(new File([blob], `pasted.${extFor(type)}`, { type }));
+          return;
+        }
+      }
+      alert('No image found on the clipboard.');
+    } catch { alert('Clipboard access was blocked — copy an image, then press ⌘/Ctrl+V here instead.'); }
+  }
 
   async function save(e) {
     e.preventDefault();
@@ -52,12 +83,16 @@ export default function MetaEditor({ book, onClose, onSaved }) {
           <label className="meta-label" style={{marginTop:'.4rem'}}>
             Cover Image {book.hasCover ? '(replaces existing)' : ''}
           </label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={e => setCoverFile(e.target.files[0] || null)}
-            style={{color:'var(--parchment-dim)',fontSize:'.8rem'}}
-          />
+          <div style={{display:'flex',alignItems:'center',gap:'.5rem',flexWrap:'wrap'}}>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={e => setCoverFile(e.target.files[0] || null)}
+              style={{color:'var(--parchment-dim)',fontSize:'.8rem',flex:1,minWidth:'9rem'}}
+            />
+            <button type="button" className="btn-secondary" style={{fontSize:'.7rem',whiteSpace:'nowrap'}} onClick={pasteFromClipboard}>📋 Paste</button>
+          </div>
+          <div style={{fontSize:'.65rem',color:'var(--parchment-dim)',opacity:.7,marginTop:'.1rem'}}>…or press ⌘/Ctrl+V to paste a copied image</div>
           {coverFile && (
             <div style={{fontSize:'.7rem',color:'var(--verdigris)',marginTop:'.1rem'}}>
               📎 {coverFile.name}
