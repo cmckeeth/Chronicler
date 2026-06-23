@@ -299,6 +299,33 @@ app.MapPut("/api/collections/{id:int}/cover/upload", [Authorize] async (int id, 
     return Results.Ok(new { hasCover = true, fileWritten, coverPath, fileError });
 });
 
+// Clear a collection's cover: wipe the DB cover AND delete cover.* in the collection
+// folder (so the GET falls back to the first book's cover, and a fresh upload writes clean).
+app.MapDelete("/api/collections/{id:int}/cover", [Authorize] async (int id, AppDbContext db, LibraryScanner scanner) =>
+{
+    var col = await db.Collections.FindAsync(id);
+    if (col is null) return Results.NotFound();
+    col.CoverData = null;
+    col.CoverMimeType = null;
+    await db.SaveChangesAsync();
+
+    int deleted = 0; string? fileError = null;
+    try
+    {
+        var dir = Path.Combine(scanner.LibraryRoot, col.FolderPath);
+        if (Directory.Exists(dir))
+            foreach (var f in Directory.GetFiles(dir)
+                .Where(f => Path.GetFileNameWithoutExtension(f).Equals("cover", StringComparison.OrdinalIgnoreCase)))
+            {
+                try { File.SetAttributes(f, FileAttributes.Normal); } catch { }
+                File.Delete(f); deleted++;
+            }
+    }
+    catch (Exception ex) { fileError = ex.Message; app.Logger.LogError(ex, "Could not delete cover file(s) for collection {Id}", id); }
+
+    return Results.Ok(new { cleared = true, filesDeleted = deleted, fileError });
+});
+
 app.MapGet("/api/books/{id:int}", [Authorize] async (int id, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var uid = UserId(principal);
@@ -415,15 +442,31 @@ app.MapPut("/api/books/{id:int}/meta", [Authorize] async (
     return Results.Ok(new { book.Id, book.Title, book.Author, book.Narrator, book.Description, Year = req.Year });
 });
 
-// Clear wrong cover so it can be re-fetched
-app.MapDelete("/api/books/{id:int}/cover", [Authorize] async (int id, AppDbContext db) =>
+// Clear the cover: wipe it from the DB AND delete cover.* on disk, so a fresh upload
+// can write cleanly (and a rescan won't re-import the old file).
+app.MapDelete("/api/books/{id:int}/cover", [Authorize] async (int id, AppDbContext db, LibraryScanner scanner) =>
 {
     var book = await db.Books.FindAsync(id);
     if (book is null) return Results.NotFound();
     book.CoverData = null;
     book.CoverMimeType = null;
     await db.SaveChangesAsync();
-    return Results.Ok();
+
+    int deleted = 0; string? fileError = null;
+    try
+    {
+        var dir = Path.GetDirectoryName(Path.Combine(scanner.LibraryRoot, book.FilePath));
+        if (dir is not null && Directory.Exists(dir))
+            foreach (var f in Directory.GetFiles(dir)
+                .Where(f => Path.GetFileNameWithoutExtension(f).Equals("cover", StringComparison.OrdinalIgnoreCase)))
+            {
+                try { File.SetAttributes(f, FileAttributes.Normal); } catch { }
+                File.Delete(f); deleted++;
+            }
+    }
+    catch (Exception ex) { fileError = ex.Message; app.Logger.LogError(ex, "Could not delete cover file(s) for book {Id}", id); }
+
+    return Results.Ok(new { cleared = true, filesDeleted = deleted, fileError });
 });
 
 app.MapPut("/api/books/{id:int}/cover/upload", [Authorize] async (int id, HttpRequest request, AppDbContext db, LibraryScanner scanner) =>

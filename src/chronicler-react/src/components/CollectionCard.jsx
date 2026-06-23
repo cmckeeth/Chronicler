@@ -41,9 +41,10 @@ export default function CollectionCard({ collection }) {
         // card's onClick/onContextMenu, which would navigate into the collection.
         <div onClick={e => e.stopPropagation()} onContextMenu={e => { e.preventDefault(); e.stopPropagation(); }}>
           <CollectionCoverEditor
-            collection={collection}
+            collection={{ ...collection, hasCover }}
             onClose={() => setShowCover(false)}
             onSaved={() => { setHasCover(true); setBust(`?t=${Date.now()}`); setShowCover(false); }}
+            onCleared={() => { setHasCover(false); setBust(`?t=${Date.now()}`); setShowCover(false); }}
           />
         </div>,
         document.body

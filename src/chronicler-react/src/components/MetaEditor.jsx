@@ -40,6 +40,16 @@ export default function MetaEditor({ book, onClose, onSaved }) {
     } catch { alert('Clipboard access was blocked — copy an image, then press ⌘/Ctrl+V here instead.'); }
   }
 
+  async function clearCover() {
+    if (!confirm('Remove the cover for this book? This deletes cover.* from its folder.')) return;
+    setSaving(true);
+    try {
+      const result = await booksApi.clearCover(book.id);
+      if (result?.fileError) alert(`Cover cleared from the database, but a cover file could not be deleted:\n\n${result.fileError}`);
+      await onSaved();
+    } finally { setSaving(false); }
+  }
+
   async function save(e) {
     e.preventDefault();
     setSaving(true);
@@ -101,6 +111,11 @@ export default function MetaEditor({ book, onClose, onSaved }) {
             <div style={{fontSize:'.7rem',color:'var(--verdigris)',marginTop:'.1rem'}}>
               📎 {coverFile.name}
             </div>
+          )}
+          {book.hasCover && (
+            <button type="button" className="btn-secondary" style={{fontSize:'.7rem',marginTop:'.3rem',alignSelf:'flex-start'}} onClick={clearCover} disabled={saving}>
+              🗑 Clear cover
+            </button>
           )}
 
           <div style={{display:'flex',gap:'.5rem',marginTop:'.75rem',justifyContent:'center'}}>

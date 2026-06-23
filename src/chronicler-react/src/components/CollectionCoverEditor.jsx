@@ -3,9 +3,19 @@ import { collectionsApi } from '../api';
 
 const extFor = (type) => ({ 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' }[type] || 'jpg');
 
-export default function CollectionCoverEditor({ collection, onClose, onSaved }) {
+export default function CollectionCoverEditor({ collection, onClose, onSaved, onCleared }) {
   const [coverFile, setCoverFile] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  async function clearCover() {
+    if (!confirm('Remove the cover for this collection? This deletes cover.* from its folder.')) return;
+    setSaving(true);
+    try {
+      const result = await collectionsApi.clearCover(collection.id);
+      if (result?.fileError) alert(`Cover cleared from the database, but a cover file could not be deleted:\n\n${result.fileError}`);
+      await onCleared();
+    } finally { setSaving(false); }
+  }
 
   // Paste an image straight from the clipboard (⌘/Ctrl+V anywhere while open).
   useEffect(() => {
@@ -77,6 +87,11 @@ export default function CollectionCoverEditor({ collection, onClose, onSaved }) 
             <div style={{fontSize:'.7rem',color:'var(--verdigris)',marginTop:'.1rem'}}>
               📎 {coverFile.name}
             </div>
+          )}
+          {collection.hasCover && (
+            <button type="button" className="btn-secondary" style={{fontSize:'.7rem',marginTop:'.3rem',alignSelf:'flex-start'}} onClick={clearCover} disabled={saving}>
+              🗑 Clear cover
+            </button>
           )}
 
           <div style={{display:'flex',gap:'.5rem',marginTop:'.75rem',justifyContent:'center'}}>

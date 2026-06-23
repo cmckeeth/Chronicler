@@ -74,7 +74,8 @@ export const booksApi = {
     return res.json();
   },
   async clearCover(id) {
-    await apiFetch(`/api/books/${id}/cover`, { method: 'DELETE' });
+    const res = await apiFetch(`/api/books/${id}/cover`, { method: 'DELETE' });
+    return res.json().catch(() => null);
   },
   async refetchCover(id) {
     const res = await apiFetch(`/api/books/${id}/refetch-cover`, { method: 'POST' });
@@ -121,6 +122,10 @@ export const collectionsApi = {
       headers: { 'Authorization': `Bearer ${getToken()}` },
       body: formData,
     });
+    return res.json().catch(() => null);
+  },
+  async clearCover(id) {
+    const res = await apiFetch(`/api/collections/${id}/cover`, { method: 'DELETE' });
     return res.json().catch(() => null);
   },
 };
