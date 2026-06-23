@@ -10,8 +10,8 @@ export default function Library() {
   const [books, setBooks] = useState([]);
   const [collections, setCollections] = useState([]);
   const [search, setSearch] = useState('');
-  const [sort, setSort] = useState('name');
-  const [filter, setFilter] = useState('all');
+  const [fav, setFav] = useState('all');        // 'all' | 'favorites'
+  const [filter, setFilter] = useState('all');  // 'all' | 'books' | 'collections'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [scanning, setScanning] = useState(false);
@@ -54,34 +54,21 @@ export default function Library() {
     let q = books;
     if (searching) {
       // Search shows every matching book, flat (collection books included).
-    } else if (filter === 'all') {
-      q = q.filter(b => b.collectionId == null);           // standalone only (collections shown separately)
-    } else if (filter === 'collections') {
-      q = [];                                              // collections-only view
+    } else {
+      if (filter === 'all') q = q.filter(b => b.collectionId == null);   // standalone only (collections shown separately)
+      else if (filter === 'collections') q = [];                          // collections-only view
+      // filter === 'books' → every book, flat (incl. those inside collections)
+      if (fav === 'favorites') q = q.filter(b => b.isFavorite);
     }
-    // filter === 'books' → every book, flat (incl. those inside collections)
-
-    if (sort === 'date') return [...q].sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
-    if (sort === 'progress') return [...q].sort((a, b) => {
-      const aip = a.listenedCount > 0 && a.listenedCount < a.chapterCount;
-      const bip = b.listenedCount > 0 && b.listenedCount < b.chapterCount;
-      return (bip ? 1 : 0) - (aip ? 1 : 0) || a.title.localeCompare(b.title);
-    });
     return [...q].sort((a, b) => a.title.localeCompare(b.title));
-  }, [books, sort, filter, searching]);
+  }, [books, filter, fav, searching]);
 
-  // Collections show only when browsing under "All" or "Collections".
+  // Collections show under "All"/"Collections" while browsing — but not in Favorites
+  // (favorites are a book-level trait).
   const shownCollections = useMemo(() => {
-    if (searching || (filter !== 'all' && filter !== 'collections')) return [];
-    if (sort === 'date') return [...collections].sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
+    if (searching || fav === 'favorites' || (filter !== 'all' && filter !== 'collections')) return [];
     return [...collections].sort((a, b) => a.name.localeCompare(b.name));
-  }, [collections, filter, sort, searching]);
-
-  const chip = (current, val, label) => (
-    <button className={`chip${current === val ? ' chip-active' : ''}`} onClick={() => current === sort ? setSort(val) : setFilter(val)}>
-      {label}
-    </button>
-  );
+  }, [collections, filter, fav, searching]);
 
   async function scan() { setScanning(true); await booksApi.scan(); await loadBooks(search); setScanning(false); }
 
@@ -105,10 +92,8 @@ export default function Library() {
         </div>
         <div className="library-controls">
           <div className="sort-group">
-            <span className="control-label">Sort</span>
-            <button className={`chip${sort==='name'?' chip-active':''}`} onClick={() => setSort('name')}>Name</button>
-            <button className={`chip${sort==='date'?' chip-active':''}`} onClick={() => setSort('date')}>Added</button>
-            <button className={`chip${sort==='progress'?' chip-active':''}`} onClick={() => setSort('progress')}>Progress</button>
+            <button className={`chip${fav==='all'?' chip-active':''}`} onClick={() => setFav('all')}>All</button>
+            <button className={`chip${fav==='favorites'?' chip-active':''}`} onClick={() => setFav('favorites')}>★ Favorites</button>
           </div>
           <div className="sort-group">
             <span className="control-label">Show</span>

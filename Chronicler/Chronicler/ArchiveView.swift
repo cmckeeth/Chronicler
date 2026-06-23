@@ -6,7 +6,7 @@ struct ArchiveView: View {
     @State private var books: [Book] = []
     @State private var collections: [Collection] = []
     @State private var search = ""
-    @State private var sort = "name"
+    @State private var fav = "all"              // all | favorites (book-level favorite filter)
     @State private var filter = "all"           // all | books | collections
     @State private var loading = true
     @State private var refreshing = false
@@ -19,8 +19,9 @@ struct ArchiveView: View {
     }
 
     // Collections appear in the (unsearched) browse view, on the All/Collections chips.
+    // Favorites are book-level, so the favorites filter hides collection cards entirely.
     private var showCollections: Bool {
-        !isSearching && filter != "books" && !collections.isEmpty
+        !isSearching && filter != "books" && fav != "favorites" && !collections.isEmpty
     }
 
     var filtered: [Book] {
@@ -44,16 +45,8 @@ struct ArchiveView: View {
             default:            q = books.filter { $0.collectionId == nil }
             }
         }
-        switch sort {
-        case "date": q.sort { $0.addedAt > $1.addedAt }
-        case "progress":
-            q.sort {
-                if $0.isInProgress != $1.isInProgress { return $0.isInProgress }
-                if $0.isCompleted != $1.isCompleted { return $0.isCompleted }
-                return $0.title < $1.title
-            }
-        default: q.sort { $0.title.lowercased() < $1.title.lowercased() }
-        }
+        if fav == "favorites" { q = q.filter { $0.isFavorite } }
+        q.sort { $0.title.lowercased() < $1.title.lowercased() }
         return q
     }
 
@@ -78,8 +71,8 @@ struct ArchiveView: View {
                             .stroke(Theme.verdigris.opacity(0.4), lineWidth: 1))
                 }
 
-                chipGroup("Sort", [("Name","name"),("Added","date"),("Progress","progress")],
-                          selection: $sort)
+                chipGroup("", [("All","all"),("★ Favorites","favorites")],
+                          selection: $fav)
                 chipGroup("Show", [("All","all"),("Books","books"),("Collections","collections")],
                           selection: $filter)
 
@@ -155,7 +148,9 @@ struct ArchiveView: View {
     private func chipGroup(_ label: String, _ options: [(String, String)],
                            selection: Binding<String>) -> some View {
         HStack(spacing: 6) {
-            Text(label).font(Theme.body(11)).foregroundColor(Theme.parchmentDim)
+            if !label.isEmpty {
+                Text(label).font(Theme.body(11)).foregroundColor(Theme.parchmentDim)
+            }
             ForEach(options, id: \.1) { (title, value) in
                 let active = selection.wrappedValue == value
                 Button { selection.wrappedValue = value } label: {

@@ -28,7 +28,7 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
     var allBooks by remember { mutableStateOf<List<Book>>(emptyList()) }
     var collections by remember { mutableStateOf<List<Collection>>(emptyList()) }
     var search by remember { mutableStateOf("") }
-    var sort by remember { mutableStateOf("name") }
+    var fav by remember { mutableStateOf("all") }
     var filter by remember { mutableStateOf("all") }
     var loading by remember { mutableStateOf(true) }
     var refreshing by remember { mutableStateOf(false) }
@@ -57,7 +57,8 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
     LaunchedEffect(Unit) { load() }
 
     val searching = search.isNotBlank()
-    val filtered = remember(allBooks, search, sort, filter) {
+    val favorites = fav == "favorites"
+    val filtered = remember(allBooks, search, fav, filter) {
         // While searching, query every book flat (including those inside collections).
         // Otherwise the chip decides: All = standalone root books, Books = every book,
         // Collections = no books (cards only).
@@ -75,13 +76,8 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
                     (it.narrator?.lowercase()?.contains(s) ?: false)
             }
         }
-        when (sort) {
-            "date" -> q.sortedByDescending { it.addedAt }
-            "progress" -> q.sortedWith(
-                compareByDescending<Book> { it.isInProgress }
-                    .thenByDescending { it.isCompleted }.thenBy { it.title })
-            else -> q.sortedBy { it.title.lowercase() }
-        }
+        if (favorites) q = q.filter { it.isFavorite }
+        q.sortedBy { it.title.lowercase() }
     }
 
     Column(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 14.dp)) {
@@ -100,8 +96,8 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
                 unfocusedBorderColor = Theme.verdigris.copy(alpha = 0.4f),
                 cursorColor = Theme.verdigris))
         Spacer(Modifier.height(14.dp))
-        chipRow("Sort", listOf("Name" to "name", "Added" to "date", "Progress" to "progress"),
-            sort) { sort = it }
+        chipRow("", listOf("All" to "all", "★ Favorites" to "favorites"),
+            fav) { fav = it }
         Spacer(Modifier.height(10.dp))
         chipRow("Show", listOf("All" to "all", "Books" to "books", "Collections" to "collections"),
             filter) { filter = it }
@@ -109,7 +105,7 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
 
         // Collections appear ahead of books on the All/Collections chips (never the Books chip,
         // never while searching).
-        val shownCollections = if (searching || filter == "books") emptyList() else collections
+        val shownCollections = if (searching || favorites || filter == "books") emptyList() else collections
         when {
             loading -> center("Consulting the archive...", Theme.parchmentDim)
             error != null -> center("The pneumatic tubes have failed: $error", Theme.rust)
