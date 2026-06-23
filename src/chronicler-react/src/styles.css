@@ -364,30 +364,30 @@
     display: block;
     width: 100%;
     height: auto;
-    transform-origin: bottom center;
-    animation: rose-grow 1.7s cubic-bezier(.2, .8, .3, 1) both;
+    animation: rose-grow 2.4s ease-out var(--gd, 0s) both;
     filter: drop-shadow(0 6px 16px rgba(0,0,0,.55));
 }
-/* a row rising from the ground + two larger ones set back in the side margins */
-[data-theme="garden"] .gr-1 { left: 1%;   width: 12rem; animation-delay: .15s; }
-[data-theme="garden"] .gr-2 { left: 18%;  width: 9rem;  animation-delay: 1.0s; }
-[data-theme="garden"] .gr-3 { left: 35%;  width: 13rem; animation-delay: .5s;  }
-[data-theme="garden"] .gr-4 { left: 53%;  width: 10rem; animation-delay: 1.3s; }
-[data-theme="garden"] .gr-5 { left: 69%;  width: 12rem; animation-delay: .8s;  }
-[data-theme="garden"] .gr-6 { left: 86%;  width: 9rem;  animation-delay: 1.6s; }
-[data-theme="garden"] .gr-bl { left: -4rem;  bottom: 26%; width: 14rem; opacity: .8; animation-delay: .35s; }
-[data-theme="garden"] .gr-br { right: -5rem; bottom: 20%; width: 15rem; opacity: .8; animation-delay: 1.1s; }
+/* a row growing up from the ground + two larger ones set back in the side margins */
+[data-theme="garden"] .gr-1 { left: 1%;   width: 12rem; --gd: .15s; }
+[data-theme="garden"] .gr-2 { left: 18%;  width: 9rem;  --gd: 1.0s; }
+[data-theme="garden"] .gr-3 { left: 35%;  width: 13rem; --gd: .5s;  }
+[data-theme="garden"] .gr-4 { left: 53%;  width: 10rem; --gd: 1.3s; }
+[data-theme="garden"] .gr-5 { left: 69%;  width: 12rem; --gd: .8s;  }
+[data-theme="garden"] .gr-6 { left: 86%;  width: 9rem;  --gd: 1.6s; }
+[data-theme="garden"] .gr-bl { left: -4rem;  bottom: 26%; width: 14rem; opacity: .8; --gd: .35s; }
+[data-theme="garden"] .gr-br { right: -5rem; bottom: 20%; width: 15rem; opacity: .8; --gd: 1.1s; }
 
+/* The rose reveals from the BOTTOM up — the leafy stem appears to grow up out of
+   the ground and the bloom rises into view. */
 @keyframes rose-grow {
-    0%   { transform: translateY(40%) scale(.25); opacity: 0; }
-    55%  { opacity: 1; }
-    100% { transform: translateY(0) scale(1); opacity: 1; }
+    0%   { clip-path: inset(100% 0 0 0); }
+    100% { clip-path: inset(0 0 0 0); }
 }
 @keyframes rose-sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
 
 @media (prefers-reduced-motion: reduce) {
     [data-theme="garden"] .rose { animation: none; }
-    [data-theme="garden"] .rose img { animation: none; transform: none; opacity: 1; }
+    [data-theme="garden"] .rose img { animation: none; clip-path: none; }
 }
 
 /* ── Reset ────────────────────────────────────────────────────────────────── */
