@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { booksApi, auth } from '../api';
+import { booksApi, collectionsApi, auth } from '../api';
 import BookCard from '../components/BookCard';
+import CollectionCard from '../components/CollectionCard';
 import ScanPreview from '../components/ScanPreview';
 
 export default function Library() {
   const nav = useNavigate();
   const [books, setBooks] = useState([]);
+  const [collections, setCollections] = useState([]);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('name');
   const [filter, setFilter] = useState('all');
@@ -18,25 +20,35 @@ export default function Library() {
   const loadBooks = useCallback(async (q) => {
     setLoading(true);
     setError('');
-    try { setBooks(await booksApi.list(q)); }
+    try {
+      const term = (q || '').trim();
+      if (term) {
+        // Searching: flat list of ALL books so books inside collections are findable.
+        setBooks(await booksApi.list(term));
+        setCollections([]);
+      } else {
+        // Browsing: top-level books + collections, shown together.
+        const [bs, cs] = await Promise.all([
+          booksApi.list(null, { root: true }),
+          collectionsApi.list(),
+        ]);
+        setBooks(bs);
+        setCollections(cs);
+      }
+    }
     catch (e) { if (e.message !== 'Unauthorized') setError(e.message); }
     setLoading(false);
   }, []);
 
-  useEffect(() => { loadBooks(); }, [loadBooks]);
+  // Refetch from the API whenever the search term changes (debounced lightly).
+  useEffect(() => {
+    const t = setTimeout(() => loadBooks(search), 200);
+    return () => clearTimeout(t);
+  }, [search, loadBooks]);
 
 
   const filtered = useMemo(() => {
     let q = books;
-
-    // Client-side search filter
-    if (search.trim()) {
-      const s = search.toLowerCase();
-      q = q.filter(b =>
-        b.title.toLowerCase().includes(s) ||
-        b.author.toLowerCase().includes(s) ||
-        (b.narrator || '').toLowerCase().includes(s));
-    }
 
     if (filter === 'inprogress') q = q.filter(b => b.listenedCount > 0 && b.listenedCount < b.chapterCount);
     else if (filter === 'favorites') q = q.filter(b => b.isFavorite);
@@ -49,6 +61,14 @@ export default function Library() {
     });
     return [...q].sort((a, b) => a.title.localeCompare(b.title));
   }, [books, sort, filter]);
+
+  // Collections show only when browsing under the "All" filter (the in-progress /
+  // favorites chips are book-level traits that don't apply to collections).
+  const shownCollections = useMemo(() => {
+    if (filter !== 'all') return [];
+    if (sort === 'date') return [...collections].sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
+    return [...collections].sort((a, b) => a.name.localeCompare(b.name));
+  }, [collections, filter, sort]);
 
   const chip = (current, val, label) => (
     <button className={`chip${current === val ? ' chip-active' : ''}`} onClick={() => current === sort ? setSort(val) : setFilter(val)}>
@@ -97,12 +117,13 @@ export default function Library() {
         <div className="loading">Consulting the archive...</div>
       ) : error ? (
         <div className="empty-state"><p>The pneumatic tubes have failed: {error}</p></div>
-      ) : filtered.length === 0 ? (
+      ) : filtered.length === 0 && shownCollections.length === 0 ? (
         <div className="empty-state">
-          <p>{books.length === 0 ? 'The archive lies empty, traveller.' : 'No volumes match this filter.'}</p>
+          <p>{books.length === 0 && collections.length === 0 ? 'The archive lies empty, traveller.' : 'No volumes match this filter.'}</p>
         </div>
       ) : (
         <div className="book-grid">
+          {shownCollections.map(c => <CollectionCard key={`c-${c.id}`} collection={c} />)}
           {filtered.map(book => <BookCard key={book.id} book={book} onToggleFav={toggleFav} />)}
         </div>
       )}

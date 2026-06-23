@@ -12,6 +12,7 @@ struct ContentView: View {
                             switch route {
                             case .archive: ArchiveView()
                             case .book(let book): BookPlayerView(bookId: book.id)
+                            case .collection(let c): CollectionView(collection: c)
                             }
                         }
                 }

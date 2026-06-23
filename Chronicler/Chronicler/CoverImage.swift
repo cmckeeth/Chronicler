@@ -14,6 +14,18 @@ actor CoverCache {
     func invalidate(_ bookId: Int) { cache[bookId] = nil }
 }
 
+// Separate cache so collection ids don't collide with book ids in CoverCache.
+actor CollectionCoverCache {
+    static let shared = CollectionCoverCache()
+    private var cache: [Int: Data] = [:]
+    func data(for collectionId: Int, api: APIClient) async -> Data? {
+        if let cached = cache[collectionId] { return cached }
+        guard let data = await api.collectionCoverData(collectionId) else { return nil }
+        cache[collectionId] = data
+        return data
+    }
+}
+
 struct CoverImage: View {
     let book: Book
     let api: APIClient
@@ -45,6 +57,39 @@ struct CoverImage: View {
         ZStack {
             Theme.surface2
             Text(symbol).font(.system(size: 40 * placeholderScale)).opacity(opacity)
+        }
+    }
+}
+
+// Cover for a collection (mirrors CoverImage; folder symbol when no cover).
+struct CollectionCoverImage: View {
+    let collection: Collection
+    let api: APIClient
+
+    @State private var image: UIImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
+                    .coverTreatment()
+            } else if collection.hasCover {
+                placeholder(symbol: "⚙", opacity: 0.15)
+            } else {
+                placeholder(symbol: "📚", opacity: 1)
+            }
+        }
+        .task(id: collection.id) {
+            guard collection.hasCover else { return }
+            if let data = await CollectionCoverCache.shared.data(for: collection.id, api: api),
+               let img = UIImage(data: data) { image = img }
+        }
+    }
+
+    private func placeholder(symbol: String, opacity: Double) -> some View {
+        ZStack {
+            Theme.surface2
+            Text(symbol).font(.system(size: 40)).opacity(opacity)
         }
     }
 }

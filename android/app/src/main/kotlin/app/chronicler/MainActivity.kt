@@ -78,6 +78,15 @@ fun App(auth: AuthStore) {
                         composable("landing") { LandingScreen(auth, nav) }
                         composable("archive") { ArchiveScreen(auth, nav) }
                         composable(
+                            "collection/{id}",
+                            arguments = listOf(navArgument("id") { type = NavType.IntType })
+                        ) { entry ->
+                            CollectionScreen(
+                                auth, nav,
+                                collectionId = entry.arguments?.getInt("id") ?: 0
+                            )
+                        }
+                        composable(
                             "book/{id}",
                             arguments = listOf(navArgument("id") { type = NavType.IntType })
                         ) { entry ->

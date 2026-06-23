@@ -3,6 +3,7 @@ import SwiftUI
 enum Route: Hashable {
     case archive
     case book(Book)
+    case collection(Collection)
 }
 
 struct LandingView: View {

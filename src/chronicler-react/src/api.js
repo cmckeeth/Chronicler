@@ -45,8 +45,10 @@ export const auth = {
 };
 
 export const booksApi = {
-  async list(q) {
-    const url = q ? `/api/books?q=${encodeURIComponent(q)}` : '/api/books';
+  async list(q, { root = false } = {}) {
+    let url = '/api/books';
+    if (q) url += `?q=${encodeURIComponent(q)}`;
+    else if (root) url += '?root=true';
     const res = await apiFetch(url);
     return res.json();
   },
@@ -95,6 +97,22 @@ export const booksApi = {
       body: JSON.stringify({ title, author, narrator, description, year })
     });
   }
+};
+
+export const collectionsApi = {
+  async list() {
+    const res = await apiFetch('/api/collections');
+    return res.json();
+  },
+  async get(id) {
+    const res = await apiFetch(`/api/collections/${id}`);
+    return res.json();
+  },
+  async books(id) {
+    const res = await apiFetch(`/api/collections/${id}/books`);
+    return res.json();
+  },
+  coverUrl: (id) => `/api/collections/${id}/cover`,
 };
 
 export const chaptersApi = {

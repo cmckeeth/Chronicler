@@ -100,6 +100,39 @@ fun CoverImage(book: Book, api: ApiClient, modifier: Modifier = Modifier) {
 
 fun invalidateCover(bookId: Int) { coverCache.remove(bookId) }
 
+// Collection covers share the same per-theme treatment as book covers. Keyed separately
+// from the book cache to avoid id collisions between books and collections.
+private val collectionCoverCache = ConcurrentHashMap<Int, ImageBitmap>()
+
+@Composable
+fun CollectionCover(collection: Collection, api: ApiClient, modifier: Modifier = Modifier) {
+    var image by remember(collection.id) { mutableStateOf(collectionCoverCache[collection.id]) }
+
+    androidx.compose.runtime.LaunchedEffect(collection.id) {
+        if (image == null && collection.hasCover) {
+            api.collectionCoverBytes(collection.id)?.let { bytes ->
+                val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                if (bmp != null) {
+                    val ib = bmp.asImageBitmap()
+                    collectionCoverCache[collection.id] = ib
+                    image = ib
+                }
+            }
+        }
+    }
+
+    Box(modifier = modifier.background(Theme.surface2), contentAlignment = Alignment.Center) {
+        val img = image
+        if (img != null) {
+            Image(bitmap = img, contentDescription = collection.name,
+                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop,
+                colorFilter = coverColorFilter())
+        } else {
+            Text(if (collection.hasCover) "⚙" else "📚", fontSize = 36.sp)
+        }
+    }
+}
+
 // Startup sound (commit: "Play startup sound on app open").
 object StartupSound {
     private var played = false          // once per app launch, not every time Landing recomposes

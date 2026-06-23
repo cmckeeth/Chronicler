@@ -14,9 +14,18 @@ struct Book: Codable, Identifiable, Hashable {
     var listenedCount: Int = 0
     let year: Int?
     var isFavorite: Bool = false
+    var collectionId: Int? = nil   // grouping; nil => standalone (top-level)
 
     var isCompleted: Bool { chapterCount > 0 && listenedCount >= chapterCount }
     var isInProgress: Bool { listenedCount > 0 && !isCompleted }
+}
+
+struct Collection: Codable, Identifiable, Hashable {
+    let id: Int
+    let name: String
+    let hasCover: Bool
+    let bookCount: Int
+    let addedAt: String          // ISO-8601; sorts lexically
 }
 
 struct Chapter: Codable, Identifiable, Hashable {

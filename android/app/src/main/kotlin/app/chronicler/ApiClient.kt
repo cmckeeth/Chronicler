@@ -51,8 +51,8 @@ class ApiClient {
     }
 
     // ── Books ──
-    suspend fun getBooks(): List<Book> {
-        val resp = body(builder("/api/books").build()) ?: return emptyList()
+    suspend fun getBooks(root: Boolean = false): List<Book> {
+        val resp = body(builder("/api/books" + if (root) "?root=true" else "").build()) ?: return emptyList()
         return runCatching { json.decodeFromString<List<Book>>(resp) }.getOrDefault(emptyList())
     }
     suspend fun getBook(id: Int): Book? {
@@ -70,6 +70,26 @@ class ApiClient {
     fun audioUrl(chapterId: Int) = "$BASE_URL/api/chapters/$chapterId/audio"
     // Cover endpoint is public (no auth) — usable directly as an artwork URL, e.g. by Android Auto.
     fun coverUrl(bookId: Int) = "$BASE_URL/api/books/$bookId/cover"
+
+    // ── Collections ──
+    suspend fun collections(): List<Collection> {
+        val resp = body(builder("/api/collections").build()) ?: return emptyList()
+        return runCatching { json.decodeFromString<List<Collection>>(resp) }.getOrDefault(emptyList())
+    }
+    suspend fun collectionBooks(id: Int): List<Book> {
+        val resp = body(builder("/api/collections/$id/books").build()) ?: return emptyList()
+        return runCatching { json.decodeFromString<List<Book>>(resp) }.getOrDefault(emptyList())
+    }
+    suspend fun collectionCoverBytes(id: Int): ByteArray? = withContext(Dispatchers.IO) {
+        runCatching {
+            http.newCall(builder("/api/collections/$id/cover").build()).execute().use { r ->
+                val bytes = if (r.isSuccessful) r.body?.bytes() else null
+                if (bytes != null && bytes.size >= 100) bytes else null
+            }
+        }.getOrNull()
+    }
+    // Cover endpoint is public (no auth) — mirrors book covers.
+    fun collectionCoverUrl(id: Int) = "$BASE_URL/api/collections/$id/cover"
 
     suspend fun getChapters(bookId: Int): List<Chapter> {
         val resp = body(builder("/api/books/$bookId/chapters").build()) ?: return emptyList()

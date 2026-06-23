@@ -24,7 +24,11 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun ArchiveScreen(auth: AuthStore, nav: NavController) {
+    // Root books (standalone, top-level) drive the default grid alongside collections.
     var books by remember { mutableStateOf<List<Book>>(emptyList()) }
+    // All books, flat — used only while searching so results span inside collections too.
+    var allBooks by remember { mutableStateOf<List<Book>>(emptyList()) }
+    var collections by remember { mutableStateOf<List<Collection>>(emptyList()) }
     var search by remember { mutableStateOf("") }
     var sort by remember { mutableStateOf("name") }
     var filter by remember { mutableStateOf("favorites") }
@@ -33,27 +37,34 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
+    suspend fun fetch() {
+        runCatching {
+            books = auth.api.getBooks(root = true)
+            collections = auth.api.collections()
+            allBooks = auth.api.getBooks()
+        }.onSuccess { error = null }.onFailure { error = "unreachable" }
+    }
+
     suspend fun load() {
         loading = true; error = null
-        runCatching { auth.api.getBooks() }
-            .onSuccess { books = it }
-            .onFailure { error = "unreachable" }
+        fetch()
         loading = false
     }
 
-    // Reload without blanking the grid — keeps current books visible while fetching.
+    // Reload without blanking the grid — keeps current content visible while fetching.
     suspend fun refresh() {
         refreshing = true
-        runCatching { auth.api.getBooks() }
-            .onSuccess { books = it; error = null }
-            .onFailure { error = "unreachable" }
+        fetch()
         refreshing = false
     }
     LaunchedEffect(Unit) { load() }
 
-    val filtered = remember(books, search, sort, filter) {
-        var q = books
-        if (search.isNotBlank()) {
+    val searching = search.isNotBlank()
+    val filtered = remember(books, allBooks, search, sort, filter) {
+        // While searching, query every book flat (including those inside collections);
+        // otherwise show only standalone root books beside the collection cards.
+        var q = if (searching) allBooks else books
+        if (searching) {
             val s = search.lowercase()
             q = q.filter {
                 it.title.lowercase().contains(s) || it.author.lowercase().contains(s) ||
@@ -97,17 +108,25 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
             filter) { filter = it }
         Spacer(Modifier.height(18.dp))
 
+        // Collections only appear in the default (non-search) view, ahead of root books.
+        val shownCollections = if (searching) emptyList() else collections
         when {
             loading -> center("Consulting the archive...", Theme.parchmentDim)
             error != null -> center("The pneumatic tubes have failed: $error", Theme.rust)
-            filtered.isEmpty() -> center(
-                if (books.isEmpty()) "The archive lies empty, traveller." else "No volumes match this filter.",
+            filtered.isEmpty() && shownCollections.isEmpty() -> center(
+                if (searching) "No volumes match this filter."
+                else if (books.isEmpty() && collections.isEmpty()) "The archive lies empty, traveller."
+                else "No volumes match this filter.",
                 Theme.parchmentDim)
             else -> LazyVerticalGrid(columns = GridCells.Adaptive(150.dp),
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
                 contentPadding = PaddingValues(vertical = 4.dp)) {
+                items(shownCollections, key = { "collection-${it.id}" }) { collection ->
+                    CollectionCard(collection, auth.api,
+                        onOpen = { nav.navigate("collection/${collection.id}") })
+                }
                 items(filtered, key = { it.id }) { book ->
                     BookCard(book, auth.api, onOpen = { nav.navigate("book/${book.id}") },
                         onToggleFavorite = { scope.launch { auth.api.toggleFavorite(book.id); load() } })
@@ -174,7 +193,7 @@ private fun chipRow(label: String, options: List<Pair<String, String>>, selected
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun BookCard(book: Book, api: ApiClient, onOpen: () -> Unit, onToggleFavorite: () -> Unit) {
+internal fun BookCard(book: Book, api: ApiClient, onOpen: () -> Unit, onToggleFavorite: () -> Unit) {
     Column(
         Modifier
             .combinedClickable(onClick = onOpen, onLongClick = onToggleFavorite)
@@ -198,6 +217,50 @@ private fun BookCard(book: Book, api: ApiClient, onOpen: () -> Unit, onToggleFav
             Spacer(Modifier.height(2.dp))
             Text(it, color = Theme.parchmentDim, fontSize = 11.sp, maxLines = 1)
         }
+        Spacer(Modifier.height(2.dp))
+    }
+}
+
+@Composable
+private fun CollectionCard(collection: Collection, api: ApiClient, onOpen: () -> Unit) {
+    Column(
+        Modifier
+            .clickable(onClick = onOpen)
+            .electricPanel(Theme.surface, corner = 4.dp, alpha = 0.7f, elevation = 12.dp)
+            .padding(10.dp)
+    ) {
+        // Stacked "folder" look: two offset slips peek out behind the cover.
+        Box(Modifier.fillMaxWidth().height(150.dp)) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 4.dp)
+                    .fillMaxWidth(0.92f)
+                    .height(146.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Theme.surface3))
+            Box(
+                Modifier
+                    .align(Alignment.TopStart)
+                    .padding(top = 2.dp)
+                    .fillMaxWidth(0.96f)
+                    .height(148.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Theme.surface2))
+            CollectionCover(collection, api,
+                Modifier.fillMaxWidth(0.94f).height(150.dp).clip(RoundedCornerShape(2.dp)))
+            // "N books" badge, brass pill in the corner.
+            Surface(color = Theme.brass, shape = RoundedCornerShape(50),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Theme.verdigris),
+                modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp)) {
+                Text("${collection.bookCount} books", color = Theme.ink, fontSize = 11.sp,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(collection.name, color = Theme.parchment, fontSize = 14.sp, maxLines = 2)
+        Spacer(Modifier.height(3.dp))
+        Text("Collection", color = Theme.parchmentDim, fontSize = 11.sp, maxLines = 1)
         Spacer(Modifier.height(2.dp))
     }
 }

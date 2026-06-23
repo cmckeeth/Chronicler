@@ -4,6 +4,7 @@ struct ArchiveView: View {
     @EnvironmentObject var auth: AuthStore
 
     @State private var books: [Book] = []
+    @State private var collections: [Collection] = []
     @State private var search = ""
     @State private var sort = "name"
     @State private var filter = "favorites"     // default matches LibraryBrowser
@@ -13,9 +14,16 @@ struct ArchiveView: View {
 
     private let columns = [GridItem(.adaptive(minimum: 150), spacing: 16)]
 
+    private var isSearching: Bool {
+        !search.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    // Collections only appear in the (unsearched) browse view; search is flat over all books.
+    private var showCollections: Bool { !isSearching && !collections.isEmpty }
+
     var filtered: [Book] {
         var q = books
-        if !search.trimmingCharacters(in: .whitespaces).isEmpty {
+        if isSearching {
             let s = search.lowercased()
             q = q.filter {
                 $0.title.lowercased().contains(s) ||
@@ -79,6 +87,8 @@ struct ArchiveView: View {
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
+        // Reload when crossing the search/browse boundary (root+collections vs flat books).
+        .onChange(of: isSearching) { Task { await load() } }
     }
 
     @ViewBuilder private var content: some View {
@@ -89,13 +99,19 @@ struct ArchiveView: View {
             Spacer(); Text("The pneumatic tubes have failed: \(error)")
                 .font(Theme.body(14)).foregroundColor(Theme.rust)
                 .multilineTextAlignment(.center); Spacer()
-        } else if filtered.isEmpty {
-            Spacer(); Text(books.isEmpty ? "The archive lies empty, traveller."
-                                         : "No volumes match this filter.")
+        } else if filtered.isEmpty && !showCollections {
+            Spacer(); Text(books.isEmpty && collections.isEmpty
+                            ? "The archive lies empty, traveller."
+                            : "No volumes match this filter.")
                 .font(Theme.serif(15)).foregroundColor(Theme.parchmentDim); Spacer()
         } else {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 14) {
+                    if showCollections {
+                        ForEach(collections) { collection in
+                            CollectionCardView(collection: collection, api: auth.api)
+                        }
+                    }
                     ForEach(filtered) { book in
                         BookCardView(book: book, api: auth.api, onFavoriteChanged: { await load() })
                     }
@@ -148,18 +164,39 @@ struct ArchiveView: View {
         }
     }
 
+    // Browse view: top-level (root) books + collections shown side by side.
+    // Search view: all books flat, so books inside collections are findable.
     private func load() async {
         loading = true; error = nil
-        do { books = try await auth.api.getBooks() }
-        catch { self.error = "unreachable" }
+        do {
+            if isSearching {
+                books = try await auth.api.getBooks()
+                collections = []
+            } else {
+                async let b = auth.api.getBooks(root: true)
+                async let c = auth.api.collections()
+                books = try await b
+                collections = (try? await c) ?? []
+            }
+        } catch { self.error = "unreachable" }
         loading = false
     }
 
-    // Reload without blanking the grid — keeps current books visible while fetching.
+    // Reload without blanking the grid — keeps current content visible while fetching.
     private func refresh() async {
         refreshing = true
-        do { books = try await auth.api.getBooks(); error = nil }
-        catch { self.error = "unreachable" }
+        do {
+            if isSearching {
+                books = try await auth.api.getBooks()
+                collections = []
+            } else {
+                async let b = auth.api.getBooks(root: true)
+                async let c = auth.api.collections()
+                books = try await b
+                collections = (try? await c) ?? []
+            }
+            error = nil
+        } catch { self.error = "unreachable" }
         refreshing = false
     }
 }
@@ -219,5 +256,49 @@ struct BookCardView: View {
             _ = await api.toggleFavorite(book.id)
             await onFavoriteChanged()
         }
+    }
+}
+
+// A collection reads as a folder/stack of volumes with a "N books" badge.
+struct CollectionCardView: View {
+    let collection: Collection
+    let api: APIClient
+
+    var body: some View {
+        NavigationLink(value: Route.collection(collection)) {
+            VStack(alignment: .leading, spacing: 4) {
+                ZStack(alignment: .topTrailing) {
+                    // Stacked sheets peeking out behind the cover sell the "folder" look.
+                    ZStack {
+                        Rectangle().fill(Theme.surface2)
+                            .frame(height: 150).frame(maxWidth: .infinity)
+                            .overlay(Rectangle().stroke(Theme.border, lineWidth: 1))
+                            .offset(x: 6, y: 6)
+                        Rectangle().fill(Theme.surface2)
+                            .frame(height: 150).frame(maxWidth: .infinity)
+                            .overlay(Rectangle().stroke(Theme.border, lineWidth: 1))
+                            .offset(x: 3, y: 3)
+                        CollectionCoverImage(collection: collection, api: api)
+                            .frame(height: 150).frame(maxWidth: .infinity)
+                            .clipped()
+                            .overlay(Rectangle().stroke(Theme.border, lineWidth: 1))
+                    }
+                    Text("\(collection.bookCount) book\(collection.bookCount == 1 ? "" : "s")")
+                        .font(Theme.body(11)).foregroundColor(Theme.ink)
+                        .padding(.horizontal, 7).padding(.vertical, 3)
+                        .background(Theme.brass)
+                        .overlay(Capsule().stroke(Theme.verdigris, lineWidth: 1))
+                        .clipShape(Capsule())
+                        .padding(6)
+                }
+                Text(collection.name).font(Theme.body(14)).foregroundColor(Theme.parchment)
+                    .lineLimit(2)
+                Text("Collection").font(Theme.body(12)).foregroundColor(Theme.parchmentDim)
+                    .lineLimit(1)
+            }
+            .padding(10)
+            .electricPanel(bg: Theme.surface, corner: 4, alpha: 0.6, glowRadius: 12)
+        }
+        .buttonStyle(.plain)
     }
 }

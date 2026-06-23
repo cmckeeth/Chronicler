@@ -53,8 +53,8 @@ final class APIClient: @unchecked Sendable {
     }
 
     // ── Books ──
-    func getBooks() async throws -> [Book] {
-        try await send(request("/api/books"), as: [Book].self)
+    func getBooks(root: Bool = false) async throws -> [Book] {
+        try await send(request("/api/books" + (root ? "?root=true" : "")), as: [Book].self)
     }
     func getBook(_ id: Int) async throws -> Book {
         try await send(request("/api/books/\(id)"), as: Book.self)
@@ -70,6 +70,23 @@ final class APIClient: @unchecked Sendable {
     }
     func audioURL(chapterId: Int) -> URL {
         URL(string: "/api/chapters/\(chapterId)/audio", relativeTo: APIClient.baseURL)!
+    }
+
+    // ── Collections ──
+    func collections() async throws -> [Collection] {
+        try await send(request("/api/collections"), as: [Collection].self)
+    }
+    func collectionBooks(_ id: Int) async throws -> [Book] {
+        try await send(request("/api/collections/\(id)/books"), as: [Book].self)
+    }
+    func collectionCoverURL(_ id: Int) -> URL {
+        URL(string: "/api/collections/\(id)/cover", relativeTo: APIClient.baseURL)!
+    }
+    func collectionCoverData(_ id: Int) async -> Data? {
+        let (data, resp) = (try? await session.data(for: request("/api/collections/\(id)/cover"))) ?? (nil, nil)
+        guard let data, let code = (resp as? HTTPURLResponse)?.statusCode,
+              (200..<300).contains(code), data.count >= 100 else { return nil }
+        return data
     }
 
     func getChapters(bookId: Int) async throws -> [Chapter] {
