@@ -547,17 +547,30 @@ private fun MetaEditorDialog(api: ApiClient, book: Book, onDismiss: () -> Unit, 
         }
     }
 
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = Theme.parchment,
+        unfocusedTextColor = Theme.parchment,
+        cursorColor = Theme.brass,
+        focusedBorderColor = Theme.brass,
+        unfocusedBorderColor = Theme.parchmentDim,
+        focusedLabelColor = Theme.brass,
+        unfocusedLabelColor = Theme.parchmentDim,
+    )
+
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = Theme.surface,
+        titleContentColor = Theme.brass,
+        textContentColor = Theme.parchment,
         title = { Text("Edit Details") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(title, { title = it }, label = { Text("Title") }, singleLine = true)
-                OutlinedTextField(author, { author = it }, label = { Text("Author") }, singleLine = true)
-                OutlinedTextField(narrator, { narrator = it }, label = { Text("Narrator") }, singleLine = true)
-                OutlinedTextField(year, { year = it }, label = { Text("Year") }, singleLine = true)
+                OutlinedTextField(title, { title = it }, label = { Text("Title") }, singleLine = true, colors = fieldColors)
+                OutlinedTextField(author, { author = it }, label = { Text("Author") }, singleLine = true, colors = fieldColors)
+                OutlinedTextField(narrator, { narrator = it }, label = { Text("Narrator") }, singleLine = true, colors = fieldColors)
+                OutlinedTextField(year, { year = it }, label = { Text("Year") }, singleLine = true, colors = fieldColors)
                 TextButton(onClick = { picker.launch("image/*") }) {
-                    Text(if (coverBytes == null) "Choose Cover Image" else "📎 Cover selected")
+                    Text(if (coverBytes == null) "Choose Cover Image" else "📎 Cover selected", color = Theme.brass)
                 }
             }
         },
@@ -570,8 +583,8 @@ private fun MetaEditorDialog(api: ApiClient, book: Book, onDismiss: () -> Unit, 
                     saving = false
                     onSaved()
                 }
-            }) { Text(if (saving) "Saving…" else "Save") }
+            }) { Text(if (saving) "Saving…" else "Save", color = Theme.brass) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = Theme.parchmentDim) } }
     )
 }

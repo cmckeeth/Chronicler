@@ -182,26 +182,49 @@ struct BookPlayerView: View {
     private var metaEditor: some View {
         NavigationStack {
             Form {
-                TextField("Title", text: $editTitle)
-                TextField("Author", text: $editAuthor)
-                TextField("Narrator (optional)", text: $editNarrator)
-                TextField("Year (optional)", text: $editYear).keyboardType(.numberPad)
+                metaField("Title", text: $editTitle)
+                metaField("Author", text: $editAuthor)
+                metaField("Narrator (optional)", text: $editNarrator)
+                metaField("Year (optional)", text: $editYear, keyboard: .numberPad)
                 PhotosPicker(selection: $pickerItem, matching: .images) {
                     Text(pendingCover == nil ? "Choose Cover Image" : "📎 Cover selected")
+                        .foregroundColor(Theme.brassLight)
                 }
+                .listRowBackground(Theme.surface2)
             }
-            .navigationTitle("Edit Details")
+            .scrollContentBackground(.hidden)
+            .background(Theme.surface)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(Theme.surface, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .presentationBackground(Theme.surface)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showMeta = false } }
+                ToolbarItem(placement: .principal) {
+                    Text("Edit Details").font(Theme.serif(18)).foregroundColor(Theme.brass)
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showMeta = false }.tint(Theme.parchmentMid)
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(savingMeta ? "Saving…" : "Save") { Task { await saveMeta() } }
-                        .disabled(savingMeta)
+                        .disabled(savingMeta).tint(Theme.brassLight)
                 }
             }
             .onChange(of: pickerItem) { _, item in
                 Task { pendingCover = try? await item?.loadTransferable(type: Data.self) }
             }
         }
+    }
+
+    // Solid, high-contrast field rows so text is readable in every theme.
+    private func metaField(_ placeholder: String, text: Binding<String>,
+                           keyboard: UIKeyboardType = .default) -> some View {
+        TextField("", text: text, prompt: Text(placeholder).foregroundColor(Theme.parchmentDim))
+            .keyboardType(keyboard)
+            .foregroundColor(Theme.parchment)
+            .tint(Theme.brass)
+            .listRowBackground(Theme.surface2)
     }
 
     // ── Data / actions ──
