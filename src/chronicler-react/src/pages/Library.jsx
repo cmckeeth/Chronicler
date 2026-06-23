@@ -27,9 +27,10 @@ export default function Library() {
         setBooks(await booksApi.list(term));
         setCollections([]);
       } else {
-        // Browsing: top-level books + collections, shown together.
+        // Browsing: fetch ALL books + collections; the filter chips derive what
+        // shows (root-only, all books, collection books, etc.) client-side.
         const [bs, cs] = await Promise.all([
-          booksApi.list(null, { root: true }),
+          booksApi.list(null),
           collectionsApi.list(),
         ]);
         setBooks(bs);
@@ -47,11 +48,18 @@ export default function Library() {
   }, [search, loadBooks]);
 
 
+  const searching = search.trim().length > 0;
+
   const filtered = useMemo(() => {
     let q = books;
-
-    if (filter === 'inprogress') q = q.filter(b => b.listenedCount > 0 && b.listenedCount < b.chapterCount);
-    else if (filter === 'favorites') q = q.filter(b => b.isFavorite);
+    if (searching) {
+      // Search shows every matching book, flat (collection books included).
+    } else if (filter === 'all') {
+      q = q.filter(b => b.collectionId == null);           // standalone only (collections shown separately)
+    } else if (filter === 'collections') {
+      q = [];                                              // collections-only view
+    }
+    // filter === 'books' → every book, flat (incl. those inside collections)
 
     if (sort === 'date') return [...q].sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
     if (sort === 'progress') return [...q].sort((a, b) => {
@@ -60,15 +68,14 @@ export default function Library() {
       return (bip ? 1 : 0) - (aip ? 1 : 0) || a.title.localeCompare(b.title);
     });
     return [...q].sort((a, b) => a.title.localeCompare(b.title));
-  }, [books, sort, filter]);
+  }, [books, sort, filter, searching]);
 
-  // Collections show only when browsing under the "All" filter (the in-progress /
-  // favorites chips are book-level traits that don't apply to collections).
+  // Collections show only when browsing under "All" or "Collections".
   const shownCollections = useMemo(() => {
-    if (filter !== 'all') return [];
+    if (searching || (filter !== 'all' && filter !== 'collections')) return [];
     if (sort === 'date') return [...collections].sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
     return [...collections].sort((a, b) => a.name.localeCompare(b.name));
-  }, [collections, filter, sort]);
+  }, [collections, filter, sort, searching]);
 
   const chip = (current, val, label) => (
     <button className={`chip${current === val ? ' chip-active' : ''}`} onClick={() => current === sort ? setSort(val) : setFilter(val)}>
@@ -106,8 +113,8 @@ export default function Library() {
           <div className="sort-group">
             <span className="control-label">Show</span>
             <button className={`chip${filter==='all'?' chip-active':''}`} onClick={() => setFilter('all')}>All</button>
-            <button className={`chip${filter==='inprogress'?' chip-active':''}`} onClick={() => setFilter('inprogress')}>In Progress</button>
-            <button className={`chip${filter==='favorites'?' chip-active':''}`} onClick={() => setFilter('favorites')}>★ Favorites</button>
+            <button className={`chip${filter==='books'?' chip-active':''}`} onClick={() => setFilter('books')}>Books</button>
+            <button className={`chip${filter==='collections'?' chip-active':''}`} onClick={() => setFilter('collections')}>Collections</button>
           </div>
         </div>
       </div>

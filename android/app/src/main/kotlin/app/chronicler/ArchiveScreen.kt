@@ -24,14 +24,12 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun ArchiveScreen(auth: AuthStore, nav: NavController) {
-    // Root books (standalone, top-level) drive the default grid alongside collections.
-    var books by remember { mutableStateOf<List<Book>>(emptyList()) }
-    // All books, flat — used only while searching so results span inside collections too.
+    // All books, flat (including those inside collections); each chip derives its view client-side.
     var allBooks by remember { mutableStateOf<List<Book>>(emptyList()) }
     var collections by remember { mutableStateOf<List<Collection>>(emptyList()) }
     var search by remember { mutableStateOf("") }
     var sort by remember { mutableStateOf("name") }
-    var filter by remember { mutableStateOf("favorites") }
+    var filter by remember { mutableStateOf("all") }
     var loading by remember { mutableStateOf(true) }
     var refreshing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -39,9 +37,8 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
 
     suspend fun fetch() {
         runCatching {
-            books = auth.api.getBooks(root = true)
-            collections = auth.api.collections()
             allBooks = auth.api.getBooks()
+            collections = auth.api.collections()
         }.onSuccess { error = null }.onFailure { error = "unreachable" }
     }
 
@@ -60,21 +57,23 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
     LaunchedEffect(Unit) { load() }
 
     val searching = search.isNotBlank()
-    val filtered = remember(books, allBooks, search, sort, filter) {
-        // While searching, query every book flat (including those inside collections);
-        // otherwise show only standalone root books beside the collection cards.
-        var q = if (searching) allBooks else books
+    val filtered = remember(allBooks, search, sort, filter) {
+        // While searching, query every book flat (including those inside collections).
+        // Otherwise the chip decides: All = standalone root books, Books = every book,
+        // Collections = no books (cards only).
+        val rootBooks = allBooks.filter { it.collectionId == null }
+        var q = when {
+            searching -> allBooks
+            filter == "books" -> allBooks
+            filter == "collections" -> emptyList()
+            else -> rootBooks
+        }
         if (searching) {
             val s = search.lowercase()
             q = q.filter {
                 it.title.lowercase().contains(s) || it.author.lowercase().contains(s) ||
                     (it.narrator?.lowercase()?.contains(s) ?: false)
             }
-        }
-        q = when (filter) {
-            "inprogress" -> q.filter { it.isInProgress }
-            "favorites" -> q.filter { it.isFavorite }
-            else -> q
         }
         when (sort) {
             "date" -> q.sortedByDescending { it.addedAt }
@@ -104,18 +103,19 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
         chipRow("Sort", listOf("Name" to "name", "Added" to "date", "Progress" to "progress"),
             sort) { sort = it }
         Spacer(Modifier.height(10.dp))
-        chipRow("Show", listOf("All" to "all", "In Progress" to "inprogress", "★ Favorites" to "favorites"),
+        chipRow("Show", listOf("All" to "all", "Books" to "books", "Collections" to "collections"),
             filter) { filter = it }
         Spacer(Modifier.height(18.dp))
 
-        // Collections only appear in the default (non-search) view, ahead of root books.
-        val shownCollections = if (searching) emptyList() else collections
+        // Collections appear ahead of books on the All/Collections chips (never the Books chip,
+        // never while searching).
+        val shownCollections = if (searching || filter == "books") emptyList() else collections
         when {
             loading -> center("Consulting the archive...", Theme.parchmentDim)
             error != null -> center("The pneumatic tubes have failed: $error", Theme.rust)
             filtered.isEmpty() && shownCollections.isEmpty() -> center(
                 if (searching) "No volumes match this filter."
-                else if (books.isEmpty() && collections.isEmpty()) "The archive lies empty, traveller."
+                else if (allBooks.isEmpty() && collections.isEmpty()) "The archive lies empty, traveller."
                 else "No volumes match this filter.",
                 Theme.parchmentDim)
             else -> LazyVerticalGrid(columns = GridCells.Adaptive(150.dp),

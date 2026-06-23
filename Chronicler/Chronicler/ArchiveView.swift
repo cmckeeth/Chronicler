@@ -7,7 +7,7 @@ struct ArchiveView: View {
     @State private var collections: [Collection] = []
     @State private var search = ""
     @State private var sort = "name"
-    @State private var filter = "favorites"     // default matches LibraryBrowser
+    @State private var filter = "all"           // all | books | collections
     @State private var loading = true
     @State private var refreshing = false
     @State private var error: String?
@@ -18,23 +18,31 @@ struct ArchiveView: View {
         !search.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
-    // Collections only appear in the (unsearched) browse view; search is flat over all books.
-    private var showCollections: Bool { !isSearching && !collections.isEmpty }
+    // Collections appear in the (unsearched) browse view, on the All/Collections chips.
+    private var showCollections: Bool {
+        !isSearching && filter != "books" && !collections.isEmpty
+    }
 
     var filtered: [Book] {
-        var q = books
+        // Search is always flat over all books. When browsing, books holds ALL books;
+        // the chip decides which slice to show:
+        //   All        -> standalone (root) books, alongside collection cards
+        //   Books      -> every book flat (including those inside collections)
+        //   Collections-> no books, only collection cards
+        var q: [Book]
         if isSearching {
             let s = search.lowercased()
-            q = q.filter {
+            q = books.filter {
                 $0.title.lowercased().contains(s) ||
                 $0.author.lowercased().contains(s) ||
                 ($0.narrator?.lowercased().contains(s) ?? false)
             }
-        }
-        switch filter {
-        case "inprogress": q = q.filter { $0.isInProgress }
-        case "favorites":  q = q.filter { $0.isFavorite }
-        default: break
+        } else {
+            switch filter {
+            case "books":       q = books
+            case "collections": q = []
+            default:            q = books.filter { $0.collectionId == nil }
+            }
         }
         switch sort {
         case "date": q.sort { $0.addedAt > $1.addedAt }
@@ -72,7 +80,7 @@ struct ArchiveView: View {
 
                 chipGroup("Sort", [("Name","name"),("Added","date"),("Progress","progress")],
                           selection: $sort)
-                chipGroup("Show", [("All","all"),("In Progress","inprogress"),("★ Favorites","favorites")],
+                chipGroup("Show", [("All","all"),("Books","books"),("Collections","collections")],
                           selection: $filter)
 
                 content
@@ -164,7 +172,8 @@ struct ArchiveView: View {
         }
     }
 
-    // Browse view: top-level (root) books + collections shown side by side.
+    // Browse view: ALL books + collections loaded; chips slice them client-side
+    // (All = root books + collections, Books = all books flat, Collections = collections only).
     // Search view: all books flat, so books inside collections are findable.
     private func load() async {
         loading = true; error = nil
@@ -173,7 +182,7 @@ struct ArchiveView: View {
                 books = try await auth.api.getBooks()
                 collections = []
             } else {
-                async let b = auth.api.getBooks(root: true)
+                async let b = auth.api.getBooks()
                 async let c = auth.api.collections()
                 books = try await b
                 collections = (try? await c) ?? []
@@ -190,7 +199,7 @@ struct ArchiveView: View {
                 books = try await auth.api.getBooks()
                 collections = []
             } else {
-                async let b = auth.api.getBooks(root: true)
+                async let b = auth.api.getBooks()
                 async let c = auth.api.collections()
                 books = try await b
                 collections = (try? await c) ?? []
