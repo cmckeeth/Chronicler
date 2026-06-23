@@ -368,7 +368,7 @@ app.MapDelete("/api/books/{id:int}/cover", [Authorize] async (int id, AppDbConte
     return Results.Ok();
 });
 
-app.MapPut("/api/books/{id:int}/cover/upload", [Authorize] async (int id, HttpRequest request, AppDbContext db) =>
+app.MapPut("/api/books/{id:int}/cover/upload", [Authorize] async (int id, HttpRequest request, AppDbContext db, LibraryScanner scanner) =>
 {
     var book = await db.Books.FindAsync(id);
     if (book is null) return Results.NotFound();
@@ -380,9 +380,28 @@ app.MapPut("/api/books/{id:int}/cover/upload", [Authorize] async (int id, HttpRe
 
     using var ms = new MemoryStream();
     await file.CopyToAsync(ms);
-    book.CoverData = ms.ToArray();
-    book.CoverMimeType = file.ContentType.StartsWith("image/") ? file.ContentType : "image/jpeg";
+    var bytes = ms.ToArray();
+    var mime = file.ContentType.StartsWith("image/") ? file.ContentType : "image/jpeg";
+    book.CoverData = bytes;
+    book.CoverMimeType = mime;
     await db.SaveChangesAsync();
+
+    // Persist the upload as cover.<ext> in the book's folder so the scanner (and every
+    // platform that reads covers) keeps it — otherwise a rescan, which syncs covers from
+    // disk, would clear a DB-only cover.
+    try
+    {
+        var bookDir = Path.GetDirectoryName(Path.Combine(scanner.LibraryRoot, book.FilePath));
+        if (bookDir is not null && Directory.Exists(bookDir))
+        {
+            var ext = mime switch { "image/png" => ".png", "image/webp" => ".webp", "image/gif" => ".gif", _ => ".jpg" };
+            foreach (var old in Directory.GetFiles(bookDir)
+                .Where(f => Path.GetFileNameWithoutExtension(f).Equals("cover", StringComparison.OrdinalIgnoreCase)))
+                try { File.Delete(old); } catch { /* ignore */ }
+            await File.WriteAllBytesAsync(Path.Combine(bookDir, "cover" + ext), bytes);
+        }
+    }
+    catch (Exception ex) { app.Logger.LogWarning(ex, "Could not write cover file for book {Id}", id); }
 
     return Results.Ok(new { hasCover = true });
 });
