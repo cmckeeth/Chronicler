@@ -65,8 +65,8 @@ struct LandingView: View {
 
             VStack {
                 HStack(spacing: 12) {
-                    Spacer()
                     themePicker
+                    Spacer()
                     Button("Sign Out") { auth.clear() }
                         .font(Theme.body(11)).foregroundColor(Theme.parchmentDim).opacity(0.5)
                 }
