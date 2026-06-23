@@ -59,6 +59,7 @@ struct BookPlayerView: View {
         .task { await loadAll() }
         .onDisappear { audio.teardown() }
         .sheet(isPresented: $showMeta) { metaEditor }
+        .sheet(isPresented: $showChapterEdit) { chapterEditor }
     }
 
     // ── Header (cover + title/author) ──
@@ -114,6 +115,11 @@ struct BookPlayerView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { selectChapter(chapter) }
                 .contextMenu {
+                    Button {
+                        openChapterEditor(chapter)
+                    } label: {
+                        Label("Edit chapter", systemImage: "pencil")
+                    }
                     Button {
                         Task { await completeChapter(chapter.id) }
                     } label: {
@@ -236,6 +242,67 @@ struct BookPlayerView: View {
             .foregroundColor(Theme.parchment)
             .tint(Theme.brass)
             .listRowBackground(Theme.surface2)
+    }
+
+    // ── Chapter editor sheet ──
+    @State private var showChapterEdit = false
+    @State private var editChapterId: Int?
+    @State private var editChapterTitle = ""
+    @State private var editChapterTrack = ""
+    @State private var savingChapter = false
+
+    private func openChapterEditor(_ chapter: Chapter) {
+        editChapterId = chapter.id
+        editChapterTitle = chapter.title
+        editChapterTrack = String(chapter.trackNumber)
+        savingChapter = false
+        showChapterEdit = true
+    }
+
+    private var chapterEditor: some View {
+        NavigationStack {
+            Form {
+                metaField("Title", text: $editChapterTitle)
+                metaField("Track #", text: $editChapterTrack, keyboard: .numberPad)
+            }
+            .scrollContentBackground(.hidden)
+            .background(Theme.surface)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(Theme.surface, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .presentationBackground(Theme.surface)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Edit Chapter").font(Theme.serif(18)).foregroundColor(Theme.brass)
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showChapterEdit = false }.tint(Theme.parchmentMid)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(savingChapter ? "Saving…" : "Save") { Task { await saveChapter() } }
+                        .disabled(savingChapter).tint(Theme.brassLight)
+                }
+            }
+        }
+    }
+
+    private func saveChapter() async {
+        guard let id = editChapterId else { return }
+        let track = Int(editChapterTrack.trimmingCharacters(in: .whitespaces))
+            ?? (chapters.first { $0.id == id }?.trackNumber ?? 0)
+        let title = editChapterTitle.trimmingCharacters(in: .whitespaces)
+        savingChapter = true
+        let ok = await api.updateChapter(id, title: title, trackNumber: track)
+        savingChapter = false
+        guard ok else { return }
+        if let idx = chapters.firstIndex(where: { $0.id == id }) {
+            let old = chapters[idx]
+            chapters[idx] = Chapter(id: old.id, bookId: old.bookId,
+                                    title: title, trackNumber: track)
+            if current?.id == id { current = chapters[idx] }
+        }
+        showChapterEdit = false
     }
 
     // ── Data / actions ──

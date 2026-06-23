@@ -106,6 +106,11 @@ final class APIClient: @unchecked Sendable {
     func completeChapter(_ chapterId: Int) async {
         _ = try? await send(request("/api/chapters/\(chapterId)/complete", method: "POST"))
     }
+    func updateChapter(_ chapterId: Int, title: String, trackNumber: Int) async -> Bool {
+        let code = (try? await send(request("/api/chapters/\(chapterId)", method: "PUT",
+            body: ChapterUpdateBody(title: title, trackNumber: trackNumber)))) ?? -1
+        return (200..<300).contains(code)
+    }
     func resetBook(_ bookId: Int) async {
         _ = try? await send(request("/api/books/\(bookId)/reset", method: "POST"))
     }
@@ -162,6 +167,9 @@ final class APIClient: @unchecked Sendable {
     private struct MetaBody: Encodable {
         let title: String; let author: String; let narrator: String?
         let description: String?; let year: Int?
+    }
+    private struct ChapterUpdateBody: Encodable {
+        let title: String; let trackNumber: Int
     }
 }
 

@@ -876,7 +876,7 @@ select {
     -webkit-backdrop-filter: var(--panel-blur);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    overflow: hidden;
+    overflow: visible;
     cursor: pointer;
     transition: border-color .2s, box-shadow .2s, transform .2s;
     position: relative;
@@ -899,9 +899,59 @@ select {
     transform: translateY(-4px) rotate(.3deg);
 }
 
+/* Metadata tooltip on hover */
+.book-tooltip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translateX(-50%) translateY(6px);
+    width: max-content;
+    max-width: 16rem;
+    background: var(--surface2);
+    border: 1px solid var(--border-brass);
+    border-radius: var(--radius);
+    box-shadow: 0 10px 28px rgba(0,0,0,.55);
+    padding: .55rem .7rem;
+    z-index: 30;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+}
+.book-card:hover .book-tooltip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    transition-delay: .35s;
+}
+.book-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%; left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--border-brass);
+}
+.book-tooltip-title {
+    font-weight: 700;
+    color: var(--brass-pale);
+    margin-bottom: .35rem;
+    font-size: .82rem;
+    line-height: 1.2;
+}
+.book-tooltip-row {
+    display: flex;
+    gap: .6rem;
+    justify-content: space-between;
+    font-size: .72rem;
+    line-height: 1.5;
+}
+.book-tooltip-key { color: var(--parchment-dim); white-space: nowrap; }
+.book-tooltip-val { color: var(--parchment); text-align: right; }
+
 .book-cover {
     aspect-ratio: 2/3;
     overflow: hidden;
+    border-top-left-radius: var(--radius);
+    border-top-right-radius: var(--radius);
     background: var(--leather);
     background-image:
         repeating-linear-gradient(

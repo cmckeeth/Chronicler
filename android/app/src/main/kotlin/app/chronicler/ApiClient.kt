@@ -110,6 +110,10 @@ class ApiClient {
     suspend fun completeChapter(chapterId: Int) {
         body(builder("/api/chapters/$chapterId/complete").post(ByteArray(0).toRequestBody()).build())
     }
+    suspend fun updateChapter(chapterId: Int, title: String, trackNumber: Int): Boolean {
+        return body(builder("/api/chapters/$chapterId")
+            .put(jsonBody(mapOf("title" to title, "trackNumber" to trackNumber))).build()) != null
+    }
     suspend fun resetBook(bookId: Int) {
         body(builder("/api/books/$bookId/reset").post(ByteArray(0).toRequestBody()).build())
     }

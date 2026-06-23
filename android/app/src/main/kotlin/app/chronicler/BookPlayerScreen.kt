@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -40,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,6 +66,7 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
     var current by remember { mutableStateOf<Chapter?>(null) }
     var showMeta by remember { mutableStateOf(false) }
     var menuChapterId by remember { mutableStateOf<Int?>(null) }
+    var editChapter by remember { mutableStateOf<Chapter?>(null) }
     // Download state per chapter: 0 = none, 1 = downloading, 2 = downloaded.
     val downloads = remember { mutableStateMapOf<Int, Int>() }
 
@@ -273,6 +276,15 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
                                     }
                                 }
                             })
+                        DropdownMenuItem(
+                            text = {
+                                Text("✎ Edit chapter", color = Theme.parchment,
+                                    fontFamily = Theme.body, fontSize = 15.sp)
+                            },
+                            onClick = {
+                                menuChapterId = null
+                                editChapter = ch
+                            })
                         if (downloads[ch.id] == 2) {
                             DropdownMenuItem(
                                 text = {
@@ -308,6 +320,16 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
     if (showMeta && book != null) {
         MetaEditorDialog(api, book!!, onDismiss = { showMeta = false },
             onSaved = { scope.launch { book = api.getBook(bookId); invalidateCover(bookId); showMeta = false } })
+    }
+
+    editChapter?.let { ch ->
+        ChapterEditorDialog(api, ch, onDismiss = { editChapter = null },
+            onSaved = { newTitle, newTrack ->
+                chapters = chapters.map {
+                    if (it.id == ch.id) it.copy(title = newTitle, trackNumber = newTrack) else it
+                }
+                editChapter = null
+            })
     }
 }
 
@@ -618,6 +640,57 @@ private fun MetaEditorDialog(api: ApiClient, book: Book, onDismiss: () -> Unit, 
                     coverBytes?.let { api.uploadCover(book.id, it, coverMime) }
                     saving = false
                     onSaved()
+                }
+            }) { Text(if (saving) "Saving…" else "Save", color = Theme.brass) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = Theme.parchmentDim) } }
+    )
+}
+
+@Composable
+private fun ChapterEditorDialog(
+    api: ApiClient, chapter: Chapter,
+    onDismiss: () -> Unit, onSaved: (String, Int) -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var title by remember { mutableStateOf(chapter.title) }
+    var track by remember { mutableStateOf(chapter.trackNumber.toString()) }
+    var saving by remember { mutableStateOf(false) }
+
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = Theme.parchment,
+        unfocusedTextColor = Theme.parchment,
+        cursorColor = Theme.brass,
+        focusedBorderColor = Theme.brass,
+        unfocusedBorderColor = Theme.parchmentDim,
+        focusedLabelColor = Theme.brass,
+        unfocusedLabelColor = Theme.parchmentDim,
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Theme.surface,
+        titleContentColor = Theme.brass,
+        textContentColor = Theme.parchment,
+        title = { Text("Edit Chapter") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(title, { title = it }, label = { Text("Title") },
+                    singleLine = true, colors = fieldColors)
+                OutlinedTextField(track, { track = it.filter(Char::isDigit) },
+                    label = { Text("Track #") }, singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    colors = fieldColors)
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = !saving, onClick = {
+                saving = true
+                val newTrack = track.toIntOrNull() ?: chapter.trackNumber
+                scope.launch {
+                    api.updateChapter(chapter.id, title, newTrack)
+                    saving = false
+                    onSaved(title, newTrack)
                 }
             }) { Text(if (saving) "Saving…" else "Save", color = Theme.brass) }
         },
