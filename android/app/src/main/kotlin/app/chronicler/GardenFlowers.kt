@@ -1,192 +1,107 @@
 package app.chronicler
 
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.rotateRad
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 
-// Rose hues (light -> mid -> deep). All garden flowers are roses now; mirrors the web's
-// ROSE-family FLOWER_HUES. Outer/mid petals use light->mid; inner/center use mid->deep.
-enum class FlowerHue(val light: Color, val mid: Color, val deep: Color) {
-    ROSE(Color(0xFFFFD9E8), Color(0xFFF0497F), Color(0xFFA81450)),
-    RED(Color(0xFFFF9FB2), Color(0xFFE21F3C), Color(0xFF860F24)),
-    BLUSH(Color(0xFFFFE6EE), Color(0xFFFF8FB0), Color(0xFFD2658A)),
-    CRIMSON(Color(0xFFFF86A4), Color(0xFFC81545), Color(0xFF760A2A)),
-    CORAL(Color(0xFFFFC1C0), Color(0xFFFF5A6E), Color(0xFFA01530)),
-}
-
-// Draw one hand-built top-down ROSE centred in this DrawScope: concentric rings of broad,
-// rounded, overlapping petals (rounded ovals, rx ≈ 0.68·ry, pointing outward), getting
-// smaller toward the middle, finished with a small rolled-bud center dot. No golden disc.
-// Outer/mid rings are LIGHT→MID radial-shaded; inner/center rings are MID→DEEP (darker).
-// Mirrors the web's rose <Flower>.
-fun DrawScope.drawFlower(hue: FlowerHue, petals: Int = 13) {
-    val w = size.width
-    val cx = w * 0.5f
-    val cy = w * 0.5f
-    val half = w * 0.5f
-
-    // One ring of broad rounded petals pointing outward from the center.
-    // ryFrac/offsetFrac are fractions of the half-size; deep=true uses the MID→DEEP gradient.
-    fun ring(count: Int, ryFrac: Float, offsetFrac: Float, rotOffsetDeg: Float, deep: Boolean) {
-        val ry = half * ryFrac
-        val rx = ry * 0.68f
-        val ovalCenterDist = half * offsetFrac   // petal center distance outward from middle
-        val inner = if (deep) hue.mid else hue.light
-        val outer = if (deep) hue.deep else hue.mid
-        for (k in 0 until count) {
-            val angDeg = rotOffsetDeg + (360f / count) * k
-            rotateRad(Math.toRadians(angDeg.toDouble()).toFloat(), pivot = Offset(cx, cy)) {
-                val ovalW = rx * 2f
-                val ovalH = ry * 2f
-                // Petal center sits above the middle (pointing "up"); the rotate fans it out.
-                val petalCy = cy - ovalCenterDist
-                val topLeft = Offset(cx - ovalW / 2f, petalCy - ovalH / 2f)
-                drawOval(
-                    brush = Brush.radialGradient(
-                        colorStops = arrayOf(0f to inner, 1f to outer),
-                        center = Offset(cx, petalCy + ovalH * 0.28f),
-                        radius = ovalH * 0.72f,
-                    ),
-                    topLeft = topLeft,
-                    size = Size(ovalW, ovalH),
-                    alpha = 0.96f,
-                )
-            }
-        }
-    }
-
-    // Outermost first so inner rings overlap on top.
-    ring(8, ryFrac = 0.38f, offsetFrac = 0.20f, rotOffsetDeg = 0f, deep = false)
-    ring(7, ryFrac = 0.32f, offsetFrac = 0.26f, rotOffsetDeg = 360f / 7f / 2f, deep = false)
-    ring(6, ryFrac = 0.26f, offsetFrac = 0.32f, rotOffsetDeg = 360f / 6f / 3f, deep = true)
-    ring(5, ryFrac = 0.20f, offsetFrac = 0.38f, rotOffsetDeg = 360f / 5f / 2f, deep = true)
-
-    // Small rolled-bud center dot.
-    drawCircle(
-        brush = Brush.radialGradient(
-            colorStops = arrayOf(0f to hue.mid, 1f to hue.deep),
-            center = Offset(cx, cy),
-            radius = half * 0.14f,
-        ),
-        radius = half * 0.12f,
-        center = Offset(cx, cy),
-    )
-}
-
-// A single swaying flower placed at an alignment + offset. Non-interactive.
+// One real painted rose (rose head + leafy stem on transparency). It grows IN on first
+// composition: revealed from its bottom edge upward (leafy stem grows up, bloom rises into
+// view), staggered, then sways gently forever, pivoting on its base (transform-origin
+// bottom). Non-interactive background ornament.
 @Composable
-private fun BoxScope.SwayFlower(
-    hue: FlowerHue,
+private fun BoxScope.Rose(
     sizeDp: Int,
     align: Alignment,
     xDp: Int,
     yDp: Int,
+    growDelayMs: Int,
     swayMs: Int,
+    swayDeg: Float,
     reverse: Boolean,
-    petals: Int = 13,
 ) {
-    val t = rememberInfiniteTransition(label = "swayFlower")
+    // Grow-in: bottom-up reveal 0 -> 1, staggered by growDelayMs (stem grows up, bloom rises).
+    var grown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { grown = true }
+    val grow by animateFloatAsState(
+        targetValue = if (grown) 1f else 0f,
+        animationSpec = tween(durationMillis = 2200, delayMillis = growDelayMs, easing = FastOutSlowInEasing),
+        label = "roseGrow",
+    )
+
+    // Gentle continuous sway, pivoting on the base of the stem.
+    val t = rememberInfiniteTransition(label = "roseSway")
     val deg by t.animateFloat(
-        initialValue = if (reverse) 6f else -6f,
-        targetValue = if (reverse) -6f else 6f,
+        initialValue = if (reverse) swayDeg else -swayDeg,
+        targetValue = if (reverse) -swayDeg else swayDeg,
         animationSpec = infiniteRepeatable(tween(swayMs, easing = LinearEasing), RepeatMode.Reverse),
         label = "sway",
     )
-    Canvas(
-        Modifier
+
+    Image(
+        painter = painterResource(R.drawable.rose),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = Modifier
             .align(align)
             .offset(x = xDp.dp, y = yDp.dp)
             .size(sizeDp.dp)
-            .rotate(deg),
-    ) { drawFlower(hue, petals) }
-}
-
-// GARDEN only: ~5 small vector flowers slowly drifting DOWN the full screen, looping,
-// staggered, with a gentle horizontal sway + slow rotation, semi-transparent. Reuses the
-// shared drawFlower at small size. Mirrors the web app's drifting-petal layer. Non-interactive.
-@Composable
-fun GardenPetalOverlay(modifier: Modifier = Modifier) {
-    data class Petal(
-        val hue: FlowerHue, val sizeDp: Int, val xFrac: Float,
-        val fallMs: Int, val swayMs: Int, val spinMs: Int, val phase: Float, val petals: Int,
-    )
-    val petalDefs = listOf(
-        Petal(FlowerHue.ROSE,    38, 0.14f, 16000, 5200, 20000, 0.00f, 13),
-        Petal(FlowerHue.RED,     30, 0.38f, 13000, 4300, 17000, 0.30f, 15),
-        Petal(FlowerHue.BLUSH,   46, 0.58f, 19000, 6100, 24000, 0.55f, 13),
-        Petal(FlowerHue.CORAL,   34, 0.78f, 14500, 4800, 19000, 0.18f, 14),
-        Petal(FlowerHue.CRIMSON, 32, 0.90f, 17500, 5600, 22000, 0.72f, 14),
-    )
-    val t = rememberInfiniteTransition(label = "petals")
-    Box(modifier.fillMaxSize().alpha(0.55f)) {
-        for (p in petalDefs) {
-            val fall by t.animateFloat(
-                0f, 1f,
-                infiniteRepeatable(tween(p.fallMs, easing = LinearEasing), RepeatMode.Restart),
-                label = "fall",
-            )
-            val sway by t.animateFloat(
-                -1f, 1f,
-                infiniteRepeatable(tween(p.swayMs, easing = LinearEasing), RepeatMode.Reverse),
-                label = "sway",
-            )
-            val spin by t.animateFloat(
-                0f, 360f,
-                infiniteRepeatable(tween(p.spinMs, easing = LinearEasing), RepeatMode.Restart),
-                label = "spin",
-            )
-            // Stagger each petal's fall progress so they don't drop in lockstep.
-            val prog = (fall + p.phase).let { it - kotlin.math.floor(it) }
-            BoxWithConstraints {
-                val h = maxHeight
-                Canvas(
-                    Modifier
-                        .align(Alignment.TopStart)
-                        .offset(
-                            x = (maxWidth * p.xFrac) + (sway * 18).dp,
-                            y = (-(p.sizeDp).dp) + (h + p.sizeDp.dp) * prog,
-                        )
-                        .size(p.sizeDp.dp)
-                        .rotate(spin),
-                ) { drawFlower(p.hue, p.petals) }
+            .graphicsLayer {
+                // Pivot at the bottom-center so the sway roots at the base of the stem.
+                transformOrigin = TransformOrigin(0.5f, 1f)
+                rotationZ = deg
             }
-        }
-    }
+            .drawWithContent {
+                // Reveal from the bottom edge upward: only the lower `grow` fraction is drawn.
+                val h = size.height * grow
+                clipRect(top = size.height - h) { this@drawWithContent.drawContent() }
+            },
+    )
 }
 
-// GARDEN-only soft BACKGROUND wallpaper: several large vector flowers at ~50% opacity,
-// gently swaying, behind the foreground content. Non-interactive. Mirrors the web GardenFX
-// bg-flower layer (varied hue/size/position).
+// GARDEN-only soft BACKGROUND wallpaper: several real painted roses standing along the BOTTOM
+// of the screen (a row rising up), plus a couple of larger ones set back in the side margins.
+// All at ~50% opacity so the panels read through. Each grows in (staggered) and sways gently.
+// Mirrors the web GardenFX rose layer. Non-interactive (drawn behind content).
 @Composable
 fun GardenFlowerBackdrop(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize().alpha(0.5f)) {
-        SwayFlower(FlowerHue.ROSE, sizeDp = 320, align = Alignment.TopStart, xDp = -90, yDp = -60, swayMs = 9000, reverse = false)
-        SwayFlower(FlowerHue.RED, sizeDp = 230, align = Alignment.TopEnd, xDp = 60, yDp = 150, swayMs = 11000, reverse = true, petals = 15)
-        SwayFlower(FlowerHue.BLUSH, sizeDp = 260, align = Alignment.BottomStart, xDp = 90, yDp = 60, swayMs = 13000, reverse = false)
-        SwayFlower(FlowerHue.CORAL, sizeDp = 185, align = Alignment.CenterStart, xDp = -45, yDp = 40, swayMs = 10000, reverse = true)
-        SwayFlower(FlowerHue.CRIMSON, sizeDp = 200, align = Alignment.Center, xDp = 30, yDp = -80, swayMs = 12000, reverse = false, petals = 14)
+        // Larger roses set back in the side margins.
+        Rose(sizeDp = 340, align = Alignment.BottomStart, xDp = -120, yDp = 40, growDelayMs = 0, swayMs = 11000, swayDeg = 2.5f, reverse = false)
+        Rose(sizeDp = 320, align = Alignment.BottomEnd, xDp = 120, yDp = 40, growDelayMs = 120, swayMs = 12500, swayDeg = 2.5f, reverse = true)
+
+        // A row of roses standing along the bottom, rising up (staggered grow-in).
+        Rose(sizeDp = 170, align = Alignment.BottomStart, xDp = 4, yDp = 20, growDelayMs = 240, swayMs = 8000, swayDeg = 3.5f, reverse = true)
+        Rose(sizeDp = 210, align = Alignment.BottomStart, xDp = 110, yDp = 30, growDelayMs = 360, swayMs = 9000, swayDeg = 3f, reverse = false)
+        Rose(sizeDp = 240, align = Alignment.BottomCenter, xDp = -20, yDp = 24, growDelayMs = 480, swayMs = 9500, swayDeg = 3f, reverse = true)
+        Rose(sizeDp = 200, align = Alignment.BottomCenter, xDp = 130, yDp = 32, growDelayMs = 600, swayMs = 8500, swayDeg = 3.5f, reverse = false)
+        Rose(sizeDp = 215, align = Alignment.BottomEnd, xDp = -90, yDp = 28, growDelayMs = 720, swayMs = 9200, swayDeg = 3f, reverse = true)
+        Rose(sizeDp = 165, align = Alignment.BottomEnd, xDp = 6, yDp = 20, growDelayMs = 840, swayMs = 7800, swayDeg = 3.5f, reverse = false)
     }
 }

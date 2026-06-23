@@ -1,9 +1,5 @@
 package app.chronicler
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,16 +20,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import kotlinx.coroutines.delay
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -45,8 +37,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathMeasure
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import kotlin.math.cos
 import kotlin.math.sin
@@ -57,7 +47,7 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
     androidx.compose.runtime.LaunchedEffect(Unit) { StartupSound.play(context) }
 
     Box(Modifier.fillMaxSize()) {   // transparent: the app-wide electric backdrop shows through
-        // Garden-only: a soft vector-flower wallpaper at ~50% opacity, BEHIND all content.
+        // Garden-only: real painted roses standing along the bottom at ~50% opacity, BEHIND all content.
         if (Theme.themeMode == ThemeMode.GARDEN) GardenFlowerBackdrop()
 
         // Steampunk-only: an old-timey industrial factory skyline pinned to the bottom,
@@ -113,12 +103,6 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
         }
 
         UpdateBanner(auth.api, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp))
-
-        // Garden-only: vines grow up, then a flower blooms slowly at each tip.
-        if (Theme.themeMode == ThemeMode.GARDEN) VineGrowOverlay()
-
-        // Garden-only: small vector flowers slowly drifting down over everything.
-        if (Theme.themeMode == ThemeMode.GARDEN) GardenPetalOverlay()
 
         // Steampunk-only: lush rising steam plumes drifting over everything (non-interactive).
         if (Theme.themeMode == ThemeMode.STEAMPUNK) SteamOverlay()
@@ -284,57 +268,6 @@ private fun SteamOverlay() {
                     center = Offset(x, y), radius = radius),
                 radius = radius, center = Offset(x, y))
         }
-    }
-}
-
-// GARDEN only: vines grow up from the bottom (the stem "draws" itself via PathMeasure),
-// then a hand-built VECTOR flower blooms slowly at the tip (no emoji).
-@Composable
-private fun VineGrowOverlay() {
-    Box(Modifier.fillMaxSize()) {
-        Vine(Alignment.BottomStart,  xDp = 6,   heightDp = 250, hue = FlowerHue.ROSE,    growMs = 3200)
-        Vine(Alignment.BottomEnd,    xDp = -6,  heightDp = 250, hue = FlowerHue.CRIMSON, growMs = 3700)
-        Vine(Alignment.BottomCenter, xDp = 0,   heightDp = 185, hue = FlowerHue.RED,     growMs = 3000)
-    }
-}
-
-@Composable
-private fun BoxScope.Vine(align: Alignment, xDp: Int, heightDp: Int, hue: FlowerHue, growMs: Int) {
-    var started by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { started = true }
-    val grow by animateFloatAsState(
-        targetValue = if (started) 1f else 0f,
-        animationSpec = tween(durationMillis = growMs, easing = FastOutSlowInEasing),
-        label = "vineGrow")
-    var bloom by remember { mutableStateOf(false) }
-    LaunchedEffect(started) { if (started) { delay(growMs.toLong()); bloom = true } }
-    val flowerScale by animateFloatAsState(
-        targetValue = if (bloom) 1f else 0f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessVeryLow),
-        label = "vineFlower")
-
-    val stem = Color(0xFF6FAE5F)
-    Box(Modifier.align(align).offset(x = xDp.dp).width(130.dp).height(heightDp.dp)) {
-        Canvas(Modifier.fillMaxSize()) {
-            val w = size.width; val h = size.height
-            val path = Path().apply {
-                moveTo(w * 0.5f, h)
-                cubicTo(w * 0.16f, h * 0.80f, w * 0.88f, h * 0.62f, w * 0.42f, h * 0.46f)
-                cubicTo(w * 0.08f, h * 0.30f, w * 0.82f, h * 0.18f, w * 0.52f, h * 0.05f)
-            }
-            val pm = PathMeasure().apply { setPath(path, false) }
-            val seg = Path()
-            pm.getSegment(0f, grow * pm.length, seg, true)
-            drawPath(seg, color = stem, style = Stroke(width = 8f, cap = StrokeCap.Round))
-        }
-        // Hand-built VECTOR flower at the tip — blooms after the stem finishes (no emoji).
-        Canvas(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .offset(y = (-10).dp)
-                .size(72.dp)
-                .scale(flowerScale)
-        ) { drawFlower(hue) }
     }
 }
 

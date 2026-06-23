@@ -1,0 +1,6 @@
+{
+  "images" : [
+    { "idiom" : "universal", "filename" : "rose.png" }
+  ],
+  "info" : { "author" : "xcode", "version" : 1 }
+}
