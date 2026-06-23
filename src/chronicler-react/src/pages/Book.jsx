@@ -198,7 +198,7 @@ export default function Book() {
 
   return (
     <div className="book-player-page">
-      <button className="btn-back" onClick={() => nav('/')}>Library</button>
+      <button className="btn-back" onClick={() => nav(-1)}>← Back</button>
 
       <div className="book-header">
         <div className="cover-container">
