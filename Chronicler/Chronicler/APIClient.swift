@@ -103,6 +103,9 @@ final class APIClient: @unchecked Sendable {
     func resetChapter(_ chapterId: Int) async {
         _ = try? await send(request("/api/chapters/\(chapterId)/reset", method: "POST"))
     }
+    func completeChapter(_ chapterId: Int) async {
+        _ = try? await send(request("/api/chapters/\(chapterId)/complete", method: "POST"))
+    }
     func resetBook(_ bookId: Int) async {
         _ = try? await send(request("/api/books/\(bookId)/reset", method: "POST"))
     }

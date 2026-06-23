@@ -107,6 +107,9 @@ class ApiClient {
     suspend fun resetChapter(chapterId: Int) {
         body(builder("/api/chapters/$chapterId/reset").post(ByteArray(0).toRequestBody()).build())
     }
+    suspend fun completeChapter(chapterId: Int) {
+        body(builder("/api/chapters/$chapterId/complete").post(ByteArray(0).toRequestBody()).build())
+    }
     suspend fun resetBook(bookId: Int) {
         body(builder("/api/books/$bookId/reset").post(ByteArray(0).toRequestBody()).build())
     }

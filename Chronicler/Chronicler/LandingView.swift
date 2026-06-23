@@ -128,8 +128,8 @@ private struct GardenRoseBackground: View {
         Rose(widthFrac: 0.29, xFrac: 0.80, yOffset: -4, phase: 3.0, swayAmp: 3.5, opacity: 0.55, delay: 0.75),
     ]
 
-    // 0 → 1 on appear: the fraction of each rose revealed from the bottom edge up,
-    // so the stem appears to grow up out of the ground and the bloom rises into view.
+    // 0 → 1 on appear: each rose scales up from a small size at its bottom-anchored
+    // base, so the roses pop/grow in from the ground.
     @State private var grow = 0.0
 
     var body: some View {
@@ -146,17 +146,10 @@ private struct GardenRoseBackground: View {
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: w, height: h)
-                            .opacity(r.opacity)
-                            // bottom-up reveal: a bottom-anchored mask whose height grows
-                            // 0 → full, so the stem rises up out of the ground.
-                            .mask(alignment: .bottom) {
-                                GeometryReader { g in
-                                    Rectangle()
-                                        .frame(height: g.size.height * grow)
-                                        .frame(maxWidth: .infinity, maxHeight: .infinity,
-                                               alignment: .bottom)
-                                }
-                            }
+                            .opacity(r.opacity * grow)
+                            // scale-in: each rose grows from a small size at the bottom,
+                            // so it pops/grows up out of the ground.
+                            .scaleEffect(0.25 + 0.75 * grow, anchor: .bottom)
                             // sway anchored at the bottom so stems stay rooted.
                             .rotationEffect(.degrees(sway), anchor: .bottom)
                             // position the BOTTOM of the rose at the screen bottom (minus lift).

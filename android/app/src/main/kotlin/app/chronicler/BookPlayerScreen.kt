@@ -259,6 +259,20 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
                                     progresses = progresses.toMutableList().also { it[idx] = ChapterProgress() }
                                 }
                             })
+                        DropdownMenuItem(
+                            text = {
+                                Text("✓ Mark completed", color = Theme.parchment,
+                                    fontFamily = Theme.body, fontSize = 15.sp)
+                            },
+                            onClick = {
+                                menuChapterId = null
+                                scope.launch {
+                                    api.completeChapter(ch.id)
+                                    progresses = progresses.toMutableList().also {
+                                        it[idx] = it[idx].copy(isListened = true)
+                                    }
+                                }
+                            })
                         if (downloads[ch.id] == 2) {
                             DropdownMenuItem(
                                 text = {

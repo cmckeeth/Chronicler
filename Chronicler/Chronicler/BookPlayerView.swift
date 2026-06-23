@@ -114,6 +114,11 @@ struct BookPlayerView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { selectChapter(chapter) }
                 .contextMenu {
+                    Button {
+                        Task { await completeChapter(chapter.id) }
+                    } label: {
+                        Label("Mark completed", systemImage: "checkmark.circle")
+                    }
                     Button(role: .destructive) {
                         Task { await resetChapter(chapter.id) }
                     } label: {
@@ -327,6 +332,13 @@ struct BookPlayerView: View {
         await api.resetChapter(id)
         if let idx = chapters.firstIndex(where: { $0.id == id }) {
             progresses[idx] = ChapterProgress(positionSeconds: 0, isListened: false)
+        }
+    }
+
+    private func completeChapter(_ id: Int) async {
+        await api.completeChapter(id)
+        if let idx = chapters.firstIndex(where: { $0.id == id }) {
+            progresses[idx].isListened = true
         }
     }
 
