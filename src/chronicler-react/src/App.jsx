@@ -123,93 +123,16 @@ function SteampunkFX() {
   );
 }
 
-// Rose-family hues (light edge → mid → deep center) for the vector ROSES.
-const FLOWER_HUES = [
-  { id: 'rose',    light: '#ffd9e8', mid: '#f0497f', deep: '#a81450' },
-  { id: 'red',     light: '#ff9fb2', mid: '#e21f3c', deep: '#860f24' },
-  { id: 'blush',   light: '#ffe6ee', mid: '#ff8fb0', deep: '#d2658a' },
-  { id: 'crimson', light: '#ff86a4', mid: '#c81545', deep: '#760a2a' },
-  { id: 'coral',   light: '#ffc1c0', mid: '#ff5a6e', deep: '#a01530' },
-];
-function FlowerDefs() {
-  return (
-    <svg className="garden-defs" width="0" height="0" aria-hidden="true">
-      <defs>
-        {FLOWER_HUES.map(h => (
-          <g key={h.id}>
-            {/* outer petals: light edge → mid */}
-            <radialGradient id={`pg-${h.id}`} cx="50%" cy="50%" r="62%">
-              <stop offset="0%" stopColor={h.mid} />
-              <stop offset="100%" stopColor={h.light} />
-            </radialGradient>
-            {/* inner petals: mid → deep (shadowed throat) */}
-            <radialGradient id={`pg-${h.id}-d`} cx="50%" cy="50%" r="62%">
-              <stop offset="0%" stopColor={h.deep} />
-              <stop offset="100%" stopColor={h.mid} />
-            </radialGradient>
-          </g>
-        ))}
-      </defs>
-    </svg>
-  );
-}
-
-// A top-down ROSE: concentric rings of rounded, overlapping petals — broad/light on
-// the outside, smaller/darker toward a rolled bud center.
-function Flower({ hue = 'rose' }) {
-  const out = `url(#pg-${hue})`, inr = `url(#pg-${hue}-d)`;
-  const ring = (count, rx, ry, cy, rot, fill) =>
-    Array.from({ length: count }).map((_, k) => (
-      <ellipse key={`${cy}-${k}`} cx="50" cy={cy} rx={rx} ry={ry} fill={fill}
-        transform={`rotate(${rot + (360 / count) * k} 50 50)`} />
-    ));
-  return (
-    <svg viewBox="0 0 100 100" aria-hidden="true">
-      <g className="flower-art">
-        {ring(8, 13, 19, 30, 0,    out)}
-        {ring(7, 11, 16, 24, 25,   out)}
-        {ring(6, 9.5, 13, 18, 50,  inr)}
-        {ring(5, 7,  10, 12, 18,   inr)}
-        <circle cx="50" cy="50" r="6" fill={inr} />
-      </g>
-    </svg>
-  );
-}
-
-// One growing vine: the stem "draws" itself in, leaves unfurl along it, then a
-// vector flower blooms slowly at the tip.
-function Vine({ cls, hue }) {
-  return (
-    <div className={`vine-grow ${cls}`}>
-      <svg className="vine-svg" viewBox="0 0 100 210" preserveAspectRatio="none" aria-hidden="true">
-        <path className="vine-stem" d="M50,208 C22,172 84,140 42,102 C14,74 74,46 52,14" />
-        <ellipse className="vine-leaf vine-leaf-1" cx="30" cy="150" rx="12" ry="5" fill="#5a9e46" transform="rotate(-32 30 150)" />
-        <ellipse className="vine-leaf vine-leaf-2" cx="70" cy="104" rx="11" ry="4.6" fill="#5a9e46" transform="rotate(34 70 104)" />
-        <ellipse className="vine-leaf vine-leaf-3" cx="32" cy="64"  rx="11" ry="4.6" fill="#5a9e46" transform="rotate(-28 32 64)" />
-      </svg>
-      <span className="vine-bloom"><Flower hue={hue} /></span>
-    </div>
-  );
-}
-
-// Garden-only BACKGROUND layer (behind content, ~50% opacity): large soft blooms,
-// growing vines that bloom at the tip, and a few drifting flowers.
+// Garden-only BACKGROUND layer (behind content, ~50% opacity): real painted roses
+// (rose + leafy stem) rising from the bottom + a couple set back in the corners.
+// Each grows in on load and sways gently. Image: /rose.png (cut from the reference).
 function GardenFX() {
+  const roses = ['gr-1', 'gr-2', 'gr-3', 'gr-4', 'gr-5', 'gr-6', 'gr-bl', 'gr-br'];
   return (
     <div className="garden-fx" aria-hidden="true">
-      <FlowerDefs />
-      <span className="bg-flower bf-1"><Flower hue="rose" /></span>
-      <span className="bg-flower bf-2"><Flower hue="red" /></span>
-      <span className="bg-flower bf-3"><Flower hue="blush" /></span>
-      <span className="bg-flower bf-4"><Flower hue="coral" /></span>
-      <span className="bg-flower bf-5"><Flower hue="crimson" /></span>
-      <Vine cls="vg-bl" hue="rose" />
-      <Vine cls="vg-br" hue="blush" />
-      <Vine cls="vg-bm" hue="red" />
-      <span className="fall-flower ff-1"><Flower hue="rose" /></span>
-      <span className="fall-flower ff-2"><Flower hue="blush" /></span>
-      <span className="fall-flower ff-3"><Flower hue="crimson" /></span>
-      <span className="fall-flower ff-4"><Flower hue="coral" /></span>
+      {roses.map(c => (
+        <span key={c} className={`rose ${c}`}><img src="/rose.png" alt="" /></span>
+      ))}
     </div>
   );
 }
