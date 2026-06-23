@@ -30,8 +30,11 @@ def run_deploy():
     with open(LOG, "a") as f:
         f.write(f"\n[{time.strftime('%Y-%m-%d %H:%M:%S')}] Deploy triggered\n")
         f.flush()
+        # Force the working tree to exactly match origin/main, then deploy.
+        # (A plain `git pull` can get stuck on local divergence / binary-file
+        #  merge conflicts; fetch + hard reset is idempotent and self-healing.)
         result = subprocess.run(
-            ["bash", "-c", "git checkout -- . && git pull && ./deploy.sh"],
+            ["bash", "-c", "git fetch origin && git reset --hard origin/main && ./deploy.sh"],
             cwd=REPO, stdout=f, stderr=subprocess.STDOUT
         )
         f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Deploy exited: {result.returncode}\n")
