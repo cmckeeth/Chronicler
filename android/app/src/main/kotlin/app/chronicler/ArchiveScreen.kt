@@ -127,30 +127,32 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
         }
 
         Spacer(Modifier.height(10.dp))
-        Surface(color = Theme.brass, shape = RoundedCornerShape(50),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Theme.verdigris),
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .shadow(6.dp, RoundedCornerShape(50),
-                    spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
-                .clickable(enabled = !refreshing) { scope.launch { refresh() } }) {
-            Row(verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 7.dp)) {
-                if (refreshing) {
-                    CircularProgressIndicator(color = Theme.ink, strokeWidth = 2.dp,
-                        modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Refreshing…", color = Theme.ink, fontSize = 13.sp)
-                } else {
-                    Text("↻", color = Theme.ink, fontSize = 14.sp, fontFamily = Theme.serif)
-                    Spacer(Modifier.width(6.dp))
-                    Text("Refresh", color = Theme.ink, fontSize = 13.sp)
+        Row(verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+            UpdateBanner(auth.api)
+            Spacer(Modifier.weight(1f))
+            Surface(color = Theme.brass, shape = RoundedCornerShape(50),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Theme.verdigris),
+                modifier = Modifier
+                    .shadow(6.dp, RoundedCornerShape(50),
+                        spotColor = Theme.verdigris, ambientColor = Theme.verdigris)
+                    .clickable(enabled = !refreshing) { scope.launch { refresh() } }) {
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 7.dp)) {
+                    if (refreshing) {
+                        CircularProgressIndicator(color = Theme.ink, strokeWidth = 2.dp,
+                            modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Refreshing…", color = Theme.ink, fontSize = 13.sp)
+                    } else {
+                        Text("↻", color = Theme.ink, fontSize = 14.sp, fontFamily = Theme.serif)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Refresh", color = Theme.ink, fontSize = 13.sp)
+                    }
                 }
             }
         }
-
-        UpdateBanner(auth.api, Modifier.align(Alignment.CenterHorizontally).padding(top = 8.dp))
     }
 }
 

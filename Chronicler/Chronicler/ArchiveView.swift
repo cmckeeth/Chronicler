@@ -76,9 +76,12 @@ struct ArchiveView: View {
 
                 content
 
-                refreshButton
-
-                UpdateBanner(api: auth.api).padding(.top, 4)
+                HStack {
+                    UpdateBanner(api: auth.api)
+                    Spacer()
+                    refreshButton
+                }
+                .padding(.top, 4)
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 14)
