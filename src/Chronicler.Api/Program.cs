@@ -241,6 +241,64 @@ app.MapGet("/api/collections/{id:int}/cover", async (int id, HttpContext ctx, Ap
     return Results.File(data, mime ?? "image/jpeg");
 });
 
+// Upload/replace a collection's cover. Mirrors the book cover upload: saves to the DB
+// and also writes cover.<ext> into the collection's folder (so a rescan keeps it and
+// every platform can read it). Reports disk-write failures instead of swallowing them.
+app.MapPut("/api/collections/{id:int}/cover/upload", [Authorize] async (int id, HttpRequest request, AppDbContext db, LibraryScanner scanner) =>
+{
+    var col = await db.Collections.FindAsync(id);
+    if (col is null) return Results.NotFound();
+    if (!request.HasFormContentType) return Results.BadRequest("Expected multipart form");
+
+    var form = await request.ReadFormAsync();
+    var file = form.Files.FirstOrDefault();
+    if (file is null || file.Length == 0) return Results.BadRequest("No file provided");
+
+    using var ms = new MemoryStream();
+    await file.CopyToAsync(ms);
+    var bytes = ms.ToArray();
+    var mime = file.ContentType.StartsWith("image/") ? file.ContentType : "image/jpeg";
+    col.CoverData = bytes;
+    col.CoverMimeType = mime;
+    await db.SaveChangesAsync();
+
+    string? coverPath = null;
+    bool fileWritten = false;
+    string? fileError = null;
+    try
+    {
+        var dir = Path.Combine(scanner.LibraryRoot, col.FolderPath);
+        if (!Directory.Exists(dir))
+        {
+            fileError = $"collection folder not found on disk: {dir}";
+        }
+        else
+        {
+            var ext = mime switch { "image/png" => ".png", "image/webp" => ".webp", "image/gif" => ".gif", _ => ".jpg" };
+            foreach (var old in Directory.GetFiles(dir)
+                .Where(f => Path.GetFileNameWithoutExtension(f).Equals("cover", StringComparison.OrdinalIgnoreCase)))
+            {
+                try { File.SetAttributes(old, FileAttributes.Normal); } catch { /* best effort */ }
+                File.Delete(old);
+            }
+            coverPath = Path.Combine(dir, "cover" + ext);
+            await using (var fs = new FileStream(coverPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                await fs.WriteAsync(bytes);
+            fileWritten = true;
+        }
+    }
+    catch (Exception ex)
+    {
+        fileError = ex.Message;
+        app.Logger.LogError(ex, "Could not write cover file for collection {Id} at {Path}", id, coverPath);
+    }
+
+    if (!fileWritten)
+        app.Logger.LogWarning("Cover for collection {Id} saved to DB but NOT written to disk: {Error}", id, fileError);
+
+    return Results.Ok(new { hasCover = true, fileWritten, coverPath, fileError });
+});
+
 app.MapGet("/api/books/{id:int}", [Authorize] async (int id, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var uid = UserId(principal);

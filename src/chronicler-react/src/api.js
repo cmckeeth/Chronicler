@@ -113,6 +113,16 @@ export const collectionsApi = {
     return res.json();
   },
   coverUrl: (id) => `/api/collections/${id}/cover`,
+  async uploadCover(id, file) {
+    const formData = new FormData();
+    formData.append('cover', file, file.name);
+    const res = await fetch(`/api/collections/${id}/cover/upload`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${getToken()}` },
+      body: formData,
+    });
+    return res.json().catch(() => null);
+  },
 };
 
 export const chaptersApi = {
