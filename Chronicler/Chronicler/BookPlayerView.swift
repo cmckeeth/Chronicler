@@ -178,6 +178,7 @@ struct BookPlayerView: View {
     @State private var savingMeta = false
     @State private var pickerItem: PhotosPickerItem?
     @State private var pendingCover: Data?
+    @State private var pasteMessage: String?
 
     private var metaEditor: some View {
         NavigationStack {
@@ -188,6 +189,11 @@ struct BookPlayerView: View {
                 metaField("Year (optional)", text: $editYear, keyboard: .numberPad)
                 PhotosPicker(selection: $pickerItem, matching: .images) {
                     Text(pendingCover == nil ? "Choose Cover Image" : "📎 Cover selected")
+                        .foregroundColor(Theme.brassLight)
+                }
+                .listRowBackground(Theme.surface2)
+                Button { pasteCover() } label: {
+                    Text(pasteMessage ?? "📋 Paste image")
                         .foregroundColor(Theme.brassLight)
                 }
                 .listRowBackground(Theme.surface2)
@@ -335,8 +341,23 @@ struct BookPlayerView: View {
         editAuthor = meta?.author ?? book?.author ?? ""
         editNarrator = meta?.narrator ?? book?.narrator ?? ""
         editYear = (meta?.year ?? book?.year).map(String.init) ?? ""
-        pendingCover = nil; pickerItem = nil
+        pendingCover = nil; pickerItem = nil; pasteMessage = nil
         showMeta = true
+    }
+
+    // Read an image off the system clipboard and stage it exactly like a picked cover.
+    private func pasteCover() {
+        let pb = UIPasteboard.general
+        guard pb.hasImages, let image = pb.image,
+              let data = image.jpegData(compressionQuality: 0.9) ?? image.pngData() else {
+            pasteMessage = "No image on clipboard"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                if pasteMessage == "No image on clipboard" { pasteMessage = nil }
+            }
+            return
+        }
+        pendingCover = data
+        pasteMessage = "📋 Pasted image"
     }
 
     private func saveMeta() async {

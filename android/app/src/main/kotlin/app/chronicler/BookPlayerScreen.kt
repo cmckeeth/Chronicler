@@ -541,10 +541,27 @@ private fun MetaEditorDialog(api: ApiClient, book: Book, onDismiss: () -> Unit, 
         }
     }
 
+    var coverMime by remember { mutableStateOf("image/jpeg") }
+
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
             coverBytes = context.contentResolver.openInputStream(it)?.use { s -> s.readBytes() }
+            coverMime = context.contentResolver.getType(it) ?: "image/jpeg"
         }
+    }
+
+    fun pasteCover() {
+        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+            as? android.content.ClipboardManager
+        val uri = clipboard?.primaryClip?.getItemAt(0)?.uri
+        val mime = uri?.let { context.contentResolver.getType(it) }
+        if (uri == null || mime?.startsWith("image/") != true) {
+            android.widget.Toast.makeText(context, "No image on the clipboard",
+                android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
+        coverBytes = context.contentResolver.openInputStream(uri)?.use { s -> s.readBytes() }
+        coverMime = mime
     }
 
     val fieldColors = OutlinedTextFieldDefaults.colors(
@@ -569,8 +586,13 @@ private fun MetaEditorDialog(api: ApiClient, book: Book, onDismiss: () -> Unit, 
                 OutlinedTextField(author, { author = it }, label = { Text("Author") }, singleLine = true, colors = fieldColors)
                 OutlinedTextField(narrator, { narrator = it }, label = { Text("Narrator") }, singleLine = true, colors = fieldColors)
                 OutlinedTextField(year, { year = it }, label = { Text("Year") }, singleLine = true, colors = fieldColors)
-                TextButton(onClick = { picker.launch("image/*") }) {
-                    Text(if (coverBytes == null) "Choose Cover Image" else "📎 Cover selected", color = Theme.brass)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = { picker.launch("image/*") }) {
+                        Text(if (coverBytes == null) "Choose Cover Image" else "📎 Cover selected", color = Theme.brass)
+                    }
+                    TextButton(onClick = { pasteCover() }) {
+                        Text("📋 Paste", color = Theme.brass)
+                    }
                 }
             }
         },
@@ -579,7 +601,7 @@ private fun MetaEditorDialog(api: ApiClient, book: Book, onDismiss: () -> Unit, 
                 saving = true
                 scope.launch {
                     api.saveBookMeta(book.id, title, author, narrator.ifBlank { null }, year.toIntOrNull())
-                    coverBytes?.let { api.uploadCover(book.id, it, "image/jpeg") }
+                    coverBytes?.let { api.uploadCover(book.id, it, coverMime) }
                     saving = false
                     onSaved()
                 }
