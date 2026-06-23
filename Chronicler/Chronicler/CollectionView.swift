@@ -10,7 +10,7 @@ struct CollectionView: View {
     @State private var loading = true
     @State private var error: String?
 
-    private let columns = [GridItem(.adaptive(minimum: 150), spacing: 16)]
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 16), count: 3)
 
     var body: some View {
         ZStack {

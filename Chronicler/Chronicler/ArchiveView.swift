@@ -6,30 +6,28 @@ struct ArchiveView: View {
     @State private var books: [Book] = []
     @State private var collections: [Collection] = []
     @State private var search = ""
-    @State private var fav = "all"              // all | favorites (book-level favorite filter)
-    @State private var filter = "all"           // all | books | collections
+    @State private var tab = "books"            // books | collections
+    @State private var favOnly = false          // book-level favorite filter (Books tab only)
     @State private var loading = true
     @State private var refreshing = false
     @State private var error: String?
 
-    private let columns = [GridItem(.adaptive(minimum: 150), spacing: 16)]
+    // Fixed 3-up grid (phone): cards size to ~1/3 width, fonts unchanged.
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 16), count: 3)
 
     private var isSearching: Bool {
         !search.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
-    // Collections appear in the (unsearched) browse view, on the All/Collections chips.
-    // Favorites are book-level, so the favorites filter hides collection cards entirely.
+    // Collections show only on the Collections tab while browsing (never while searching).
     private var showCollections: Bool {
-        !isSearching && filter != "books" && fav != "favorites" && !collections.isEmpty
+        !isSearching && tab == "collections" && !collections.isEmpty
     }
 
     var filtered: [Book] {
-        // Search is always flat over all books. When browsing, books holds ALL books;
-        // the chip decides which slice to show:
-        //   All        -> standalone (root) books, alongside collection cards
-        //   Books      -> every book flat (including those inside collections)
-        //   Collections-> no books, only collection cards
+        // Search is always flat over all books. When browsing:
+        //   Books tab       -> every book flat (standalone AND inside collections)
+        //   Collections tab -> no books, only collection cards
         var q: [Book]
         if isSearching {
             let s = search.lowercased()
@@ -39,13 +37,9 @@ struct ArchiveView: View {
                 ($0.narrator?.lowercased().contains(s) ?? false)
             }
         } else {
-            switch filter {
-            case "books":       q = books
-            case "collections": q = []
-            default:            q = books.filter { $0.collectionId == nil }
-            }
+            q = tab == "collections" ? [] : books
         }
-        if fav == "favorites" { q = q.filter { $0.isFavorite } }
+        if favOnly { q = q.filter { $0.isFavorite } }
         q.sort { $0.title.lowercased() < $1.title.lowercased() }
         return q
     }
@@ -71,10 +65,11 @@ struct ArchiveView: View {
                             .stroke(Theme.verdigris.opacity(0.4), lineWidth: 1))
                 }
 
-                chipGroup("", [("All","all"),("★ Favorites","favorites")],
-                          selection: $fav)
-                chipGroup("Show", [("All","all"),("Books","books"),("Collections","collections")],
-                          selection: $filter)
+                chipGroup("", [("Books","books"),("Collections","collections")],
+                          selection: $tab)
+                if tab == "books" {
+                    favChip
+                }
 
                 content
 
@@ -143,6 +138,22 @@ struct ArchiveView: View {
             .shadow(color: Theme.verdigris.opacity(0.5), radius: 6)
         }
         .disabled(refreshing)
+    }
+
+    // Single on/off favorites toggle (no "All" chip), shown only on the Books tab.
+    private var favChip: some View {
+        HStack(spacing: 6) {
+            Button { favOnly.toggle() } label: {
+                Text("★ Favorites").font(Theme.body(12))
+                    .foregroundColor(favOnly ? Theme.ink : Theme.parchmentMid)
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(favOnly ? Theme.brass : Theme.surface2)
+                    .overlay(Capsule().stroke(favOnly ? Theme.verdigris : .clear, lineWidth: 1))
+                    .clipShape(Capsule())
+                    .shadow(color: favOnly ? Theme.verdigris.opacity(0.5) : .clear, radius: 8)
+            }
+            Spacer()
+        }
     }
 
     private func chipGroup(_ label: String, _ options: [(String, String)],

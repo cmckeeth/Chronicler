@@ -28,8 +28,8 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
     var allBooks by remember { mutableStateOf<List<Book>>(emptyList()) }
     var collections by remember { mutableStateOf<List<Collection>>(emptyList()) }
     var search by remember { mutableStateOf("") }
-    var fav by remember { mutableStateOf("all") }
-    var filter by remember { mutableStateOf("all") }
+    var tab by remember { mutableStateOf("books") }
+    var favOnly by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var refreshing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -57,17 +57,13 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
     LaunchedEffect(Unit) { load() }
 
     val searching = search.isNotBlank()
-    val favorites = fav == "favorites"
-    val filtered = remember(allBooks, search, fav, filter) {
-        // While searching, query every book flat (including those inside collections).
-        // Otherwise the chip decides: All = standalone root books, Books = every book,
-        // Collections = no books (cards only).
-        val rootBooks = allBooks.filter { it.collectionId == null }
+    val filtered = remember(allBooks, search, tab, favOnly) {
+        // Books tab shows every book flat (standalone + inside collections); Collections tab
+        // shows no books. While searching, always query every book flat.
         var q = when {
             searching -> allBooks
-            filter == "books" -> allBooks
-            filter == "collections" -> emptyList()
-            else -> rootBooks
+            tab == "books" -> allBooks
+            else -> emptyList()
         }
         if (searching) {
             val s = search.lowercase()
@@ -76,7 +72,7 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
                     (it.narrator?.lowercase()?.contains(s) ?: false)
             }
         }
-        if (favorites) q = q.filter { it.isFavorite }
+        if (favOnly && tab == "books") q = q.filter { it.isFavorite }
         q.sortedBy { it.title.lowercase() }
     }
 
@@ -96,16 +92,16 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
                 unfocusedBorderColor = Theme.verdigris.copy(alpha = 0.4f),
                 cursorColor = Theme.verdigris))
         Spacer(Modifier.height(14.dp))
-        chipRow("", listOf("All" to "all", "★ Favorites" to "favorites"),
-            fav) { fav = it }
-        Spacer(Modifier.height(10.dp))
-        chipRow("Show", listOf("All" to "all", "Books" to "books", "Collections" to "collections"),
-            filter) { filter = it }
+        chipRow("", listOf("Books" to "books", "Collections" to "collections"),
+            tab) { tab = it }
+        if (tab == "books") {
+            Spacer(Modifier.height(10.dp))
+            favChip(favOnly) { favOnly = !favOnly }
+        }
         Spacer(Modifier.height(18.dp))
 
-        // Collections appear ahead of books on the All/Collections chips (never the Books chip,
-        // never while searching).
-        val shownCollections = if (searching || favorites || filter == "books") emptyList() else collections
+        // Collections appear only on the Collections tab (never while searching).
+        val shownCollections = if (searching || tab == "books") emptyList() else collections
         when {
             loading -> center("Consulting the archive...", Theme.parchmentDim)
             error != null -> center("The pneumatic tubes have failed: $error", Theme.rust)
@@ -114,7 +110,7 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
                 else if (allBooks.isEmpty() && collections.isEmpty()) "The archive lies empty, traveller."
                 else "No volumes match this filter.",
                 Theme.parchmentDim)
-            else -> LazyVerticalGrid(columns = GridCells.Adaptive(150.dp),
+            else -> LazyVerticalGrid(columns = GridCells.Fixed(3),
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
@@ -184,6 +180,21 @@ private fun chipRow(label: String, options: List<Pair<String, String>>, selected
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
             }
         }
+    }
+}
+
+// Single on/off favorites toggle chip (Books tab only).
+@Composable
+private fun favChip(active: Boolean, onToggle: () -> Unit) {
+    Surface(color = if (active) Theme.brass else Theme.surface2,
+        shape = RoundedCornerShape(50),
+        border = if (active) androidx.compose.foundation.BorderStroke(1.dp, Theme.verdigris) else null,
+        modifier = Modifier
+            .then(if (active) Modifier.shadow(8.dp, RoundedCornerShape(50),
+                spotColor = Theme.verdigris, ambientColor = Theme.verdigris) else Modifier)
+            .clickable { onToggle() }) {
+        Text("★ Favorites", color = if (active) Theme.ink else Theme.parchmentMid, fontSize = 12.sp,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
     }
 }
 

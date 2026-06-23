@@ -52,7 +52,7 @@ fun CollectionScreen(auth: AuthStore, nav: NavController, collectionId: Int) {
             loading -> center("Consulting the archive...", Theme.parchmentDim)
             error != null -> center("The pneumatic tubes have failed: $error", Theme.rust)
             sorted.isEmpty() -> center("This collection lies empty, traveller.", Theme.parchmentDim)
-            else -> LazyVerticalGrid(columns = GridCells.Adaptive(150.dp),
+            else -> LazyVerticalGrid(columns = GridCells.Fixed(3),
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
