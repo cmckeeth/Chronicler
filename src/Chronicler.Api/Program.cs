@@ -494,6 +494,26 @@ app.MapPost("/api/chapters/{chapterId:int}/reset", [Authorize] async (int chapte
     return Results.Ok();
 });
 
+app.MapPost("/api/chapters/{chapterId:int}/complete", [Authorize] async (int chapterId, ClaimsPrincipal principal, AppDbContext db) =>
+{
+    var uid = UserId(principal);
+    var chapter = await db.Chapters.FindAsync(chapterId);
+    if (chapter is null) return Results.NotFound();
+
+    var p = await db.ChapterProgresses
+        .FirstOrDefaultAsync(cp => cp.UserId == uid && cp.ChapterId == chapterId);
+    if (p is null)
+    {
+        p = new ChapterProgress { UserId = uid, ChapterId = chapterId };
+        db.ChapterProgresses.Add(p);
+    }
+    p.IsListened = true;
+    p.PositionSeconds = chapter.DurationSeconds;   // jump to the end so it reads as finished
+    p.UpdatedAt = DateTime.UtcNow;
+    await db.SaveChangesAsync();
+    return Results.Ok();
+});
+
 app.MapPost("/api/books/{bookId:int}/reset", [Authorize] async (int bookId, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var uid = UserId(principal);

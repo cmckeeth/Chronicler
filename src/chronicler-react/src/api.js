@@ -129,6 +129,9 @@ export const chaptersApi = {
   },
   async reset(id) {
     await apiFetch(`/api/chapters/${id}/reset`, { method: 'POST' });
+  },
+  async complete(id) {
+    await apiFetch(`/api/chapters/${id}/complete`, { method: 'POST' });
   }
 };
 

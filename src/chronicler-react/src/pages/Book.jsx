@@ -261,6 +261,12 @@ export default function Book() {
               key={ch.id}
               className={`chapter-item${i === currentIdx ? ' chapter-active' : ''}${progresses[i]?.isListened ? ' chapter-listened' : ''}`}
               onClick={() => { setCurrentIdx(i); started.current = false; }}
+              onContextMenu={async e => {
+                e.preventDefault();
+                await chaptersApi.complete(ch.id);
+                setProgresses(prev => prev.map((p, j) => j === i ? { ...p, isListened: true } : p));
+              }}
+              title="Right-click to mark completed"
             >
               <span className="chapter-number">{ch.trackNumber}</span>
               <span className="chapter-title">{ch.title}</span>
@@ -269,7 +275,14 @@ export default function Book() {
                 {!progresses[i]?.isListened && progresses[i]?.positionSeconds > 0 && <span className="in-progress-badge">…</span>}
                 {i === currentIdx && <span className="playing-badge">▶</span>}
               </span>
-              <button className="btn-reset-chapter" onClick={async e => {
+              {!progresses[i]?.isListened && (
+                <button className="btn-reset-chapter" title="Mark completed" onClick={async e => {
+                  e.stopPropagation();
+                  await chaptersApi.complete(ch.id);
+                  setProgresses(prev => prev.map((p, j) => j === i ? { ...p, isListened: true } : p));
+                }}>✓</button>
+              )}
+              <button className="btn-reset-chapter" title="Reset chapter" onClick={async e => {
                 e.stopPropagation();
                 await chaptersApi.reset(ch.id);
                 setProgresses(prev => prev.map((p, j) => j === i ? { positionSeconds: 0, isListened: false } : p));
