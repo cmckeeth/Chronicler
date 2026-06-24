@@ -156,12 +156,16 @@ class AudioController(context: Context) {
         }
     }
 
-    fun load(url: String, title: String, startPosition: Double, @Suppress("UNUSED_PARAMETER") token: String?) {
+    fun load(url: String, title: String, startPosition: Double, mimeType: String = "audio/mpeg") {
         this.title = title
         isLocal = url.startsWith("file:")
         currentPosition = startPosition
         duration = 0.0
-        player.setMediaItem(MediaItem.fromUri(url))
+        // CastPlayer requires an explicit mimeType or it crashes when the media item
+        // transfers to a Cast session — the stream URL has no extension to infer from.
+        player.setMediaItem(
+            MediaItem.Builder().setUri(url).setMimeType(mimeType).build()
+        )
         player.prepare()
         if (startPosition > 1) player.seekTo((startPosition * 1000).toLong())
         updateSession()

@@ -73,7 +73,7 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
     fun loadChapter(ch: Chapter, start: Double) {
         current = ch
         // Play the local file when downloaded; otherwise stream.
-        audio.load(Downloads.sourceUri(context, ch.id, api.audioUrl(ch.id)), ch.title, start, api.token)
+        audio.load(Downloads.sourceUri(context, ch.id, api.audioUrl(ch.id)), ch.title, start, ch.mimeType)
     }
 
     fun downloadChapter(ch: Chapter) {

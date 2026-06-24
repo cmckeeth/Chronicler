@@ -539,9 +539,11 @@ app.MapGet("/api/books/{bookId:int}/chapters", [Authorize] async (int bookId, Ap
     var chapters = await db.Chapters
         .Where(c => c.BookId == bookId)
         .OrderBy(c => c.TrackNumber)
-        .Select(c => new ChapterDto(c.Id, c.BookId, c.Title, c.TrackNumber))
+        .Select(c => new { c.Id, c.BookId, c.Title, c.TrackNumber, c.FilePath })
         .ToListAsync();
-    return Results.Ok(chapters);
+    var dtos = chapters.Select(c =>
+        new ChapterDto(c.Id, c.BookId, c.Title, c.TrackNumber, AudioMime(c.FilePath)));
+    return Results.Ok(dtos);
 });
 
 app.MapGet("/api/chapters/{chapterId:int}/audio", async (
@@ -916,6 +918,20 @@ static string GetVersionFromApkPath(string path)
     return idx >= 0 ? name[(idx + 2)..] : "0.0.0";
 }
 
+// Audio MIME from file extension. Cast (Android CastPlayer) requires an explicit
+// mimeType on the MediaItem or it crashes — so chapters expose theirs here.
+static string AudioMime(string path) => Path.GetExtension(path).ToLower() switch
+{
+    ".mp3" => "audio/mpeg",
+    ".m4b" or ".m4a" => "audio/mp4",
+    ".ogg" => "audio/ogg",
+    ".opus" => "audio/ogg; codecs=opus",
+    ".flac" => "audio/flac",
+    ".aac" => "audio/aac",
+    ".wav" => "audio/wav",
+    _ => "application/octet-stream"
+};
+
 // ── Request/Response types ────────────────────────────────────────────────────
 
 record RegisterRequest(string Email, string Password);
@@ -926,7 +942,7 @@ record BookDto(int Id, string Title, string Author, string? Narrator, double Dur
     bool HasCover, DateTime AddedAt, int ChapterCount = 0, int ListenedCount = 0, int? Year = null, bool IsFavorite = false,
     int? CollectionId = null);
 record CollectionDto(int Id, string Name, bool HasCover, int BookCount, DateTime AddedAt);
-record ChapterDto(int Id, int BookId, string Title, int TrackNumber);
+record ChapterDto(int Id, int BookId, string Title, int TrackNumber, string MimeType = "audio/mpeg");
 record BookMetaRequest(string? Title, string? Author, string? Narrator, string? Description, int? Year);
 record ChapterProgressRequest(double PositionSeconds, double DurationSeconds);
 record ChapterEditDto(string? Title, int? TrackNumber);

@@ -32,7 +32,8 @@ data class Collection(
 )
 
 @Serializable
-data class Chapter(val id: Int, val bookId: Int, val title: String, val trackNumber: Int)
+data class Chapter(val id: Int, val bookId: Int, val title: String, val trackNumber: Int,
+    val mimeType: String = "audio/mpeg")
 
 @Serializable
 data class ChapterProgress(val positionSeconds: Double = 0.0, val isListened: Boolean = false)
