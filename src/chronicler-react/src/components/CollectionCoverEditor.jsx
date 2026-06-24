@@ -52,6 +52,11 @@ export default function CollectionCoverEditor({ collection, onClose, onSaved, on
     setSaving(true);
     try {
       const result = await collectionsApi.uploadCover(collection.id, coverFile);
+      if (result && result.ok === false) {
+        alert(`Cover upload failed: HTTP ${result.status}${result.status === 413 ? ' (image too large — exceeds the upload size limit)' : ''}\n\n${(result.body || '').slice(0, 300)}`);
+        setSaving(false);
+        return;
+      }
       if (result && result.fileWritten === false) {
         alert(`Cover saved to the database, but the cover file could NOT be written to the collection folder:\n\n${result.fileError || 'unknown error'}\n\nPath: ${result.coverPath || '(folder not found)'}`);
       }

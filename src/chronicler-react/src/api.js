@@ -122,7 +122,9 @@ export const collectionsApi = {
       headers: { 'Authorization': `Bearer ${getToken()}` },
       body: formData,
     });
-    return res.json().catch(() => null);
+    if (!res.ok) return { ok: false, status: res.status, body: await res.text().catch(() => '') };
+    const json = await res.json().catch(() => null);
+    return { ok: true, ...(json || {}) };
   },
   async clearCover(id) {
     const res = await apiFetch(`/api/collections/${id}/cover`, { method: 'DELETE' });

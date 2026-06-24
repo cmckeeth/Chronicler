@@ -64,6 +64,12 @@ export default function MetaEditor({ book, onClose, onSaved }) {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('chronicler_token')}` },
           body: formData,
         });
+        if (!res.ok) {
+          const body = await res.text().catch(() => '');
+          alert(`Cover upload failed: HTTP ${res.status}${res.status === 413 ? ' (image too large — exceeds the upload size limit)' : ''}\n\n${body.slice(0, 300)}`);
+          setSaving(false);
+          return;
+        }
         const result = await res.json().catch(() => null);
         if (result && result.fileWritten === false) {
           alert(`Cover saved to the database, but the cover file could NOT be written to the audiobook folder:\n\n${result.fileError || 'unknown error'}\n\nPath: ${result.coverPath || '(book folder not found)'}`);
