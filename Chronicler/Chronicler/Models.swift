@@ -15,7 +15,7 @@ struct Book: Codable, Identifiable, Hashable {
     let year: Int?
     var isFavorite: Bool = false
     var collectionId: Int? = nil   // grouping; nil => standalone (top-level)
-    var description: String? = nil  // only populated by the single-book GET
+    var description: String? = nil  // populated by list + single-book GET
 
     var isCompleted: Bool { chapterCount > 0 && listenedCount >= chapterCount }
     var isInProgress: Bool { listenedCount > 0 && !isCompleted }

@@ -121,9 +121,9 @@ export default function Library() {
           <p>{books.length === 0 && collections.length === 0 ? 'The archive lies empty, traveller.' : 'No volumes match this filter.'}</p>
         </div>
       ) : (
-        <div className="book-grid" style={{gridTemplateColumns: `repeat(${gridCols}, 1fr)`}}>
+        <div className={`book-grid${gridCols===1?' cols-1':''}`} style={{gridTemplateColumns: `repeat(${gridCols}, 1fr)`}}>
           {shownCollections.map(c => <CollectionCard key={`c-${c.id}`} collection={c} />)}
-          {filtered.map(book => <BookCard key={book.id} book={book} onToggleFav={toggleFav} />)}
+          {filtered.map(book => <BookCard key={book.id} book={book} onToggleFav={toggleFav} wide={gridCols===1} />)}
         </div>
       )}
 

@@ -178,7 +178,7 @@ app.MapGet("/api/books", [Authorize] async (string? q, bool? root, ClaimsPrincip
             b.Chapters.Count(c => c.Progresses.Any(p => p.UserId == userId && p.IsListened)),
             b.Year,
             db.UserBookFavorites.Any(f => f.UserId == userId && f.BookId == b.Id),
-            b.CollectionId, null))
+            b.CollectionId, b.Description))
         .ToListAsync();
 
     return Results.Ok(books);
@@ -216,7 +216,7 @@ app.MapGet("/api/collections/{id:int}/books", [Authorize] async (int id, ClaimsP
             b.Chapters.Count(c => c.Progresses.Any(p => p.UserId == userId && p.IsListened)),
             b.Year,
             db.UserBookFavorites.Any(f => f.UserId == userId && f.BookId == b.Id),
-            b.CollectionId, null))
+            b.CollectionId, b.Description))
         .ToListAsync();
     return Results.Ok(books);
 });

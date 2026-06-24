@@ -7,7 +7,7 @@ function fmtDur(s) {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
-export default function BookCard({ book, onToggleFav }) {
+export default function BookCard({ book, onToggleFav, wide }) {
   const nav = useNavigate();
   const rows = [
     ['Author', book.author],
@@ -19,7 +19,7 @@ export default function BookCard({ book, onToggleFav }) {
   ].filter(([, v]) => v != null && v !== '');
 
   return (
-    <div className="book-card" onClick={() => nav(`/book/${book.id}`)}>
+    <div className={`book-card${wide ? ' book-card-wide' : ''}`} onClick={() => nav(`/book/${book.id}`)}>
       <div className="book-cover">
         {book.hasCover
           ? <img src={booksApi.coverUrl(book.id)} alt={book.title} loading="lazy" />
@@ -35,17 +35,30 @@ export default function BookCard({ book, onToggleFav }) {
         <span className="book-title">{book.title}</span>
         <span className="book-author">{book.author}</span>
         {book.narrator && <span className="book-narrator">Narrated by {book.narrator}</span>}
+        {wide && (
+          <div className="book-wide-rows">
+            {rows.filter(([k]) => k !== 'Author' && k !== 'Narrator').map(([k, v]) => (
+              <div className="book-tooltip-row" key={k}>
+                <span className="book-tooltip-key">{k}</span>
+                <span className="book-tooltip-val">{v}</span>
+              </div>
+            ))}
+            {book.description && <p className="book-wide-desc">{book.description}</p>}
+          </div>
+        )}
       </div>
 
-      <div className="book-tooltip" role="tooltip">
-        <div className="book-tooltip-title">{book.title}</div>
-        {rows.map(([k, v]) => (
-          <div className="book-tooltip-row" key={k}>
-            <span className="book-tooltip-key">{k}</span>
-            <span className="book-tooltip-val">{v}</span>
-          </div>
-        ))}
-      </div>
+      {!wide && (
+        <div className="book-tooltip" role="tooltip">
+          <div className="book-tooltip-title">{book.title}</div>
+          {rows.map(([k, v]) => (
+            <div className="book-tooltip-row" key={k}>
+              <span className="book-tooltip-key">{k}</span>
+              <span className="book-tooltip-val">{v}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

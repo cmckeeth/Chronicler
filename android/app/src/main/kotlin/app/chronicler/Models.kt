@@ -17,7 +17,7 @@ data class Book(
     val year: Int? = null,
     val isFavorite: Boolean = false,
     val collectionId: Int? = null,
-    val description: String? = null,  // only populated by the single-book GET
+    val description: String? = null,  // populated by list + single-book GET
 ) {
     val isCompleted get() = chapterCount > 0 && listenedCount >= chapterCount
     val isInProgress get() = listenedCount > 0 && !isCompleted

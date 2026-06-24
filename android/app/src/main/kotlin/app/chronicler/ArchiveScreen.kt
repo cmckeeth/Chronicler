@@ -123,7 +123,8 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
                         onOpen = { nav.navigate("collection/${collection.id}") })
                 }
                 items(filtered, key = { it.id }) { book ->
-                    BookCard(book, auth.api, onOpen = { nav.navigate("book/${book.id}") },
+                    BookCard(book, auth.api, wide = auth.gridColumns == 1,
+                        onOpen = { nav.navigate("book/${book.id}") },
                         onToggleFavorite = { scope.launch { auth.api.toggleFavorite(book.id); load() } })
                 }
             }
@@ -205,31 +206,71 @@ private fun favChip(active: Boolean, onToggle: () -> Unit) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun BookCard(book: Book, api: ApiClient, onOpen: () -> Unit, onToggleFavorite: () -> Unit) {
-    Column(
-        Modifier
-            .combinedClickable(onClick = onOpen, onLongClick = onToggleFavorite)
-            .electricPanel(Theme.surface, corner = 4.dp,
-                alpha = if (book.isFavorite) 0.9f else 0.5f,
-                elevation = if (book.isFavorite) 18.dp else 10.dp)
-            .padding(10.dp)
-    ) {
-        Box {
-            CoverImage(book, api, Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(2.dp)))
-            if (book.isFavorite) {
-                Text("★", color = Theme.brassPale, fontSize = 18.sp,
-                    modifier = Modifier.align(Alignment.TopEnd).padding(6.dp))
+internal fun BookCard(book: Book, api: ApiClient, wide: Boolean = false,
+                      onOpen: () -> Unit, onToggleFavorite: () -> Unit) {
+    val container = Modifier
+        .combinedClickable(onClick = onOpen, onLongClick = onToggleFavorite)
+        .electricPanel(Theme.surface, corner = 4.dp,
+            alpha = if (book.isFavorite) 0.9f else 0.5f,
+            elevation = if (book.isFavorite) 18.dp else 10.dp)
+        .padding(10.dp)
+
+    if (wide) {
+        // One-per-row: cover on the left, full metadata + description on the right.
+        Row(container.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+            Box {
+                CoverImage(book, api, Modifier.size(100.dp, 150.dp).clip(RoundedCornerShape(2.dp)))
+                if (book.isFavorite) {
+                    Text("★", color = Theme.brassPale, fontSize = 16.sp,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(4.dp))
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(book.title, color = Theme.parchment, fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold, fontFamily = Theme.body, maxLines = 2)
+                Spacer(Modifier.height(3.dp))
+                Text(book.author, color = Theme.parchmentMid, fontSize = 13.sp, maxLines = 1)
+                book.narrator?.let {
+                    Spacer(Modifier.height(2.dp))
+                    Text("Narrated by $it", color = Theme.parchmentDim, fontSize = 11.sp, maxLines = 1)
+                }
+                book.year?.let {
+                    Spacer(Modifier.height(2.dp))
+                    Text(it.toString(), color = Theme.parchmentDim, fontSize = 11.sp)
+                }
+                if (book.chapterCount > 0) {
+                    Spacer(Modifier.height(2.dp))
+                    Text("${book.listenedCount}/${book.chapterCount} listened",
+                        color = Theme.parchmentDim, fontSize = 11.sp)
+                }
+                book.description?.takeIf { it.isNotBlank() }?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text(it, color = Theme.parchmentDim, fontSize = 11.sp, fontFamily = Theme.serif,
+                        lineHeight = 15.sp, maxLines = 3,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                }
             }
         }
-        Spacer(Modifier.height(10.dp))
-        Text(book.title, color = Theme.parchment, fontSize = 14.sp, maxLines = 2)
-        Spacer(Modifier.height(3.dp))
-        Text(book.author, color = Theme.parchmentDim, fontSize = 12.sp, maxLines = 1)
-        book.narrator?.let {
+    } else {
+        Column(container) {
+            Box {
+                CoverImage(book, api, Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(2.dp)))
+                if (book.isFavorite) {
+                    Text("★", color = Theme.brassPale, fontSize = 18.sp,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(6.dp))
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(book.title, color = Theme.parchment, fontSize = 14.sp, maxLines = 2)
+            Spacer(Modifier.height(3.dp))
+            Text(book.author, color = Theme.parchmentDim, fontSize = 12.sp, maxLines = 1)
+            book.narrator?.let {
+                Spacer(Modifier.height(2.dp))
+                Text(it, color = Theme.parchmentDim, fontSize = 11.sp, maxLines = 1)
+            }
             Spacer(Modifier.height(2.dp))
-            Text(it, color = Theme.parchmentDim, fontSize = 11.sp, maxLines = 1)
         }
-        Spacer(Modifier.height(2.dp))
     }
 }
 

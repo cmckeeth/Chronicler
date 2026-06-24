@@ -116,7 +116,8 @@ struct ArchiveView: View {
                         }
                     }
                     ForEach(filtered) { book in
-                        BookCardView(book: book, api: auth.api, onFavoriteChanged: { await load() })
+                        BookCardView(book: book, api: auth.api, wide: gridColumns == 1,
+                                     onFavoriteChanged: { await load() })
                     }
                 }
                 .padding(.vertical, 8)
@@ -247,42 +248,24 @@ struct ArchiveView: View {
 struct BookCardView: View {
     let book: Book
     let api: APIClient
+    let wide: Bool
     let onFavoriteChanged: () async -> Void
 
     @State private var isFavorite: Bool
     @State private var showMenu = false
 
-    init(book: Book, api: APIClient, onFavoriteChanged: @escaping () async -> Void) {
-        self.book = book; self.api = api; self.onFavoriteChanged = onFavoriteChanged
+    init(book: Book, api: APIClient, wide: Bool = false, onFavoriteChanged: @escaping () async -> Void) {
+        self.book = book; self.api = api; self.wide = wide; self.onFavoriteChanged = onFavoriteChanged
         _isFavorite = State(initialValue: book.isFavorite)
     }
 
     var body: some View {
         NavigationLink(value: Route.book(book)) {
-            VStack(alignment: .leading, spacing: 4) {
-                ZStack(alignment: .topTrailing) {
-                    CoverImage(book: book, api: api)
-                        .frame(height: 150).frame(maxWidth: .infinity)
-                        .clipped()
-                        .overlay(Rectangle().stroke(Theme.border, lineWidth: 1))
-                    if isFavorite {
-                        Text("★").font(.system(size: 18)).foregroundColor(Theme.brassPale)
-                            .padding(4)
-                    }
-                }
-                Text(book.title).font(Theme.body(14)).foregroundColor(Theme.parchment)
-                    .lineLimit(2)
-                Text(book.author).font(Theme.body(12)).foregroundColor(Theme.parchmentDim)
-                    .lineLimit(1)
-                if let narrator = book.narrator {
-                    Text(narrator).font(Theme.body(11)).foregroundColor(Theme.parchmentDim).opacity(0.7)
-                        .lineLimit(1)
-                }
-            }
-            .padding(10)
-            .electricPanel(bg: Theme.surface, corner: 4,
-                           alpha: isFavorite ? 0.9 : 0.5,
-                           glowRadius: isFavorite ? 18 : 10)
+            Group { if wide { wideContent } else { tallContent } }
+                .padding(10)
+                .electricPanel(bg: Theme.surface, corner: 4,
+                               alpha: isFavorite ? 0.9 : 0.5,
+                               glowRadius: isFavorite ? 18 : 10)
         }
         .buttonStyle(.plain)
         .onLongPressGesture(minimumDuration: 0.6) { showMenu = true }
@@ -290,6 +273,69 @@ struct BookCardView: View {
             Button(isFavorite ? "★ Remove from Favorites" : "☆ Add to Favorites") {
                 toggleFavorite()
             }
+        }
+    }
+
+    // Standard grid card: cover on top, title/author beneath.
+    private var tallContent: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ZStack(alignment: .topTrailing) {
+                CoverImage(book: book, api: api)
+                    .frame(height: 150).frame(maxWidth: .infinity)
+                    .clipped()
+                    .overlay(Rectangle().stroke(Theme.border, lineWidth: 1))
+                if isFavorite {
+                    Text("★").font(.system(size: 18)).foregroundColor(Theme.brassPale)
+                        .padding(4)
+                }
+            }
+            Text(book.title).font(Theme.body(14)).foregroundColor(Theme.parchment)
+                .lineLimit(2)
+            Text(book.author).font(Theme.body(12)).foregroundColor(Theme.parchmentDim)
+                .lineLimit(1)
+            if let narrator = book.narrator {
+                Text(narrator).font(Theme.body(11)).foregroundColor(Theme.parchmentDim).opacity(0.7)
+                    .lineLimit(1)
+            }
+        }
+    }
+
+    // One-per-row card: cover on the left, full metadata + description on the right.
+    private var wideContent: some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack(alignment: .topTrailing) {
+                CoverImage(book: book, api: api)
+                    .frame(width: 100, height: 150)
+                    .clipped()
+                    .overlay(Rectangle().stroke(Theme.border, lineWidth: 1))
+                if isFavorite {
+                    Text("★").font(.system(size: 16)).foregroundColor(Theme.brassPale)
+                        .padding(4)
+                }
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(book.title).font(Theme.bodyBold(16)).foregroundColor(Theme.parchment)
+                    .lineLimit(2)
+                Text(book.author).font(Theme.body(13)).foregroundColor(Theme.parchmentMid)
+                    .lineLimit(1)
+                if let narrator = book.narrator {
+                    Text("Narrated by \(narrator)").font(Theme.body(11)).foregroundColor(Theme.parchmentDim)
+                        .lineLimit(1)
+                }
+                if let y = book.year {
+                    Text(verbatim: "\(y)").font(Theme.body(11)).foregroundColor(Theme.parchmentDim)
+                }
+                if book.chapterCount > 0 {
+                    Text("\(book.listenedCount)/\(book.chapterCount) listened")
+                        .font(Theme.body(11)).foregroundColor(Theme.parchmentDim)
+                }
+                if let d = book.description, !d.isEmpty {
+                    Text(d).font(Theme.body(11)).foregroundColor(Theme.parchmentDim)
+                        .lineLimit(3).fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 2)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
