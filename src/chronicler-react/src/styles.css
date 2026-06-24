@@ -1161,6 +1161,14 @@ select {
 
 .narrator::before { content: '~ '; }
 
+.book-description {
+    color: var(--parchment-dim);
+    font-size: .85rem;
+    line-height: 1.5;
+    margin: .25rem 0 .75rem;
+    white-space: pre-wrap;
+}
+
 /* ── Audio Player ─────────────────────────────────────────────────────────── */
 .audio-player {
     background: var(--panel-bg);

@@ -80,6 +80,12 @@ struct BookPlayerView: View {
                         Text(" · \(n)").font(Theme.serif(14)).foregroundColor(Theme.parchmentDim)
                     }
                 }
+                if let d = book.description, !d.isEmpty {
+                    Text(d).font(Theme.serif(13)).foregroundColor(Theme.parchmentDim)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 2)
+                }
             }
         }
     }
@@ -186,6 +192,7 @@ struct BookPlayerView: View {
     @State private var editAuthor = ""
     @State private var editNarrator = ""
     @State private var editYear = ""
+    @State private var editDescription = ""
     @State private var savingMeta = false
     @State private var pickerItem: PhotosPickerItem?
     @State private var pendingCover: Data?
@@ -198,6 +205,11 @@ struct BookPlayerView: View {
                 metaField("Author", text: $editAuthor)
                 metaField("Narrator (optional)", text: $editNarrator)
                 metaField("Year (optional)", text: $editYear, keyboard: .numberPad)
+                TextField("", text: $editDescription, prompt: Text("Description (optional)").foregroundColor(Theme.parchmentDim), axis: .vertical)
+                    .lineLimit(3...8)
+                    .foregroundColor(Theme.parchment)
+                    .tint(Theme.brass)
+                    .listRowBackground(Theme.surface2)
                 PhotosPicker(selection: $pickerItem, matching: .images) {
                     Text(pendingCover == nil ? "Choose Cover Image" : "📎 Cover selected")
                         .foregroundColor(Theme.brassLight)
@@ -420,6 +432,7 @@ struct BookPlayerView: View {
         editAuthor = meta?.author ?? book?.author ?? ""
         editNarrator = meta?.narrator ?? book?.narrator ?? ""
         editYear = (meta?.year ?? book?.year).map(String.init) ?? ""
+        editDescription = meta?.description ?? book?.description ?? ""
         pendingCover = nil; pickerItem = nil; pasteMessage = nil
         showMeta = true
     }
@@ -443,6 +456,7 @@ struct BookPlayerView: View {
         savingMeta = true
         _ = await api.saveBookMeta(bookId, title: editTitle, author: editAuthor,
                                    narrator: editNarrator.isEmpty ? nil : editNarrator,
+                                   description: editDescription.isEmpty ? nil : editDescription,
                                    year: Int(editYear))
         if let pendingCover {
             _ = await api.uploadCover(bookId, imageData: pendingCover, mime: "image/jpeg")

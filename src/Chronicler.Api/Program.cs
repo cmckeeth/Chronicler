@@ -178,7 +178,7 @@ app.MapGet("/api/books", [Authorize] async (string? q, bool? root, ClaimsPrincip
             b.Chapters.Count(c => c.Progresses.Any(p => p.UserId == userId && p.IsListened)),
             b.Year,
             db.UserBookFavorites.Any(f => f.UserId == userId && f.BookId == b.Id),
-            b.CollectionId))
+            b.CollectionId, null))
         .ToListAsync();
 
     return Results.Ok(books);
@@ -216,7 +216,7 @@ app.MapGet("/api/collections/{id:int}/books", [Authorize] async (int id, ClaimsP
             b.Chapters.Count(c => c.Progresses.Any(p => p.UserId == userId && p.IsListened)),
             b.Year,
             db.UserBookFavorites.Any(f => f.UserId == userId && f.BookId == b.Id),
-            b.CollectionId))
+            b.CollectionId, null))
         .ToListAsync();
     return Results.Ok(books);
 });
@@ -333,7 +333,7 @@ app.MapGet("/api/books/{id:int}", [Authorize] async (int id, ClaimsPrincipal pri
     if (b is null) return Results.NotFound();
     var isFav = await db.UserBookFavorites.FindAsync(uid, id) is not null;
     return Results.Ok(new BookDto(b.Id, b.Title, b.Author, b.Narrator, b.DurationSeconds,
-        b.CoverData != null, b.AddedAt, 0, 0, b.Year, isFav, b.CollectionId));
+        b.CoverData != null, b.AddedAt, 0, 0, b.Year, isFav, b.CollectionId, b.Description));
 });
 
 app.MapGet("/api/books/{id:int}/cover", async (int id, HttpContext ctx, AppDbContext db) =>
@@ -940,7 +940,7 @@ record BookUpdateRequest(string? Title, string? Author, string? Narrator, string
 record DiagMessage(string Message);
 record BookDto(int Id, string Title, string Author, string? Narrator, double DurationSeconds,
     bool HasCover, DateTime AddedAt, int ChapterCount = 0, int ListenedCount = 0, int? Year = null, bool IsFavorite = false,
-    int? CollectionId = null);
+    int? CollectionId = null, string? Description = null);
 record CollectionDto(int Id, string Name, bool HasCover, int BookCount, DateTime AddedAt);
 record ChapterDto(int Id, int BookId, string Title, int TrackNumber, string MimeType = "audio/mpeg");
 record BookMetaRequest(string? Title, string? Author, string? Narrator, string? Description, int? Year);

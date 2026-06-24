@@ -224,6 +224,8 @@ export default function Book() {
         </div>
       </div>
 
+      {book.description && <p className="book-description">{book.description}</p>}
+
       {chapter && (
         <div className="audio-player">
           <div className="player-info">

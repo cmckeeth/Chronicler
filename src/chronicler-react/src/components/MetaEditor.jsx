@@ -8,6 +8,7 @@ export default function MetaEditor({ book, onClose, onSaved }) {
   const [author, setAuthor] = useState(book.author || '');
   const [narrator, setNarrator] = useState(book.narrator || '');
   const [year, setYear] = useState(book.year || '');
+  const [description, setDescription] = useState(book.description || '');
   const [coverFile, setCoverFile] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -54,7 +55,7 @@ export default function MetaEditor({ book, onClose, onSaved }) {
     e.preventDefault();
     setSaving(true);
     try {
-      await booksApi.saveMeta(book.id, { title, author, narrator: narrator || null, year: year ? parseInt(year) : null });
+      await booksApi.saveMeta(book.id, { title, author, narrator: narrator || null, year: year ? parseInt(year) : null, description: description || null });
 
       if (coverFile) {
         const formData = new FormData();
@@ -99,6 +100,9 @@ export default function MetaEditor({ book, onClose, onSaved }) {
 
           <label className="meta-label">Year</label>
           <input className="form-input" type="number" value={year} onChange={e => setYear(e.target.value)} placeholder="(optional)" />
+
+          <label className="meta-label">Description</label>
+          <textarea className="form-input" value={description} onChange={e => setDescription(e.target.value)} placeholder="(optional)" rows={4} style={{resize:'vertical',fontFamily:'inherit'}} />
 
           <label className="meta-label" style={{marginTop:'.4rem'}}>
             Cover Image {book.hasCover ? '(replaces existing)' : ''}

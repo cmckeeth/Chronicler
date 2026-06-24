@@ -122,10 +122,10 @@ final class APIClient: @unchecked Sendable {
         try? await send(request("/api/books/\(bookId)/meta"), as: BookMeta.self)
     }
     func saveBookMeta(_ bookId: Int, title: String, author: String,
-                      narrator: String?, year: Int?) async -> Bool {
+                      narrator: String?, description: String?, year: Int?) async -> Bool {
         let code = (try? await send(request("/api/books/\(bookId)/meta", method: "PUT",
             body: MetaBody(title: title, author: author, narrator: narrator,
-                           description: nil, year: year)))) ?? -1
+                           description: description, year: year)))) ?? -1
         return (200..<300).contains(code)
     }
     func uploadCover(_ bookId: Int, imageData: Data, mime: String) async -> Bool {

@@ -126,10 +126,10 @@ class ApiClient {
         val resp = body(builder("/api/books/$bookId/meta").build()) ?: return null
         return runCatching { json.decodeFromString<BookMeta>(resp) }.getOrNull()
     }
-    suspend fun saveBookMeta(bookId: Int, title: String, author: String, narrator: String?, year: Int?): Boolean {
+    suspend fun saveBookMeta(bookId: Int, title: String, author: String, narrator: String?, description: String?, year: Int?): Boolean {
         return body(builder("/api/books/$bookId/meta")
             .put(jsonBody(mapOf("title" to title, "author" to author,
-                "narrator" to narrator, "description" to null, "year" to year))).build()) != null
+                "narrator" to narrator, "description" to description, "year" to year))).build()) != null
     }
     suspend fun uploadCover(bookId: Int, image: ByteArray, mime: String): Boolean {
         val multipart = MultipartBody.Builder().setType(MultipartBody.FORM)

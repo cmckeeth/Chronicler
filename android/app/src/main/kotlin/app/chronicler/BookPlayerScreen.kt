@@ -172,6 +172,12 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
                     Text(b.author, color = Theme.parchmentMid, fontSize = 14.sp)
                     b.narrator?.let { Text(" · $it", color = Theme.parchmentDim, fontSize = 14.sp) }
                 }
+                b.description?.takeIf { it.isNotBlank() }?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(it, color = Theme.parchmentDim, fontSize = 13.sp, fontFamily = Theme.serif,
+                        lineHeight = 19.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
             }
 
             Spacer(Modifier.height(20.dp))
@@ -568,12 +574,14 @@ private fun MetaEditorDialog(api: ApiClient, book: Book, onDismiss: () -> Unit, 
     var author by remember { mutableStateOf(book.author) }
     var narrator by remember { mutableStateOf(book.narrator ?: "") }
     var year by remember { mutableStateOf(book.year?.toString() ?: "") }
+    var description by remember { mutableStateOf(book.description ?: "") }
     var saving by remember { mutableStateOf(false) }
     var coverBytes by remember { mutableStateOf<ByteArray?>(null) }
 
     LaunchedEffect(book.id) {
         api.getBookMeta(book.id)?.let {
             title = it.title; author = it.author; narrator = it.narrator ?: ""; year = it.year?.toString() ?: ""
+            description = it.description ?: ""
         }
     }
 
@@ -622,6 +630,8 @@ private fun MetaEditorDialog(api: ApiClient, book: Book, onDismiss: () -> Unit, 
                 OutlinedTextField(author, { author = it }, label = { Text("Author") }, singleLine = true, colors = fieldColors)
                 OutlinedTextField(narrator, { narrator = it }, label = { Text("Narrator") }, singleLine = true, colors = fieldColors)
                 OutlinedTextField(year, { year = it }, label = { Text("Year") }, singleLine = true, colors = fieldColors)
+                OutlinedTextField(description, { description = it }, label = { Text("Description") },
+                    minLines = 3, maxLines = 8, colors = fieldColors)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     TextButton(onClick = { picker.launch("image/*") }) {
                         Text(if (coverBytes == null) "Choose Cover Image" else "📎 Cover selected", color = Theme.brass)
@@ -636,7 +646,8 @@ private fun MetaEditorDialog(api: ApiClient, book: Book, onDismiss: () -> Unit, 
             TextButton(enabled = !saving, onClick = {
                 saving = true
                 scope.launch {
-                    api.saveBookMeta(book.id, title, author, narrator.ifBlank { null }, year.toIntOrNull())
+                    api.saveBookMeta(book.id, title, author, narrator.ifBlank { null },
+                        description.ifBlank { null }, year.toIntOrNull())
                     coverBytes?.let { api.uploadCover(book.id, it, coverMime) }
                     saving = false
                     onSaved()
