@@ -65,6 +65,7 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
     var progresses by remember { mutableStateOf<List<ChapterProgress>>(emptyList()) }
     var current by remember { mutableStateOf<Chapter?>(null) }
     var showMeta by remember { mutableStateOf(false) }
+    var showInfo by remember { mutableStateOf(false) }
     var menuChapterId by remember { mutableStateOf<Int?>(null) }
     var editChapter by remember { mutableStateOf<Chapter?>(null) }
     // Download state per chapter: 0 = none, 1 = downloading, 2 = downloaded.
@@ -160,23 +161,26 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
                 Text("Consulting the archive...", color = Theme.parchmentDim)
             }
         } else {
-            Column(Modifier.fillMaxWidth().padding(top = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally) {
-                CoverImage(b, api, Modifier.size(132.dp).clip(RoundedCornerShape(4.dp))
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.Top) {
+                CoverImage(b, api, Modifier.size(120.dp).clip(RoundedCornerShape(4.dp))
                     .clickable { scope.launch { showMeta = true } })
-                Spacer(Modifier.height(14.dp))
-                Text(b.title, color = Theme.parchment, fontSize = 20.sp, fontWeight = FontWeight.Bold,
-                    fontFamily = Theme.body, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                Spacer(Modifier.height(6.dp))
-                Row {
-                    Text(b.author, color = Theme.parchmentMid, fontSize = 14.sp)
-                    b.narrator?.let { Text(" · $it", color = Theme.parchmentDim, fontSize = 14.sp) }
-                }
-                b.description?.takeIf { it.isNotBlank() }?.let {
-                    Spacer(Modifier.height(8.dp))
-                    Text(it, color = Theme.parchmentDim, fontSize = 13.sp, fontFamily = Theme.serif,
-                        lineHeight = 19.sp,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f).clickable { showInfo = true }) {
+                    Text(b.title, color = Theme.parchment, fontSize = 18.sp, fontWeight = FontWeight.Bold,
+                        fontFamily = Theme.body)
+                    Spacer(Modifier.height(6.dp))
+                    Row {
+                        Text(b.author, color = Theme.parchmentMid, fontSize = 13.sp)
+                        b.narrator?.let { Text(" · $it", color = Theme.parchmentDim, fontSize = 13.sp) }
+                    }
+                    b.description?.takeIf { it.isNotBlank() }?.let {
+                        Spacer(Modifier.height(8.dp))
+                        Text(it, color = Theme.parchmentDim, fontSize = 12.sp, fontFamily = Theme.serif,
+                            lineHeight = 17.sp, maxLines = 4,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Spacer(Modifier.height(4.dp))
+                        Text("Read more ›", color = Theme.brass, fontSize = 11.sp)
+                    }
                 }
             }
 
@@ -323,6 +327,9 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
         }
     }
 
+    if (showInfo && book != null) {
+        BookInfoDialog(api, book!!, onDismiss = { showInfo = false })
+    }
     if (showMeta && book != null) {
         MetaEditorDialog(api, book!!, onDismiss = { showMeta = false },
             onSaved = { scope.launch { book = api.getBook(bookId); invalidateCover(bookId); showMeta = false } })
@@ -564,6 +571,41 @@ private fun DrawScope.drawPulses(phase: Float, glow: Float, playing: Boolean) {
     // Breathing source ring at the rim.
     drawCircle(Theme.verdigris.copy(alpha = 0.5f * glow), radius = rimR, center = center,
         style = Stroke(width = 3f))
+}
+
+// Full book info: cover + all metadata + untruncated description.
+@Composable
+private fun BookInfoDialog(api: ApiClient, book: Book, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Theme.surface,
+        titleContentColor = Theme.brass,
+        textContentColor = Theme.parchment,
+        title = { Text(book.title) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.Top) {
+                    CoverImage(book, api, Modifier.size(96.dp).clip(RoundedCornerShape(4.dp)))
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(book.author, color = Theme.parchmentMid, fontSize = 14.sp)
+                        book.narrator?.let {
+                            Text("Narrated by $it", color = Theme.parchmentDim, fontSize = 13.sp)
+                        }
+                        book.year?.let {
+                            Text(it.toString(), color = Theme.parchmentDim, fontSize = 13.sp)
+                        }
+                    }
+                }
+                book.description?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, color = Theme.parchment, fontSize = 14.sp, fontFamily = Theme.serif,
+                        lineHeight = 20.sp)
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Done", color = Theme.brass) } }
+    )
 }
 
 @Composable

@@ -98,6 +98,9 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
             Spacer(Modifier.height(10.dp))
             favChip(favOnly) { favOnly = !favOnly }
         }
+        Spacer(Modifier.height(10.dp))
+        chipRow("Grid", listOf("1" to "1", "2" to "2", "3" to "3"),
+            auth.gridColumns.toString()) { auth.setGridSize(it.toInt()) }
         Spacer(Modifier.height(18.dp))
 
         // Collections appear only on the Collections tab (never while searching).
@@ -110,7 +113,7 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
                 else if (allBooks.isEmpty() && collections.isEmpty()) "The archive lies empty, traveller."
                 else "No volumes match this filter.",
                 Theme.parchmentDim)
-            else -> LazyVerticalGrid(columns = GridCells.Fixed(if (favOnly && tab == "books") 2 else 3),
+            else -> LazyVerticalGrid(columns = GridCells.Fixed(auth.gridColumns),
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),

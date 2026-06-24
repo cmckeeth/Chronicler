@@ -13,6 +13,7 @@ struct BookPlayerView: View {
     @State private var progresses: [ChapterProgress] = []
     @State private var current: Chapter?
     @State private var showMeta = false
+    @State private var showInfo = false
     // Download state per chapter: 0 = none, 1 = downloading, 2 = downloaded.
     @State private var downloads: [Int: Int] = [:]
 
@@ -59,32 +60,83 @@ struct BookPlayerView: View {
         .task { await loadAll() }
         .onDisappear { audio.teardown() }
         .sheet(isPresented: $showMeta) { metaEditor }
+        .sheet(isPresented: $showInfo) { infoModal }
         .sheet(isPresented: $showChapterEdit) { chapterEditor }
     }
 
-    // ── Header (cover + title/author) ──
+    // ── Header (cover beside title/author/description) ──
     private var header: some View {
-        VStack(spacing: 14) {
+        HStack(alignment: .top, spacing: 14) {
             if let book {
                 CoverImage(book: book, api: api)
-                    .frame(width: 132, height: 132)
+                    .frame(width: 120, height: 120)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Theme.borderBrass, lineWidth: 1))
                     .onLongPressGesture(minimumDuration: 0.6) { Task { await openMeta() } }
-                // Book title is Lora bold (matches the Archive list), NOT Cinzel Decorative.
-                Text(book.title).font(Theme.bodyBold(20)).foregroundColor(Theme.parchment)
-                    .multilineTextAlignment(.center)
-                HStack(spacing: 0) {
-                    Text(book.author).font(Theme.serif(14)).foregroundColor(Theme.parchmentMid)
-                    if let n = book.narrator {
-                        Text(" · \(n)").font(Theme.serif(14)).foregroundColor(Theme.parchmentDim)
+                VStack(alignment: .leading, spacing: 6) {
+                    // Book title is Lora bold (matches the Archive list), NOT Cinzel Decorative.
+                    Text(book.title).font(Theme.bodyBold(18)).foregroundColor(Theme.parchment)
+                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 0) {
+                        Text(book.author).font(Theme.serif(13)).foregroundColor(Theme.parchmentMid)
+                        if let n = book.narrator {
+                            Text(" · \(n)").font(Theme.serif(13)).foregroundColor(Theme.parchmentDim)
+                        }
+                    }
+                    if let d = book.description, !d.isEmpty {
+                        Text(d).font(Theme.serif(12)).foregroundColor(Theme.parchmentDim)
+                            .lineLimit(4)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button { showInfo = true } label: {
+                            Text("Read more ›").font(Theme.body(11)).foregroundColor(Theme.brass)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .onTapGesture { showInfo = true }
+            }
+        }
+    }
+
+    // ── Full book info modal (cover + all metadata + untruncated description) ──
+    private var infoModal: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    if let book {
+                        HStack(alignment: .top, spacing: 14) {
+                            CoverImage(book: book, api: api)
+                                .frame(width: 110, height: 110)
+                                .clipShape(RoundedRectangle(cornerRadius: 4))
+                                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Theme.borderBrass, lineWidth: 1))
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(book.title).font(Theme.bodyBold(20)).foregroundColor(Theme.parchment)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Text(book.author).font(Theme.serif(14)).foregroundColor(Theme.parchmentMid)
+                                if let n = book.narrator {
+                                    Text("Narrated by \(n)").font(Theme.serif(13)).foregroundColor(Theme.parchmentDim)
+                                }
+                                if let y = book.year {
+                                    Text(verbatim: "\(y)").font(Theme.serif(13)).foregroundColor(Theme.parchmentDim)
+                                }
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        if let d = book.description, !d.isEmpty {
+                            Text(d).font(Theme.serif(15)).foregroundColor(Theme.parchment)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                 }
-                if let d = book.description, !d.isEmpty {
-                    Text(d).font(Theme.serif(13)).foregroundColor(Theme.parchmentDim)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, 2)
+                .padding(20)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .background(Theme.bg.ignoresSafeArea())
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { showInfo = false }.foregroundColor(Theme.brass)
                 }
             }
         }

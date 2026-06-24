@@ -32,6 +32,15 @@ class AuthStore(context: Context) {
         prefs.edit().putBoolean("volumeBoost", v).apply()
     }
 
+    // Persisted: archive grid density (1 / 2 / 3 columns).
+    var gridColumns by mutableStateOf(prefs.getInt("gridColumns", 3))
+        private set
+
+    fun setGridSize(v: Int) {
+        gridColumns = v
+        prefs.edit().putInt("gridColumns", v).apply()
+    }
+
     // Persisted: the active visual theme (Tesla vs. Steampunk). Stored as the enum name.
     fun loadThemeMode(): ThemeMode =
         runCatching { ThemeMode.valueOf(prefs.getString("theme", null) ?: "") }

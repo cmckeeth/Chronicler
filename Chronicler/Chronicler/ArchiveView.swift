@@ -12,10 +12,10 @@ struct ArchiveView: View {
     @State private var refreshing = false
     @State private var error: String?
 
-    // 3-up grid normally; 2-up when the favorites-only filter is on (Books tab).
+    // Grid density: user-chosen 1/2/3 columns, persisted across launches.
+    @AppStorage("gridColumns") private var gridColumns = 3
     private var columns: [GridItem] {
-        let cols = (favOnly && !showCollections) ? 2 : 3
-        return Array(repeating: GridItem(.flexible(), spacing: 16), count: cols)
+        Array(repeating: GridItem(.flexible(), spacing: 16), count: gridColumns)
     }
 
     private var isSearching: Bool {
@@ -73,6 +73,7 @@ struct ArchiveView: View {
                 if tab == "books" {
                     favChip
                 }
+                layoutChips
 
                 content
 
@@ -157,6 +158,27 @@ struct ArchiveView: View {
                     .overlay(Capsule().stroke(favOnly ? Theme.verdigris : .clear, lineWidth: 1))
                     .clipShape(Capsule())
                     .shadow(color: favOnly ? Theme.verdigris.opacity(0.5) : .clear, radius: 8)
+            }
+            Spacer()
+        }
+    }
+
+    // Grid density picker: 1 / 2 / 3 columns, persisted via @AppStorage.
+    private var layoutChips: some View {
+        HStack(spacing: 6) {
+            Text("Grid").font(Theme.body(11)).foregroundColor(Theme.parchmentDim)
+            ForEach([1, 2, 3], id: \.self) { n in
+                let active = gridColumns == n
+                Button { gridColumns = n } label: {
+                    Text("\(n)").font(Theme.body(12))
+                        .foregroundColor(active ? Theme.ink : Theme.parchmentMid)
+                        .frame(minWidth: 14)
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(active ? Theme.brass : Theme.surface2)
+                        .overlay(Capsule().stroke(active ? Theme.verdigris : .clear, lineWidth: 1))
+                        .clipShape(Capsule())
+                        .shadow(color: active ? Theme.verdigris.opacity(0.5) : .clear, radius: 8)
+                }
             }
             Spacer()
         }

@@ -12,6 +12,9 @@ export default function Library() {
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState('books');      // 'books' | 'collections'
   const [favOnly, setFavOnly] = useState(false); // only meaningful under Books
+  // Grid density: user-chosen 1/2/3 columns, persisted across visits.
+  const [gridCols, setGridCols] = useState(() => parseInt(localStorage.getItem('gridCols')) || 3);
+  const chooseGrid = n => { setGridCols(n); localStorage.setItem('gridCols', n); };
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [scanning, setScanning] = useState(false);
@@ -99,6 +102,12 @@ export default function Library() {
               <button className={`chip${favOnly?' chip-active':''}`} onClick={() => setFavOnly(v => !v)}>★ Favorites</button>
             </div>
           )}
+          <div className="sort-group grid-toggle">
+            <span className="grid-toggle-label">Grid</span>
+            {[1, 2, 3].map(n => (
+              <button key={n} className={`chip${gridCols===n?' chip-active':''}`} onClick={() => chooseGrid(n)}>{n}</button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -112,7 +121,7 @@ export default function Library() {
           <p>{books.length === 0 && collections.length === 0 ? 'The archive lies empty, traveller.' : 'No volumes match this filter.'}</p>
         </div>
       ) : (
-        <div className={`book-grid${tab==='books' && favOnly && !searching ? ' fav-grid' : ''}`}>
+        <div className="book-grid" style={{gridTemplateColumns: `repeat(${gridCols}, 1fr)`}}>
           {shownCollections.map(c => <CollectionCard key={`c-${c.id}`} collection={c} />)}
           {filtered.map(book => <BookCard key={book.id} book={book} onToggleFav={toggleFav} />)}
         </div>

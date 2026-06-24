@@ -18,6 +18,7 @@ export default function Book() {
   const [book, setBook] = useState(null);
   const [coverBust, setCoverBust] = useState('');
   const [showMetaEditor, setShowMetaEditor] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const [editChapter, setEditChapter] = useState(null);
   const [coverSearching, setCoverSearching] = useState(false);
   const longPressTimer = useRef(null);
@@ -221,10 +222,14 @@ export default function Book() {
           <h1>{book.title}</h1>
           <h2>{book.author}</h2>
           {book.narrator && <p className="narrator">{book.narrator}</p>}
+          {book.description && (
+            <div className="book-description-clamp" onClick={() => setShowInfo(true)} title="Tap for full details">
+              <p className="book-description">{book.description}</p>
+              <button className="read-more" onClick={e => { e.stopPropagation(); setShowInfo(true); }}>Read more ›</button>
+            </div>
+          )}
         </div>
       </div>
-
-      {book.description && <p className="book-description">{book.description}</p>}
 
       {chapter && (
         <div className="audio-player">
@@ -325,6 +330,26 @@ export default function Book() {
             setShowMetaEditor(false);
           }}
         />
+      )}
+
+      {showInfo && (
+        <div className="meta-editor-overlay" onClick={() => setShowInfo(false)}>
+          <div className="meta-editor book-info-modal" onClick={e => e.stopPropagation()}>
+            <div className="book-info-modal-head">
+              {book.hasCover
+                ? <img className="book-cover-small" src={`${booksApi.coverUrl(book.id)}${coverBust}`} alt={book.title} />
+                : <div className="book-cover-small-placeholder">📚</div>}
+              <div>
+                <h1>{book.title}</h1>
+                <h2>{book.author}</h2>
+                {book.narrator && <p className="narrator">{book.narrator}</p>}
+                {book.year && <p className="narrator">{book.year}</p>}
+              </div>
+            </div>
+            {book.description && <p className="book-info-modal-desc">{book.description}</p>}
+            <button className="btn-secondary" onClick={() => setShowInfo(false)}>Close</button>
+          </div>
+        </div>
       )}
     </div>
   );
