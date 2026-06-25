@@ -275,7 +275,9 @@ struct BookCardView: View {
         }
     }
 
-    // Standard grid card: cover on top, title/author beneath.
+    // Standard grid card: cover on top, title/author beneath. Text rows use fixed
+    // heights (title always 2 lines, author + narrator always reserved) so every
+    // tile is the same height and the grid stays even instead of staggering.
     private var tallContent: some View {
         VStack(alignment: .leading, spacing: 4) {
             ZStack(alignment: .topTrailing) {
@@ -290,12 +292,14 @@ struct BookCardView: View {
             }
             Text(book.title).font(Theme.body(14)).foregroundColor(Theme.parchment)
                 .lineLimit(2)
+                .frame(maxWidth: .infinity, minHeight: 36, alignment: .topLeading)
             Text(book.author).font(Theme.body(12)).foregroundColor(Theme.parchmentDim)
                 .lineLimit(1)
-            if let narrator = book.narrator {
-                Text(narrator).font(Theme.body(11)).foregroundColor(Theme.parchmentDim).opacity(0.7)
-                    .lineLimit(1)
-            }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(book.narrator ?? " ").font(Theme.body(11)).foregroundColor(Theme.parchmentDim)
+                .opacity(book.narrator == nil ? 0 : 0.7)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

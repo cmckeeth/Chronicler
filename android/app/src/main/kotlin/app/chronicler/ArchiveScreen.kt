@@ -253,6 +253,8 @@ internal fun BookCard(book: Book, api: ApiClient, wide: Boolean = false,
             }
         }
     } else {
+        // Fixed text-row heights (title always 2 lines, author + narrator always
+        // reserved) keep every tile the same height so the grid stays even.
         Column(container) {
             Box {
                 CoverImage(book, api, Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(2.dp)))
@@ -262,13 +264,11 @@ internal fun BookCard(book: Book, api: ApiClient, wide: Boolean = false,
                 }
             }
             Spacer(Modifier.height(10.dp))
-            Text(book.title, color = Theme.parchment, fontSize = 14.sp, maxLines = 2)
+            Text(book.title, color = Theme.parchment, fontSize = 14.sp, minLines = 2, maxLines = 2)
             Spacer(Modifier.height(3.dp))
             Text(book.author, color = Theme.parchmentDim, fontSize = 12.sp, maxLines = 1)
-            book.narrator?.let {
-                Spacer(Modifier.height(2.dp))
-                Text(it, color = Theme.parchmentDim, fontSize = 11.sp, maxLines = 1)
-            }
+            Spacer(Modifier.height(2.dp))
+            Text(book.narrator ?: " ", color = Theme.parchmentDim, fontSize = 11.sp, maxLines = 1)
             Spacer(Modifier.height(2.dp))
         }
     }
