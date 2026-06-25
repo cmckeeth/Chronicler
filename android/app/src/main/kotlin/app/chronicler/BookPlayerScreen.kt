@@ -40,6 +40,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
@@ -169,10 +172,13 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
                     Text(b.title, color = Theme.parchment, fontSize = 18.sp, fontWeight = FontWeight.Bold,
                         fontFamily = Theme.body)
                     Spacer(Modifier.height(6.dp))
-                    Row {
-                        Text(b.author, color = Theme.parchmentMid, fontSize = 13.sp)
-                        b.narrator?.let { Text(" · $it", color = Theme.parchmentDim, fontSize = 13.sp) }
-                    }
+                    // Single flowing byline so a long narrator wraps as text, not char-by-char.
+                    Text(buildAnnotatedString {
+                        withStyle(SpanStyle(color = Theme.parchmentMid)) { append(b.author) }
+                        b.narrator?.let {
+                            withStyle(SpanStyle(color = Theme.parchmentDim)) { append(" · $it") }
+                        }
+                    }, fontSize = 13.sp)
                     b.description?.takeIf { it.isNotBlank() }?.let {
                         Spacer(Modifier.height(8.dp))
                         Text(it, color = Theme.parchmentDim, fontSize = 12.sp, fontFamily = Theme.serif,

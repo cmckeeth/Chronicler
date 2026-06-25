@@ -77,12 +77,11 @@ struct BookPlayerView: View {
                     // Book title is Lora bold (matches the Archive list), NOT Cinzel Decorative.
                     Text(book.title).font(Theme.bodyBold(18)).foregroundColor(Theme.parchment)
                         .fixedSize(horizontal: false, vertical: true)
-                    HStack(spacing: 0) {
-                        Text(book.author).font(Theme.serif(13)).foregroundColor(Theme.parchmentMid)
-                        if let n = book.narrator {
-                            Text(" · \(n)").font(Theme.serif(13)).foregroundColor(Theme.parchmentDim)
-                        }
-                    }
+                    // Single flowing byline so a long narrator wraps as text, not column-squeezed.
+                    (Text(book.author).foregroundColor(Theme.parchmentMid)
+                        + (book.narrator.map { Text(" · \($0)").foregroundColor(Theme.parchmentDim) } ?? Text("")))
+                        .font(Theme.serif(13))
+                        .fixedSize(horizontal: false, vertical: true)
                     if let d = book.description, !d.isEmpty {
                         Text(d).font(Theme.serif(12)).foregroundColor(Theme.parchmentDim)
                             .lineLimit(4)
