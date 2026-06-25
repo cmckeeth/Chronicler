@@ -94,13 +94,13 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
         Spacer(Modifier.height(14.dp))
         chipRow("", listOf("Books" to "books", "Collections" to "collections"),
             tab) { tab = it }
-        if (tab == "books") {
-            Spacer(Modifier.height(10.dp))
-            favChip(favOnly) { favOnly = !favOnly }
-        }
         Spacer(Modifier.height(10.dp))
-        chipRow("Grid", listOf("1" to "1", "2" to "2", "3" to "3"),
-            auth.gridColumns.toString()) { auth.setGridSize(it.toInt()) }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            if (tab == "books") favChip(favOnly) { favOnly = !favOnly }
+            Spacer(Modifier.weight(1f))
+            chipRow("Grid", listOf("1" to "1", "2" to "2", "3" to "3"),
+                auth.gridColumns.toString()) { auth.setGridSize(it.toInt()) }
+        }
         Spacer(Modifier.height(18.dp))
 
         // Collections appear only on the Collections tab (never while searching).

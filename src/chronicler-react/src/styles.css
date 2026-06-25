@@ -1196,7 +1196,7 @@ select {
 }
 
 /* Archive grid-density toggle (1/2/3 columns) */
-.grid-toggle { align-items: center; gap: .3rem; }
+.grid-toggle { align-items: center; gap: .3rem; margin-left: auto; }
 .grid-toggle-label { color: var(--parchment-dim); font-size: .8rem; margin-right: .15rem; }
 
 /* One-per-row: cover on the left, full metadata + description on the right. */

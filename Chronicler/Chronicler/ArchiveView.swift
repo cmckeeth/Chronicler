@@ -70,10 +70,11 @@ struct ArchiveView: View {
 
                 chipGroup("", [("Books","books"),("Collections","collections")],
                           selection: $tab)
-                if tab == "books" {
-                    favChip
+                HStack(spacing: 10) {
+                    if tab == "books" { favChip }
+                    Spacer()
+                    layoutChips
                 }
-                layoutChips
 
                 content
 
@@ -160,7 +161,6 @@ struct ArchiveView: View {
                     .clipShape(Capsule())
                     .shadow(color: favOnly ? Theme.verdigris.opacity(0.5) : .clear, radius: 8)
             }
-            Spacer()
         }
     }
 
@@ -181,7 +181,6 @@ struct ArchiveView: View {
                         .shadow(color: active ? Theme.verdigris.opacity(0.5) : .clear, radius: 8)
                 }
             }
-            Spacer()
         }
     }
 
