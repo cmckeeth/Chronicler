@@ -88,6 +88,8 @@ struct LandingView: View {
             Text("⚡ Tesla").tag(ThemeMode.tesla)
             Text("⚙ Steampunk").tag(ThemeMode.steampunk)
             Text("🌿 Garden").tag(ThemeMode.garden)
+            Text("📖 Dark Academia").tag(ThemeMode.academia)
+            Text("🦇 Blackletter Noir").tag(ThemeMode.noir)
         }
         .pickerStyle(.menu)
         .font(Theme.body(11))

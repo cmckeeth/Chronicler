@@ -26,12 +26,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-// Three runtime themes:
+// Five runtime themes:
 //   TESLA     — electric-blue look (the current default; animated lightning everywhere).
 //   STEAMPUNK — Victorian brass/gold, NO electricity (static brass borders, green accent).
 //   GARDEN    — verdant greens + floral pink accents, NO electricity (soft solid panels,
 //               rounded organic corners, steady soft-green glow, handwritten/rounded fonts).
-enum class ThemeMode { TESLA, STEAMPUNK, GARDEN }
+//   ACADEMIA  — Dark Academia: espresso wood, brass metal, cream text, forest-green accent,
+//               rain backdrop, elegant serif. NO electricity.
+//   NOIR      — Blackletter Noir: near-black, tarnished-silver metal, cold-gray text,
+//               ox-blood accent, drifting fog, sharp corners, dramatic serif. NO electricity.
+enum class ThemeMode { TESLA, STEAMPUNK, GARDEN, ACADEMIA, NOIR }
 
 // Theme palette. Every themed color is a computed `get()` that reads [themeMode], so any
 // composable that touches a color recomposes when the mode flips (mutableStateOf is observed
@@ -43,41 +47,49 @@ object Theme {
     private val tesla get() = themeMode == ThemeMode.TESLA
     private val garden get() = themeMode == ThemeMode.GARDEN
 
-    // Pick a per-theme value. Order: TESLA, STEAMPUNK, GARDEN.
-    private fun <T> byTheme(tesla: T, steampunk: T, garden: T): T = when (themeMode) {
+    // Pick a per-theme value. Order: TESLA, STEAMPUNK, GARDEN, ACADEMIA, NOIR.
+    private fun <T> byTheme(tesla: T, steampunk: T, garden: T, academia: T, noir: T): T = when (themeMode) {
         ThemeMode.TESLA -> tesla
         ThemeMode.STEAMPUNK -> steampunk
         ThemeMode.GARDEN -> garden
+        ThemeMode.ACADEMIA -> academia
+        ThemeMode.NOIR -> noir
     }
 
     // TESLA — cold futuristic glass/electric (dark blue-black, electric-blue "metal").
-    // STEAMPUNK — warm Victorian brass/gold/leather, green accent (unchanged).
+    // STEAMPUNK — warm Victorian brass/gold/leather, green accent.
     // GARDEN — verdant greens, foliage-green "metal", floral-pink accent.
-    val bg: Color get() = byTheme(Color(0xFF05080F), Color(0xFF160D03), Color(0xFF0B1410))
-    val bg2: Color get() = byTheme(Color(0xFF090E1A), Color(0xFF1E1206), Color(0xFF0F1C14))
-    val leather: Color get() = byTheme(Color(0xFF0B1424), Color(0xFF281809), Color(0xFF12241A))
-    val surface: Color get() = byTheme(Color(0xFF0F1A2E), Color(0xFF32200C), Color(0xFF16301F))
-    val surface2: Color get() = byTheme(Color(0xFF142440), Color(0xFF3E280E), Color(0xFF1D3D28))
-    val surface3: Color get() = byTheme(Color(0xFF1B3052), Color(0xFF4A3012), Color(0xFF245031))
-    val border: Color get() = byTheme(Color(0xFF21405F), Color(0xFF6B4420), Color(0xFF2F5C3C))
-    val borderBrass: Color get() = byTheme(Color(0xFF3F86B8), Color(0xFFC08828), Color(0xFF6FAE5F))
+    // ACADEMIA — espresso wood, antique-brass "metal", cream text, forest-green accent.
+    // NOIR — near-black, tarnished-silver "metal", cold-gray text, ox-blood accent.
+    //                            ( tesla     , steampunk  , garden     , academia   , noir       )
+    val bg: Color get() = byTheme(Color(0xFF05080F), Color(0xFF160D03), Color(0xFF0B1410), Color(0xFF161009), Color(0xFF060608))
+    val bg2: Color get() = byTheme(Color(0xFF090E1A), Color(0xFF1E1206), Color(0xFF0F1C14), Color(0xFF1D150C), Color(0xFF0B0B0E))
+    val leather: Color get() = byTheme(Color(0xFF0B1424), Color(0xFF281809), Color(0xFF12241A), Color(0xFF2A1D10), Color(0xFF101013))
+    val surface: Color get() = byTheme(Color(0xFF0F1A2E), Color(0xFF32200C), Color(0xFF16301F), Color(0xFF2F2211), Color(0xFF141418))
+    val surface2: Color get() = byTheme(Color(0xFF142440), Color(0xFF3E280E), Color(0xFF1D3D28), Color(0xFF3A2B16), Color(0xFF1C1C22))
+    val surface3: Color get() = byTheme(Color(0xFF1B3052), Color(0xFF4A3012), Color(0xFF245031), Color(0xFF46351C), Color(0xFF25252D))
+    val border: Color get() = byTheme(Color(0xFF21405F), Color(0xFF6B4420), Color(0xFF2F5C3C), Color(0xFF5A4527), Color(0xFF34343D))
+    val borderBrass: Color get() = byTheme(Color(0xFF3F86B8), Color(0xFFC08828), Color(0xFF6FAE5F), Color(0xFF9A7B3E), Color(0xFF8B8E99))
     // "brass"/metal token (~used everywhere for buttons, wordmark). TESLA = electric blue/chrome,
-    // GARDEN = foliage green.
-    val brass: Color get() = byTheme(Color(0xFF2BC4FF), Color(0xFFE09808), Color(0xFF8BD450))
-    val brassLight: Color get() = byTheme(Color(0xFF7FE0FF), Color(0xFFFFC838), Color(0xFFB6F07A))
-    val brassPale: Color get() = byTheme(Color(0xFFD6F4FF), Color(0xFFFFE878), Color(0xFFE2FFC0))
-    val copper: Color get() = byTheme(Color(0xFF1F9FD8), Color(0xFFC86818), Color(0xFFE88FA8))
-    val rust: Color get() = byTheme(Color(0xFFFF5470), Color(0xFFB82C0C), Color(0xFFD4564A))
+    // GARDEN = foliage green, ACADEMIA = antique brass, NOIR = tarnished silver.
+    val brass: Color get() = byTheme(Color(0xFF2BC4FF), Color(0xFFE09808), Color(0xFF8BD450), Color(0xFFC39A4E), Color(0xFFB9BDC7))
+    val brassLight: Color get() = byTheme(Color(0xFF7FE0FF), Color(0xFFFFC838), Color(0xFFB6F07A), Color(0xFFE3C275), Color(0xFFD9DDE5))
+    val brassPale: Color get() = byTheme(Color(0xFFD6F4FF), Color(0xFFFFE878), Color(0xFFE2FFC0), Color(0xFFF4E6B8), Color(0xFFEEF0F5))
+    val copper: Color get() = byTheme(Color(0xFF1F9FD8), Color(0xFFC86818), Color(0xFFE88FA8), Color(0xFF7D9B6A), Color(0xFF7C1A1F))
+    val rust: Color get() = byTheme(Color(0xFFFF5470), Color(0xFFB82C0C), Color(0xFFD4564A), Color(0xFFA23B22), Color(0xFFC0282F))
     // Accent / "electric" token. Name kept (used ~35 places). TESLA = electric blue,
-    // STEAMPUNK = verdigris green, GARDEN = floral pink — the key accent flip.
-    val verdigris: Color get() = byTheme(Color(0xFF2BC4FF), Color(0xFF8FD44A), Color(0xFFFF8FB8))
-    val parchment: Color get() = byTheme(Color(0xFFE6F3FF), Color(0xFFF6ECD0), Color(0xFFF0F7E8))
-    val parchmentMid: Color get() = byTheme(Color(0xFFA6C8E2), Color(0xFFE0BC6C), Color(0xFFCFE4B8))
-    val parchmentDim: Color get() = byTheme(Color(0xFF6F93B4), Color(0xFFC09838), Color(0xFF9BBF88))
-    val ink: Color get() = byTheme(Color(0xFF04101E), Color(0xFF1A0C02), Color(0xFF08130C))
+    // STEAMPUNK = verdigris green, GARDEN = floral pink, ACADEMIA = forest green, NOIR = ox-blood.
+    val verdigris: Color get() = byTheme(Color(0xFF2BC4FF), Color(0xFF8FD44A), Color(0xFFFF8FB8), Color(0xFF4F8A52), Color(0xFF9E1B22))
+    val parchment: Color get() = byTheme(Color(0xFFE6F3FF), Color(0xFFF6ECD0), Color(0xFFF0F7E8), Color(0xFFF2E7CF), Color(0xFFD7D9E0))
+    val parchmentMid: Color get() = byTheme(Color(0xFFA6C8E2), Color(0xFFE0BC6C), Color(0xFFCFE4B8), Color(0xFFD4C29A), Color(0xFF9B9EAA))
+    val parchmentDim: Color get() = byTheme(Color(0xFF6F93B4), Color(0xFFC09838), Color(0xFF9BBF88), Color(0xFFA08F6E), Color(0xFF6B6E7A))
+    val ink: Color get() = byTheme(Color(0xFF04101E), Color(0xFF1A0C02), Color(0xFF08130C), Color(0xFF120C06), Color(0xFF050507))
 
-    // Soft green halo color used for GARDEN headings/panels (no electricity, no pulse).
+    // Steady halo colors (no electricity, no pulse): GARDEN soft green, ACADEMIA green bloom,
+    // NOIR bright ox-blood so the halo reads on near-black.
     private val gardenGlow get() = Color(0xFF7CC24A)
+    private val academiaGlow get() = Color(0xFF5A9E5D)
+    private val noirGlow get() = Color(0xFFC0282F)
 
     val brassGradient: Brush get() = Brush.verticalGradient(listOf(brassLight, brass, borderBrass))
 
@@ -127,9 +139,12 @@ object Theme {
         Font(R.font.quicksand, FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(600))),
     )
 
-    val display: FontFamily get() = byTheme(orbitronDisplay, cinzelDisplay, dancingDisplay)
-    val serif: FontFamily get() = byTheme(rajdhaniSerif, cinzelSerif, quicksandSerif)
-    val body: FontFamily get() = byTheme(rajdhaniBody, loraBody, quicksandBody)
+    // ACADEMIA + NOIR reuse the bundled serif family (Cinzel caps + Lora body) — both are
+    // literary serif looks. ACADEMIA leans elegant (plain Cinzel wordmark); NOIR leans
+    // dramatic (ornate Cinzel Decorative wordmark). Web gets bespoke Cormorant/Playfair/Pirata.
+    val display: FontFamily get() = byTheme(orbitronDisplay, cinzelDisplay, dancingDisplay, cinzelSerif, cinzelDisplay)
+    val serif: FontFamily get() = byTheme(rajdhaniSerif, cinzelSerif, quicksandSerif, cinzelSerif, cinzelSerif)
+    val body: FontFamily get() = byTheme(rajdhaniBody, loraBody, quicksandBody, loraBody, loraBody)
 
     // Glows read the themed colors via get() so they re-evaluate when the mode flips.
     // STEAMPUNK headings get a warm brass halo; TESLA gets the bright electric-blue one;
@@ -140,6 +155,8 @@ object Theme {
             Shadow(color = verdigris.copy(alpha = 1f), offset = Offset.Zero, blurRadius = 36f),
             Shadow(color = brass.copy(alpha = 0.7f), offset = Offset.Zero, blurRadius = 18f),
             Shadow(color = gardenGlow.copy(alpha = 0.75f), offset = Offset.Zero, blurRadius = 22f),
+            Shadow(color = academiaGlow.copy(alpha = 0.72f), offset = Offset.Zero, blurRadius = 22f),
+            Shadow(color = noirGlow.copy(alpha = 0.85f), offset = Offset.Zero, blurRadius = 16f),  // tighter = sharper
         )
 }
 
@@ -175,6 +192,22 @@ fun Modifier.electricPanel(
             .shadow(elevation, shape, spotColor = Theme.brass, ambientColor = Theme.brass)
             .background(bg.copy(alpha = 0.5f), shape)
             .border(1.6.dp, Theme.borderBrass.copy(alpha = (alpha + 0.2f).coerceAtMost(1f)), shape)
+    } else if (Theme.themeMode == ThemeMode.ACADEMIA) {
+        // Academia: quiet leather-and-lamplight panel — softly squared 6.dp corners, a
+        // brass-green border, steady warm shadow. No animation, no glass.
+        val shape = RoundedCornerShape(6.dp)
+        this
+            .shadow(elevation, shape, spotColor = Theme.brass, ambientColor = Theme.brass)
+            .background(bg.copy(alpha = 0.55f), shape)
+            .border(1.2.dp, Theme.borderBrass.copy(alpha = (alpha + 0.1f).coerceAtMost(1f)), shape)
+    } else if (Theme.themeMode == ThemeMode.NOIR) {
+        // Noir: sharp gothic plate — hard right-angle corners, a thin tarnished-silver edge,
+        // and a hard black drop shadow. No animation, no glass, no bloom.
+        val shape = RoundedCornerShape(0.dp)
+        this
+            .shadow(elevation, shape, spotColor = Color.Black, ambientColor = Color.Black)
+            .background(bg.copy(alpha = 0.66f), shape)
+            .border(1.dp, Theme.borderBrass.copy(alpha = (alpha + 0.15f).coerceAtMost(1f)), shape)
     } else {
         // Glassy Tesla panel: soft 10.dp corners, translucent fill + sheen, breathing cyan edge.
         val shape = RoundedCornerShape(10.dp)

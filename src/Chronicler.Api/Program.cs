@@ -178,7 +178,7 @@ app.MapGet("/api/books", [Authorize] async (string? q, bool? root, ClaimsPrincip
             b.Chapters.Count(c => c.Progresses.Any(p => p.UserId == userId && p.IsListened)),
             b.Year,
             db.UserBookFavorites.Any(f => f.UserId == userId && f.BookId == b.Id),
-            b.CollectionId, b.Description))
+            b.CollectionId, b.Description, b.SortOrder))
         .ToListAsync();
 
     return Results.Ok(books);
@@ -208,7 +208,9 @@ app.MapGet("/api/collections/{id:int}/books", [Authorize] async (int id, ClaimsP
     var userId = UserId(principal);
     var books = await db.Books
         .Where(b => b.CollectionId == id)
-        .OrderBy(b => b.Author).ThenBy(b => b.Title)
+        // Manually-ordered books first (by SortOrder), then the rest alphabetically.
+        .OrderBy(b => b.SortOrder == null).ThenBy(b => b.SortOrder)
+        .ThenBy(b => b.Author).ThenBy(b => b.Title)
         .Select(b => new BookDto(
             b.Id, b.Title, b.Author, b.Narrator, b.DurationSeconds,
             b.CoverData != null, b.AddedAt,
@@ -216,9 +218,22 @@ app.MapGet("/api/collections/{id:int}/books", [Authorize] async (int id, ClaimsP
             b.Chapters.Count(c => c.Progresses.Any(p => p.UserId == userId && p.IsListened)),
             b.Year,
             db.UserBookFavorites.Any(f => f.UserId == userId && f.BookId == b.Id),
-            b.CollectionId, b.Description))
+            b.CollectionId, b.Description, b.SortOrder))
         .ToListAsync();
     return Results.Ok(books);
+});
+
+// Persist manual book order within a collection. Body = book ids in desired order.
+// Backward compat: books omitted from the list keep their existing SortOrder.
+app.MapPut("/api/collections/{id:int}/order", [Authorize] async (int id, int[] bookIds, AppDbContext db) =>
+{
+    var books = await db.Books.Where(b => b.CollectionId == id).ToListAsync();
+    if (books.Count == 0) return Results.NotFound();
+    var byId = books.ToDictionary(b => b.Id);
+    for (var i = 0; i < bookIds.Length; i++)
+        if (byId.TryGetValue(bookIds[i], out var b)) b.SortOrder = i;
+    await db.SaveChangesAsync();
+    return Results.NoContent();
 });
 
 // Collection cover: its own cover.* if present, else fall back to its first book's cover.
@@ -940,7 +955,7 @@ record BookUpdateRequest(string? Title, string? Author, string? Narrator, string
 record DiagMessage(string Message);
 record BookDto(int Id, string Title, string Author, string? Narrator, double DurationSeconds,
     bool HasCover, DateTime AddedAt, int ChapterCount = 0, int ListenedCount = 0, int? Year = null, bool IsFavorite = false,
-    int? CollectionId = null, string? Description = null);
+    int? CollectionId = null, string? Description = null, int? SortOrder = null);
 record CollectionDto(int Id, string Name, bool HasCover, int BookCount, DateTime AddedAt);
 record ChapterDto(int Id, int BookId, string Title, int TrackNumber, string MimeType = "audio/mpeg");
 record BookMetaRequest(string? Title, string? Author, string? Narrator, string? Description, int? Year);

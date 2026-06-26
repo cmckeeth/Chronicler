@@ -18,5 +18,8 @@ public class Book
     public int? CollectionId { get; set; }
     public Collection? Collection { get; set; }
 
+    // Manual order within a Collection. Null = unordered → falls back to Author/Title.
+    public int? SortOrder { get; set; }
+
     public ICollection<Chapter> Chapters { get; set; } = [];
 }

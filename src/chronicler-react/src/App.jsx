@@ -123,6 +123,38 @@ function SteampunkFX() {
   );
 }
 
+// Dark-Academia-only backdrop: slanted rain on the windows. A field of thin streaks
+// at varied speed/position; the layer itself is rotated for diagonal fall (see CSS).
+function AcademiaFX() {
+  // Deterministic spread (no Math.random — keeps SSR/build stable and varied enough).
+  const drops = Array.from({ length: 60 }, (_, i) => {
+    const left = (i * 1.7 + (i % 7) * 3.1) % 100;      // scattered across width
+    const dur = 0.55 + ((i * 37) % 80) / 100;          // 0.55–1.35s
+    const delay = ((i * 53) % 100) / 50;               // 0–2s
+    return { left, dur, delay };
+  });
+  return (
+    <div className="academia-fx" aria-hidden="true">
+      {drops.map((d, i) => (
+        <span key={i} className="raindrop"
+          style={{ left: `${d.left}%`, animationDuration: `${d.dur}s`, animationDelay: `${d.delay}s` }} />
+      ))}
+    </div>
+  );
+}
+
+// Blackletter-Noir-only backdrop: slow drifting cathedral fog banks.
+function NoirFX() {
+  return (
+    <div className="noir-fx" aria-hidden="true">
+      <span className="fog fog-1" />
+      <span className="fog fog-2" />
+      <span className="fog fog-3" />
+      <span className="fog fog-4" />
+    </div>
+  );
+}
+
 // Garden-only BACKGROUND layer (behind content, ~50% opacity): real painted roses
 // (rose + leafy stem) rising from the bottom + a couple set back in the corners.
 // Each grows in on load and sways gently. Image: /rose.png (cut from the reference).
@@ -158,6 +190,8 @@ function CornerControls() {
         <option value="tesla">⚡ Tesla</option>
         <option value="steampunk">⚙ Steampunk</option>
         <option value="garden">🌿 Garden</option>
+        <option value="academia">📖 Dark Academia</option>
+        <option value="noir">🦇 Blackletter Noir</option>
       </select>
     </div>
   );
@@ -170,6 +204,8 @@ export default function App() {
       <SteampunkBG />
       <SteampunkFX />
       <GardenFX />
+      <AcademiaFX />
+      <NoirFX />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Protected><Library /></Protected>} />

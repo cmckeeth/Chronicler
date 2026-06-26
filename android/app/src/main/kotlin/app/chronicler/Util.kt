@@ -66,6 +66,36 @@ fun coverColorFilter(): ColorFilter {
             m.timesAssign(contrast(1.04f))
             ColorFilter.colorMatrix(m)
         }
+        ThemeMode.ACADEMIA -> {
+            // warm cream tint, slight desaturate, gentle contrast + dim
+            // (~ sepia(.22) saturate(.9) brightness(.94) contrast(1.04)).
+            val m = ColorMatrix().also { saturate(it, 0.82f) }
+            m.timesAssign(contrast(1.04f))
+            val b = 0.94f
+            val tint = ColorMatrix(floatArrayOf(
+                0.96f * b, 0f, 0f, 0f, 0f,
+                0f, 0.90f * b, 0f, 0f, 0f,
+                0f, 0f, 0.78f * b, 0f, 0f,
+                0f, 0f, 0f, 1f, 0f,
+            ))
+            m.timesAssign(tint)
+            ColorFilter.colorMatrix(m)
+        }
+        ThemeMode.NOIR -> {
+            // cold, desaturated, dim, punchy contrast
+            // (~ grayscale(.18) saturate(.95) brightness(.86) contrast(1.12)).
+            val m = ColorMatrix().also { saturate(it, 0.78f) }
+            m.timesAssign(contrast(1.12f))
+            val b = 0.86f
+            val tint = ColorMatrix(floatArrayOf(
+                0.92f * b, 0f, 0f, 0f, 0f,
+                0f, 0.94f * b, 0f, 0f, 0f,
+                0f, 0f, 1.00f * b, 0f, 0f,
+                0f, 0f, 0f, 1f, 0f,
+            ))
+            m.timesAssign(tint)
+            ColorFilter.colorMatrix(m)
+        }
     }
 }
 

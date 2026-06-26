@@ -123,6 +123,79 @@ fun GardenBackdrop(modifier: Modifier = Modifier) {
     }
 }
 
+// Dark-Academia backdrop: espresso field, warm brass lamplight from above, a faint green
+// pool low, and rain streaking down the glass. Animated via a frame clock. ACADEMIA only.
+@Composable
+fun AcademiaBackdrop(modifier: Modifier = Modifier) {
+    var t by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        val start = withFrameNanos { it }
+        while (true) { val now = withFrameNanos { it }; t = (now - start) / 1_000_000_000f }
+    }
+    Canvas(modifier) {
+        val w = size.width; val h = size.height
+        drawRect(Color(0xFF161009))
+        // Warm brass lamplight bloom from the top.
+        val gc = Offset(w * 0.5f, h * 0.12f); val gr = hypot(w, h) * 0.78f
+        drawCircle(brush = Brush.radialGradient(
+            colors = listOf(Color(0xFFC39A4E).copy(alpha = 0.13f), Color(0x00C39A4E)),
+            center = gc, radius = gr), radius = gr, center = gc)
+        // Faint forest-green pool low.
+        val pc = Offset(w * 0.5f, h * 0.92f); val pr = hypot(w, h) * 0.45f
+        drawCircle(brush = Brush.radialGradient(
+            colors = listOf(Color(0xFF4F8A52).copy(alpha = 0.08f), Color(0x004F8A52)),
+            center = pc, radius = pr), radius = pr, center = pc)
+        // Slanted rain — many thin streaks falling at varied speed (deterministic from t).
+        val slant = 0.2f; val span = h + 200f
+        for (i in 0 until 90) {
+            val fx = ((i * 73) % 1000) / 1000f
+            val speed = 680f + ((i * 37) % 420)
+            val len = 22f + ((i * 13) % 26)
+            val x0 = fx * (w + 140f) - 70f
+            val y = ((t * speed + i * 57f) % span) - 120f
+            drawLine(Color(0xFFD4C29A).copy(alpha = 0.22f),
+                Offset(x0, y), Offset(x0 + slant * len, y + len),
+                strokeWidth = 1.2f, blendMode = BlendMode.Plus)
+        }
+    }
+}
+
+// Blackletter-Noir backdrop: near-black field, a low ox-blood ember, slow drifting cold
+// fog, and a heavy cathedral vignette. Animated via a frame clock. NOIR only.
+@Composable
+fun NoirBackdrop(modifier: Modifier = Modifier) {
+    var t by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        val start = withFrameNanos { it }
+        while (true) { val now = withFrameNanos { it }; t = (now - start) / 1_000_000_000f }
+    }
+    Canvas(modifier) {
+        val w = size.width; val h = size.height
+        drawRect(Color(0xFF060608))
+        // Low ox-blood ember.
+        val ec = Offset(w * 0.5f, h * 1.02f); val er = hypot(w, h) * 0.5f
+        drawCircle(brush = Brush.radialGradient(
+            colors = listOf(Color(0xFF9E1B22).copy(alpha = 0.13f), Color(0x009E1B22)),
+            center = ec, radius = er), radius = er, center = ec)
+        // Slow drifting banks of cold fog.
+        for (k in 0 until 4) {
+            val p = k * 1.9f
+            val cx = w * (0.5f + 0.55f * sin(t * 0.03f + p))
+            val cy = h * (0.16f + 0.22f * k)
+            val r = hypot(w, h) * 0.32f
+            drawCircle(brush = Brush.radialGradient(
+                colors = listOf(Color(0xFF9A9EAA).copy(alpha = 0.09f), Color(0x009A9EAA)),
+                center = Offset(cx, cy), radius = r), radius = r, center = Offset(cx, cy),
+                blendMode = BlendMode.Plus)
+        }
+        // Heavy vignette — transparent centre to near-black edges.
+        val vc = Offset(w * 0.5f, h * 0.45f); val vr = hypot(w, h) * 0.62f
+        drawCircle(brush = Brush.radialGradient(
+            colors = listOf(Color(0x00000000), Color(0xB8000000)),
+            center = vc, radius = vr), radius = vr, center = vc)
+    }
+}
+
 private fun DrawScope.drawField(t: Float, intensity: Float) {
     val w = size.width; val h = size.height
 
@@ -232,6 +305,18 @@ fun Modifier.charged(): Modifier = composed {
         val shape = RoundedCornerShape(2.dp)
         this
             .shadow(4.dp, shape, spotColor = Theme.brass, ambientColor = Theme.brass)
+            .border(1.dp, Theme.borderBrass.copy(alpha = 0.35f), shape)
+    } else if (Theme.themeMode == ThemeMode.ACADEMIA) {
+        // No electricity: a steady brass-green edge with softly-squared 6.dp corners.
+        val shape = RoundedCornerShape(6.dp)
+        this
+            .shadow(4.dp, shape, spotColor = Theme.brass, ambientColor = Theme.brass)
+            .border(1.dp, Theme.borderBrass.copy(alpha = 0.32f), shape)
+    } else if (Theme.themeMode == ThemeMode.NOIR) {
+        // No electricity: a steady tarnished-silver edge with sharp 0.dp corners.
+        val shape = RoundedCornerShape(0.dp)
+        this
+            .shadow(4.dp, shape, spotColor = Color.Black, ambientColor = Color.Black)
             .border(1.dp, Theme.borderBrass.copy(alpha = 0.35f), shape)
     } else {
         // Glassy Tesla edge: soft 10.dp corners, faint translucent cyan fill + pulsing border.

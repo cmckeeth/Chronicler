@@ -67,6 +67,12 @@ fun App(auth: AuthStore) {
             } else if (Theme.themeMode == ThemeMode.GARDEN) {
                 // Calm verdant backdrop: dark green field + soft green/pink blooms, no electricity.
                 GardenBackdrop(modifier = Modifier.fillMaxSize())
+            } else if (Theme.themeMode == ThemeMode.ACADEMIA) {
+                // Espresso field + brass lamplight + rain on the glass, no electricity.
+                AcademiaBackdrop(modifier = Modifier.fillMaxSize())
+            } else if (Theme.themeMode == ThemeMode.NOIR) {
+                // Near-black field + drifting fog + heavy vignette, no electricity.
+                NoirBackdrop(modifier = Modifier.fillMaxSize())
             }
             // Inset content below the status bar / camera cutout and above the nav bar.
             Box(Modifier.fillMaxSize().systemBarsPadding()) {

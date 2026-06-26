@@ -113,6 +113,12 @@ export const collectionsApi = {
     const res = await apiFetch(`/api/collections/${id}/books`);
     return res.json();
   },
+  async reorder(id, bookIds) {
+    await apiFetch(`/api/collections/${id}/order`, {
+      method: 'PUT',
+      body: JSON.stringify(bookIds),
+    });
+  },
   coverUrl: (id) => `/api/collections/${id}/cover`,
   async uploadCover(id, file) {
     const formData = new FormData();

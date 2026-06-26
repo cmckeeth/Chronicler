@@ -34,7 +34,8 @@ fun CollectionScreen(auth: AuthStore, nav: NavController, collectionId: Int) {
     }
     LaunchedEffect(collectionId) { load() }
 
-    val sorted = remember(books) { books.sortedBy { it.title.lowercase() } }
+    // Honor the server's order (manual SortOrder, then alphabetical) — no client resort.
+    val sorted = books
 
     Column(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 14.dp)) {
         TextButton(onClick = { nav.popBackStack() },

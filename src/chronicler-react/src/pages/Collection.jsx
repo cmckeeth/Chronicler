@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { collectionsApi, booksApi } from '../api';
 import BookCard from '../components/BookCard';
@@ -10,6 +10,9 @@ export default function Collection() {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reordering, setReordering] = useState(false);
+  const [dragIndex, setDragIndex] = useState(null);
+  const orderDirty = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,6 +42,26 @@ export default function Collection() {
     catch { setBooks(prev => prev.map(b => b.id === bookId ? { ...b, isFavorite: !b.isFavorite } : b)); }
   }
 
+  function onDragEnter(i) {
+    if (dragIndex === null || i === dragIndex) return;
+    setBooks(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(dragIndex, 1);
+      next.splice(i, 0, moved);
+      return next;
+    });
+    setDragIndex(i);
+    orderDirty.current = true;
+  }
+
+  async function onDragEnd() {
+    setDragIndex(null);
+    if (!orderDirty.current) return;
+    orderDirty.current = false;
+    try { await collectionsApi.reorder(id, books.map(b => b.id)); }
+    catch (e) { setError(`Could not save order: ${e.message}`); }
+  }
+
   return (
     <div className="library-browser">
       <div className="library-top">
@@ -49,6 +72,14 @@ export default function Collection() {
             {collection.bookCount} {collection.bookCount === 1 ? 'volume' : 'volumes'}
           </span>
         )}
+        {!loading && !error && books.length > 1 && (
+          <button
+            className={`btn-reorder${reordering ? ' active' : ''}`}
+            onClick={() => setReordering(r => !r)}
+          >
+            {reordering ? 'Done' : 'Reorder'}
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -58,8 +89,23 @@ export default function Collection() {
       ) : books.length === 0 ? (
         <div className="empty-state"><p>This collection holds no volumes, traveller.</p></div>
       ) : (
-        <div className="book-grid">
-          {books.map(book => <BookCard key={book.id} book={book} onToggleFav={toggleFav} />)}
+        <div className={`book-grid${reordering ? ' reordering' : ''}`}>
+          {books.map((book, i) => reordering ? (
+            <div
+              key={book.id}
+              className={`book-drag${dragIndex === i ? ' dragging' : ''}`}
+              draggable
+              onDragStart={() => setDragIndex(i)}
+              onDragEnter={() => onDragEnter(i)}
+              onDragOver={e => e.preventDefault()}
+              onDragEnd={onDragEnd}
+              onClickCapture={e => { e.preventDefault(); e.stopPropagation(); }}
+            >
+              <BookCard book={book} onToggleFav={toggleFav} />
+            </div>
+          ) : (
+            <BookCard key={book.id} book={book} onToggleFav={toggleFav} />
+          ))}
         </div>
       )}
     </div>

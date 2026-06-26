@@ -1,10 +1,12 @@
 import SwiftUI
 import Combine
 
-// Three runtime themes. Tesla = electric-blue look; Steampunk = Victorian brass/gold
+// Five runtime themes. Tesla = electric-blue look; Steampunk = Victorian brass/gold
 // with NO electricity; Garden = verdant greens + floral pink, soft/organic, NO electricity.
+// Academia = espresso/forest-green/cream/brass, rainy-university serif, NO electricity.
+// Noir = black/ox-blood/cold-gray/tarnished-silver, gothic, sharp shadows, NO electricity.
 // Mirrors the web frontend's theme switcher.
-enum ThemeMode: String { case tesla, steampunk, garden }
+enum ThemeMode: String { case tesla, steampunk, garden, academia, noir }
 
 // Themed palette. Colors are computed properties that switch on `Theme.mode`.
 // TESLA values are the original hardcoded set; STEAMPUNK is a warmer brass set
@@ -16,46 +18,59 @@ enum Theme {
     private static var s: Bool { mode == .steampunk }
     private static var g: Bool { mode == .garden }
 
-    // Three-way palette pick: tesla / steampunk / garden.
-    private static func pick(_ tesla: UInt, _ steampunk: UInt, _ garden: UInt) -> Color {
+    // Five-way palette pick: tesla / steampunk / garden / academia / noir.
+    private static func pick(_ tesla: UInt, _ steampunk: UInt, _ garden: UInt,
+                             _ academia: UInt, _ noir: UInt) -> Color {
         switch mode {
         case .tesla:     return Color(hex: tesla)
         case .steampunk: return Color(hex: steampunk)
         case .garden:    return Color(hex: garden)
+        case .academia:  return Color(hex: academia)
+        case .noir:      return Color(hex: noir)
         }
     }
 
     // Tesla = cold electric-blue glass. Steampunk = warm brass/leather. Garden = verdant
-    // greens, the "metal" becomes foliage green and the accent becomes floral pink.
-    //                            ( tesla   ,  steampunk,  garden  )
-    static var bg: Color          { pick(0x05080f, 0x160d03, 0x0b1410) }
-    static var bg2: Color         { pick(0x090e1a, 0x1e1206, 0x0f1c14) }
-    static var leather: Color     { pick(0x0b1424, 0x281809, 0x12241a) }
-    static var surface: Color     { pick(0x0f1a2e, 0x32200c, 0x16301f) }
-    static var surface2: Color    { pick(0x142440, 0x3e280e, 0x1d3d28) }
-    static var surface3: Color    { pick(0x1b3052, 0x4a3012, 0x245031) }
-    static var border: Color      { pick(0x21405f, 0x6b4420, 0x2f5c3c) }
-    static var borderBrass: Color { pick(0x3f86b8, 0xc08828, 0x6fae5f) }  // trim
-    // The "brass"/metal: Tesla electric-blue chrome, Steampunk gold, Garden foliage green
-    // (buttons + wordmark).
-    static var brass: Color       { pick(0x2bc4ff, 0xe09808, 0x8bd450) }
-    static var brassLight: Color  { pick(0x7fe0ff, 0xffc838, 0xb6f07a) }
-    static var brassPale: Color   { pick(0xd6f4ff, 0xffe878, 0xe2ffc0) }
-    static var copper: Color      { pick(0x1f9fd8, 0xc86818, 0xe88fa8) }
-    static var copperLight: Color { pick(0x5ac8ff, 0xe88838, 0xffb0c8) }
-    static var rust: Color        { pick(0xff5470, 0xb82c0c, 0xd4564a) }
+    // greens (metal→foliage, accent→floral pink). Academia = espresso wood, brass metal,
+    // cream text, forest-green accent. Noir = near-black, tarnished-silver metal, cold-gray
+    // text, ox-blood accent.
+    //                            ( tesla   ,  steampunk,  garden  ,  academia,  noir    )
+    static var bg: Color          { pick(0x05080f, 0x160d03, 0x0b1410, 0x161009, 0x060608) }
+    static var bg2: Color         { pick(0x090e1a, 0x1e1206, 0x0f1c14, 0x1d150c, 0x0b0b0e) }
+    static var leather: Color     { pick(0x0b1424, 0x281809, 0x12241a, 0x2a1d10, 0x101013) }
+    static var surface: Color     { pick(0x0f1a2e, 0x32200c, 0x16301f, 0x2f2211, 0x141418) }
+    static var surface2: Color    { pick(0x142440, 0x3e280e, 0x1d3d28, 0x3a2b16, 0x1c1c22) }
+    static var surface3: Color    { pick(0x1b3052, 0x4a3012, 0x245031, 0x46351c, 0x25252d) }
+    static var border: Color      { pick(0x21405f, 0x6b4420, 0x2f5c3c, 0x5a4527, 0x34343d) }
+    static var borderBrass: Color { pick(0x3f86b8, 0xc08828, 0x6fae5f, 0x9a7b3e, 0x8b8e99) }  // trim
+    // The "brass"/metal: Tesla electric-blue chrome, Steampunk gold, Garden foliage green,
+    // Academia antique brass, Noir tarnished silver (buttons + wordmark).
+    static var brass: Color       { pick(0x2bc4ff, 0xe09808, 0x8bd450, 0xc39a4e, 0xb9bdc7) }
+    static var brassLight: Color  { pick(0x7fe0ff, 0xffc838, 0xb6f07a, 0xe3c275, 0xd9dde5) }
+    static var brassPale: Color   { pick(0xd6f4ff, 0xffe878, 0xe2ffc0, 0xf4e6b8, 0xeef0f5) }
+    static var copper: Color      { pick(0x1f9fd8, 0xc86818, 0xe88fa8, 0x7d9b6a, 0x7c1a1f) }
+    static var copperLight: Color { pick(0x5ac8ff, 0xe88838, 0xffb0c8, 0xa3c089, 0xa8323a) }
+    static var rust: Color        { pick(0xff5470, 0xb82c0c, 0xd4564a, 0xa23b22, 0xc0282f) }
     // Accent / "electric" color. Tesla = electric blue (drives glow + panel). Steampunk =
-    // verdigris green. Garden = floral PINK — badges/active/accents.
-    static var verdigris: Color   { pick(0x2bc4ff, 0x8fd44a, 0xff8fb8) }
-    static var parchment: Color   { pick(0xe6f3ff, 0xf6ecd0, 0xf0f7e8) }
-    static var parchmentMid: Color { pick(0xa6c8e2, 0xe0bc6c, 0xcfe4b8) }
-    static var parchmentDim: Color { pick(0x6f93b4, 0xc09838, 0x9bbf88) }
-    static var ink: Color         { pick(0x04101e, 0x1a0c02, 0x08130c) }
+    // verdigris green. Garden = floral PINK. Academia = forest green. Noir = ox-blood red.
+    static var verdigris: Color   { pick(0x2bc4ff, 0x8fd44a, 0xff8fb8, 0x4f8a52, 0x9e1b22) }
+    static var parchment: Color   { pick(0xe6f3ff, 0xf6ecd0, 0xf0f7e8, 0xf2e7cf, 0xd7d9e0) }
+    static var parchmentMid: Color { pick(0xa6c8e2, 0xe0bc6c, 0xcfe4b8, 0xd4c29a, 0x9b9eaa) }
+    static var parchmentDim: Color { pick(0x6f93b4, 0xc09838, 0x9bbf88, 0xa08f6e, 0x6b6e7a) }
+    static var ink: Color         { pick(0x04101e, 0x1a0c02, 0x08130c, 0x120c06, 0x050507) }
 
     // The halo/accent color used by the glow + panel modifiers. Tesla = electric-blue
-    // accent. Steampunk = warm brass aura (NOT the green accent). Garden = soft green
-    // (NOT the floral-pink accent) — heading/panel bloom.
-    static var glow: Color { g ? Color(hex: 0x7cc24a) : (s ? brass : verdigris) }
+    // accent. Steampunk = warm brass aura. Garden = soft green. Academia = green bloom.
+    // Noir = bright ox-blood (rust) so the halo reads on near-black.
+    static var glow: Color {
+        switch mode {
+        case .tesla:     return verdigris
+        case .steampunk: return brass
+        case .garden:    return Color(hex: 0x7cc24a)
+        case .academia:  return Color(hex: 0x5a9e5d)
+        case .noir:      return Color(hex: 0xc0282f)
+        }
+    }
 
     // Bump all text larger app-wide (matches Android's LocalDensity fontScale).
     static let fontScale: CGFloat = 1.32
@@ -69,11 +84,17 @@ enum Theme {
     // PostScript names verified via fontTools (DancingScript-Regular, Quicksand-Light);
     // registered at runtime in ChroniclerApp. The display weight is bumped to .bold so the
     // flowing signature reads boldly.
+    // Academia + Noir reuse the bundled serif family (Cinzel caps + Lora body) — both are
+    // literary/serif looks. Academia leans elegant (plain Cinzel wordmark); Noir leans
+    // dramatic (ornate Cinzel Decorative wordmark). Web gets the bespoke Cormorant/Playfair/
+    // Pirata fonts; native falls back to the already-registered Cinzel/Lora.
     static func display(_ size: CGFloat) -> Font {
         switch mode {
         case .steampunk: return .custom("CinzelDecorative-Bold", size: size * fontScale)
         case .tesla:     return .custom("Orbitron-Bold", size: size * fontScale)
         case .garden:    return .custom("DancingScript-Regular", size: size * fontScale).weight(.bold)
+        case .academia:  return .custom("Cinzel-Regular", size: size * fontScale).weight(.semibold)
+        case .noir:      return .custom("CinzelDecorative-Bold", size: size * fontScale)
         }
     }
     static func serif(_ size: CGFloat) -> Font {
@@ -81,6 +102,8 @@ enum Theme {
         case .steampunk: return .custom("Cinzel-Regular", size: size * fontScale)
         case .tesla:     return .custom("Orbitron-Medium", size: size * fontScale)
         case .garden:    return .custom("Quicksand-Light", size: size * fontScale).weight(.medium)
+        case .academia:  return .custom("Cinzel-Regular", size: size * fontScale)
+        case .noir:      return .custom("Cinzel-Regular", size: size * fontScale)
         }
     }
     static func body(_ size: CGFloat) -> Font {
@@ -88,6 +111,8 @@ enum Theme {
         case .steampunk: return .custom("Lora-Regular", size: size * fontScale)
         case .tesla:     return .custom("Rajdhani-Medium", size: size * fontScale)
         case .garden:    return .custom("Quicksand-Light", size: size * fontScale)
+        case .academia:  return .custom("Lora-Regular", size: size * fontScale)
+        case .noir:      return .custom("Lora-Regular", size: size * fontScale)
         }
     }
     // Lora bundles Regular only; bold synthesized. Rajdhani-Medium already reads bold.
@@ -97,6 +122,8 @@ enum Theme {
         case .steampunk: return .custom("Lora-Regular", size: size * fontScale).weight(.bold)
         case .tesla:     return .custom("Rajdhani-Medium", size: size * fontScale).weight(.bold)
         case .garden:    return .custom("Quicksand-Light", size: size * fontScale).weight(.bold)
+        case .academia:  return .custom("Lora-Regular", size: size * fontScale).weight(.bold)
+        case .noir:      return .custom("Lora-Regular", size: size * fontScale).weight(.bold)
         }
     }
 
@@ -187,6 +214,29 @@ private struct ElectricPanelStyle: ViewModifier {
                     .stroke(Theme.glow.opacity(min(1, alpha * 1.2)), lineWidth: 1.8))
                 .shadow(color: Theme.glow.opacity(0.4), radius: glowRadius)
                 .shadow(color: Theme.glow.opacity(0.18), radius: glowRadius * 1.8)
+        } else if Theme.mode == .academia {
+            // Academia: a quiet leather-and-lamplight panel — softly squared corners,
+            // brass-green border, steady warm bloom. No pulse, no current.
+            let c: CGFloat = 6
+            content
+                .background(bg.opacity(0.55))
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: c))
+                .overlay(RoundedRectangle(cornerRadius: c)
+                    .stroke(Theme.borderBrass.opacity(min(1, alpha)), lineWidth: 1.2))
+                .shadow(color: Theme.glow.opacity(0.3), radius: glowRadius * 1.2)
+                .shadow(color: Theme.glow.opacity(0.12), radius: glowRadius * 2.2)
+        } else if Theme.mode == .noir {
+            // Noir: sharp gothic plate — hard right-angle corners, thin tarnished-silver
+            // edge, a hard black drop shadow + a tight ox-blood rim. No pulse, no current.
+            content
+                .background(bg.opacity(0.66))
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 0))
+                .overlay(RoundedRectangle(cornerRadius: 0)
+                    .stroke(Theme.borderBrass.opacity(min(1, alpha * 1.1)), lineWidth: 1.0))
+                .shadow(color: .black.opacity(0.85), radius: glowRadius * 0.7, x: 0, y: 6)
+                .shadow(color: Theme.glow.opacity(0.32), radius: glowRadius)
         } else {
             // Tesla: frosted GLASS — translucent material over a faint blue fill, soft
             // rounded corners, a thin bright cyan border + pulsing halo, racing current.

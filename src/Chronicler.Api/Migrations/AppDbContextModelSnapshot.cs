@@ -116,6 +116,9 @@ namespace Chronicler.Api.Migrations
                     b.Property<string>("Narrator")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("SortOrder")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("TEXT");

@@ -324,6 +324,8 @@ private fun ThemeMode.label(): String = when (this) {
     ThemeMode.TESLA -> "⚡ Tesla"
     ThemeMode.STEAMPUNK -> "⚙ Steampunk"
     ThemeMode.GARDEN -> "🌿 Garden"
+    ThemeMode.ACADEMIA -> "📖 Dark Academia"
+    ThemeMode.NOIR -> "🦇 Blackletter Noir"
 }
 
 // Theme selector as a compact DROPDOWN: a themed outlined field shows the current theme;

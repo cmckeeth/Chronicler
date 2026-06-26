@@ -412,9 +412,90 @@ struct ThemedBackground: View {
                     colors: [Color(hex: 0x7cc24a).opacity(0.20), Theme.bg2.opacity(0.0)],
                     center: .center, startRadius: 0, endRadius: 540)
                     .ignoresSafeArea()
+            } else if Theme.mode == .academia {
+                // Dark Academia: warm brass lamplight from above, a faint green pool low,
+                // and rain streaking down the windows.
+                RadialGradient(
+                    colors: [Theme.brass.opacity(0.14), Theme.bg2.opacity(0.0)],
+                    center: .top, startRadius: 0, endRadius: 600)
+                    .ignoresSafeArea()
+                RadialGradient(
+                    colors: [Theme.verdigris.opacity(0.10), Theme.bg.opacity(0.0)],
+                    center: .bottom, startRadius: 0, endRadius: 420)
+                    .ignoresSafeArea()
+                RainOverlay()
+            } else if Theme.mode == .noir {
+                // Blackletter Noir: a heavy cathedral vignette, a low ox-blood ember, and
+                // slow drifting fog. Sharp and moody — no glow, no grid.
+                RadialGradient(
+                    colors: [Color.clear, Color.black.opacity(0.72)],
+                    center: .center, startRadius: 70, endRadius: 640)
+                    .ignoresSafeArea()
+                RadialGradient(
+                    colors: [Theme.verdigris.opacity(0.13), Theme.bg.opacity(0.0)],
+                    center: .bottom, startRadius: 0, endRadius: 440)
+                    .ignoresSafeArea()
+                FogOverlay()
             }
             ElectricBackground(intensity: intensity)
         }
+    }
+}
+
+// Dark-Academia-only: rain streaking down the glass. Many thin slanted streaks falling
+// at varied speed, deterministic from the TimelineView clock (no Date()/RNG → resume-safe).
+struct RainOverlay: View {
+    var body: some View {
+        TimelineView(.animation) { tl in
+            let t = tl.date.timeIntervalSinceReferenceDate
+            Canvas { ctx, size in
+                let w = size.width, h = size.height
+                let slant: CGFloat = 0.2          // x-drift per unit fall → diagonal rain
+                let span = Double(h + 200)
+                for i in 0..<90 {
+                    let fx = Double((i * 73) % 1000) / 1000.0
+                    let speed = 680.0 + Double((i * 37) % 420)
+                    let len: CGFloat = 22 + CGFloat((i * 13) % 26)
+                    let x0 = CGFloat(fx) * (w + 140) - 70
+                    let y = CGFloat((t * speed + Double(i) * 57).truncatingRemainder(dividingBy: span)) - 120
+                    var path = Path()
+                    path.move(to: CGPoint(x: x0, y: y))
+                    path.addLine(to: CGPoint(x: x0 + slant * len, y: y + len))
+                    ctx.stroke(path, with: .color(Theme.parchmentMid.opacity(0.22)), lineWidth: 1)
+                }
+            }
+            .blendMode(.screen)
+            .drawingGroup()
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+}
+
+// Blackletter-Noir-only: slow drifting banks of cold fog — a few big soft gray blobs
+// sliding sideways. Deterministic from the clock; cheap additive screen blend.
+struct FogOverlay: View {
+    var body: some View {
+        TimelineView(.animation) { tl in
+            let t = tl.date.timeIntervalSinceReferenceDate
+            Canvas { ctx, size in
+                let w = size.width, h = size.height
+                for k in 0..<4 {
+                    let p = Double(k) * 1.9
+                    let cx = w * CGFloat(0.5 + 0.55 * sin(t * 0.03 + p))
+                    let cy = h * CGFloat(0.16 + 0.22 * Double(k))
+                    let r: CGFloat = 380
+                    ctx.fill(Path(ellipseIn: CGRect(x: cx - r, y: cy - r * 0.5, width: r * 2, height: r)),
+                             with: .radialGradient(
+                                Gradient(colors: [Color(hex: 0x9a9eaa).opacity(0.10),
+                                                  Color(hex: 0x9a9eaa).opacity(0.0)]),
+                                center: CGPoint(x: cx, y: cy), startRadius: 0, endRadius: r))
+                }
+            }
+            .blendMode(.screen)
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
     }
 }
 

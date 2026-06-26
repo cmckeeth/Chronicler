@@ -1,6 +1,8 @@
 /* ── Imports ──────────────────────────────────────────────────────────────── */
-/* Steampunk: Cinzel/Lora (Victorian serif).  Tesla: Orbitron/Rajdhani (techno). */
-@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Dancing+Script:wght@600;700&display=swap');
+/* Steampunk: Cinzel/Lora (Victorian serif).  Tesla: Orbitron/Rajdhani (techno).
+   Dark Academia: Cormorant Garamond + EB Garamond (elegant university serif).
+   Blackletter Noir: Pirata One (blackletter wordmark) + Playfair Display (tall drama). */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Dancing+Script:wght@600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=Pirata+One&display=swap');
 
 /* ── Variables ────────────────────────────────────────────────────────────── */
 /* ══ DEFAULT = TESLA: electric, futuristic — cold steel-blue, neon, glass ══════
@@ -149,6 +151,102 @@
     --elec-3: 90,150,60;
     --elec-4: 160,220,120;
     --elec-spark: #eaffd0;
+}
+
+/* ── DARK ACADEMIA: espresso + forest green + cream + brass ─────────────────────
+   Old university, leather chairs, rain on the windows, serious books. Brass is the
+   metal/action; forest green is the accent; cream is the text; espresso the wood. */
+:root[data-theme="academia"] {
+    --bg:           #161009;
+    --bg2:          #1d150c;
+    --leather:      #2a1d10;   /* worn espresso leather */
+    --surface:      #2f2211;
+    --surface2:     #3a2b16;
+    --surface3:     #46351c;
+    --border:       #5a4527;
+    --border-brass: #9a7b3e;   /* aged brass trim / bookplate edge */
+    /* Antique brass — buttons, wordmark, fittings */
+    --brass:        #c39a4e;
+    --brass-light:  #e3c275;
+    --brass-pale:   #f4e6b8;
+    /* "Copper" reimagined as muted reading-lamp sage */
+    --copper:       #7d9b6a;
+    --copper-light: #a3c089;
+    --rust:         #a23b22;   /* clothbound-spine red (errors) */
+    --parchment:    #f2e7cf;   /* warm cream page */
+    --parchment-mid:#d4c29a;
+    --parchment-dim:#a08f6e;
+    --ink:          #120c06;
+    --glow-brass:   0 0 16px #c39a4e80, 0 0 32px #c39a4e33;
+    --glow-copper:  0 0 12px #7d9b6a70;
+    --radius:       6px;        /* softly squared, like a clothbound corner */
+    /* Elegant university serif */
+    --font-display: 'Cormorant Garamond', 'Cinzel', 'Palatino Linotype', serif;
+    --font-serif:   'Cormorant Garamond', 'Palatino Linotype', serif;
+    --font-body:    'EB Garamond', Georgia, serif;
+    --metal-hi:    244,230,184;
+    --tint:        195,154,78;
+    --panel-bg:    rgba(42,29,16,.58);
+    --panel-blur:  blur(4px);
+    --cover-filter: sepia(.22) saturate(.9) brightness(.94) contrast(1.04);
+    /* Accent = forest green (badges, active chapter, chips) */
+    --verdigris:      #4f8a52;
+    --verdigris-rgb:  79,138,82;
+    --glow-verdigris: 0 0 16px #4f8a52cc, 0 0 36px #4f8a5255;
+    /* No electricity — steady warm-brass "energy" channels (de-electrified below) */
+    --elec-1: 244,230,184;
+    --elec-2: 195,154,78;
+    --elec-3: 150,110,50;
+    --elec-4: 200,170,90;
+    --elec-spark: #f4e6b8;
+}
+
+/* ── BLACKLETTER NOIR: black + ox-blood + cold gray + tarnished silver ──────────
+   Gothic, literary, moody — Dracula, cathedrals, grim fantasy. Tarnished silver is
+   the metal; ox-blood red the accent; cold gray the text; sharp shadows, no glow-soft. */
+:root[data-theme="noir"] {
+    --bg:           #060608;
+    --bg2:          #0b0b0e;
+    --leather:      #101013;
+    --surface:      #141418;
+    --surface2:     #1c1c22;
+    --surface3:     #25252d;
+    --border:       #34343d;
+    --border-brass: #8b8e99;   /* tarnished silver trim */
+    /* Tarnished silver — buttons, wordmark, gothic fittings */
+    --brass:        #b9bdc7;
+    --brass-light:  #d9dde5;
+    --brass-pale:   #eef0f5;
+    /* "Copper" reimagined as ox-blood */
+    --copper:       #7c1a1f;
+    --copper-light: #a8323a;
+    --rust:         #c0282f;   /* fresh blood (errors) */
+    --parchment:    #d7d9e0;   /* cold gray-white */
+    --parchment-mid:#9b9eaa;
+    --parchment-dim:#6b6e7a;
+    --ink:          #050507;
+    --glow-brass:   0 0 12px #b9bdc766, 0 0 24px #b9bdc722;
+    --glow-copper:  0 0 10px #7c1a1f80;
+    --radius:       0px;        /* sharp gothic corners */
+    /* Tall dramatic serif; blackletter wordmark */
+    --font-display: 'Pirata One', 'Cinzel Decorative', serif;
+    --font-serif:   'Playfair Display', 'Cinzel', serif;
+    --font-body:    'Playfair Display', Georgia, serif;
+    --metal-hi:    220,224,232;
+    --tint:        158,27,34;
+    --panel-bg:    rgba(20,20,24,.66);
+    --panel-blur:  blur(2px);
+    --cover-filter: grayscale(.18) saturate(.95) brightness(.86) contrast(1.12);
+    /* Accent = ox-blood red — tighter halo reads as a sharp glow, not a soft bloom */
+    --verdigris:      #9e1b22;
+    --verdigris-rgb:  158,27,34;
+    --glow-verdigris: 0 0 14px #9e1b22cc, 0 0 30px #9e1b2255;
+    /* No electricity — steady blood-red "energy" channels (de-electrified below) */
+    --elec-1: 200,60,66;
+    --elec-2: 158,27,34;
+    --elec-3: 110,18,22;
+    --elec-4: 180,46,52;
+    --elec-spark: #e0a0a4;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -389,6 +487,187 @@
 @media (prefers-reduced-motion: reduce) {
     [data-theme="garden"] .rose { animation: none; }
     [data-theme="garden"] .rose img { animation: none; transform: none; opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DARK ACADEMIA MODE — rain on the windows, brass lamplight, serious books.
+   No electricity: hovers glow a steady brass; an elegant serif wordmark.
+   ══════════════════════════════════════════════════════════════════════════ */
+[data-theme="academia"] .btn-primary:hover,
+[data-theme="academia"] .btn-primary:focus,
+[data-theme="academia"] .btn-primary:active,
+[data-theme="academia"] .btn-secondary:hover,
+[data-theme="academia"] .btn-secondary:active,
+[data-theme="academia"] .book-card:hover,
+[data-theme="academia"] .book-card:active,
+[data-theme="academia"] .btn-play:hover,
+[data-theme="academia"] .btn-play:active,
+[data-theme="academia"] .btn-icon:hover,
+[data-theme="academia"] .btn-icon:active,
+[data-theme="academia"] input:focus,
+[data-theme="academia"] select:focus {
+    animation: none !important;
+    box-shadow: var(--glow-brass), var(--shadow-deep);
+    filter: brightness(1.04);
+}
+[data-theme="academia"] .chapter-active .chapter-title,
+[data-theme="academia"] .chapter-item:hover .chapter-title,
+[data-theme="academia"] .playing-badge {
+    animation: none !important;
+    text-shadow: 0 0 8px rgba(var(--verdigris-rgb), .55);
+}
+/* Elegant engraved wordmark — refined caps with generous tracking */
+[data-theme="academia"] h1 {
+    font-weight: 600;
+    letter-spacing: 3px;
+}
+
+/* Warm espresso radials + lamp pool + faint paper grain */
+[data-theme="academia"] body {
+    background-image:
+        radial-gradient(ellipse at 50% -5%, rgba(195,154,78,.16) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 105%, rgba(79,138,82,.08) 0%, transparent 48%),
+        radial-gradient(circle at 50% 120%, rgba(0,0,0,.55) 0%, transparent 60%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.6' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E");
+    background-size: auto;
+    background-attachment: fixed;
+}
+/* Slim brass rule along the top (no electric rail) */
+[data-theme="academia"] body::before {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--border-brass) 25%, var(--brass) 50%, var(--border-brass) 75%, transparent);
+    box-shadow: 0 0 6px rgba(195,154,78,.4);
+}
+
+/* Rain-on-the-window layer (always in DOM, shown only for academia) */
+.academia-fx { display: none; }
+[data-theme="academia"] .academia-fx {
+    display: block;
+    position: fixed;
+    inset: -10% -10% -10% -10%;     /* overscan so the slanted layer covers corners */
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    transform: rotate(7deg);         /* slanted rainfall */
+    opacity: .5;
+}
+[data-theme="academia"] .auth-page,
+[data-theme="academia"] .library-browser,
+[data-theme="academia"] .book-player-page { position: relative; z-index: 1; }
+[data-theme="academia"] .raindrop {
+    position: absolute;
+    top: -12rem;
+    width: 1.5px;
+    height: 7rem;
+    background: linear-gradient(to bottom, transparent, rgba(212,194,154,.55));
+    will-change: transform;
+    animation: rain-fall linear infinite;
+}
+@keyframes rain-fall {
+    0%   { transform: translateY(-12rem); opacity: 0; }
+    8%   { opacity: 1; }
+    100% { transform: translateY(118vh);  opacity: .35; }
+}
+@media (prefers-reduced-motion: reduce) {
+    [data-theme="academia"] .raindrop { animation: none; opacity: .12; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BLACKLETTER NOIR MODE — cathedral fog, ox-blood, tarnished silver.
+   Sharp shadows, a blackletter wordmark, gothic crosses across the top.
+   ══════════════════════════════════════════════════════════════════════════ */
+[data-theme="noir"] .btn-primary:hover,
+[data-theme="noir"] .btn-primary:focus,
+[data-theme="noir"] .btn-primary:active,
+[data-theme="noir"] .btn-secondary:hover,
+[data-theme="noir"] .btn-secondary:active,
+[data-theme="noir"] .book-card:hover,
+[data-theme="noir"] .book-card:active,
+[data-theme="noir"] .btn-play:hover,
+[data-theme="noir"] .btn-play:active,
+[data-theme="noir"] .btn-icon:hover,
+[data-theme="noir"] .btn-icon:active,
+[data-theme="noir"] input:focus,
+[data-theme="noir"] select:focus {
+    animation: none !important;
+    /* sharp, hard-edged shadow + a tight ox-blood rim, not a soft bloom */
+    box-shadow: 0 0 0 1px rgba(158,27,34,.5), var(--glow-verdigris), 0 10px 26px rgba(0,0,0,.85);
+    filter: brightness(1.05);
+}
+[data-theme="noir"] .chapter-active .chapter-title,
+[data-theme="noir"] .chapter-item:hover .chapter-title,
+[data-theme="noir"] .playing-badge {
+    animation: none !important;
+    text-shadow: 0 0 9px rgba(var(--verdigris-rgb), .7);
+}
+/* Dramatic blackletter wordmark — tall, heavy, hard drop shadow */
+[data-theme="noir"] h1 {
+    text-transform: none;
+    letter-spacing: 1px;
+    font-weight: 400;
+    text-shadow: 0 2px 0 #000, 0 0 18px rgba(158,27,34,.45);
+}
+[data-theme="noir"] .auth-card h1 { font-size: 2.7rem; }
+
+/* Near-black field with a heavy vignette + a low ox-blood ember */
+[data-theme="noir"] body {
+    background-image:
+        radial-gradient(ellipse at 50% 0%,   rgba(158,27,34,.10) 0%, transparent 45%),
+        radial-gradient(ellipse at 50% 108%, rgba(158,27,34,.12) 0%, transparent 42%),
+        radial-gradient(circle at 50% 45%,   transparent 35%, rgba(0,0,0,.75) 100%);
+    background-size: auto;
+    background-attachment: fixed;
+}
+/* Row of gothic crosses along the top, on tarnished silver */
+[data-theme="noir"] body::before {
+    content: '✝  ✝  ✝  ✝  ✝  ✝  ✝  ✝  ✝  ✝  ✝  ✝  ✝  ✝  ✝  ✝  ✝  ✝  ✝  ✝';
+    height: auto;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-brass);
+    color: var(--border-brass);
+    font-size: .6rem;
+    letter-spacing: 8px;
+    padding: .3rem 1rem;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: clip;
+    box-shadow: 0 3px 14px rgba(0,0,0,.8);
+}
+
+/* Drifting cathedral fog (always in DOM, shown only for noir) */
+.noir-fx { display: none; }
+[data-theme="noir"] .noir-fx {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+[data-theme="noir"] .auth-page,
+[data-theme="noir"] .library-browser,
+[data-theme="noir"] .book-player-page { position: relative; z-index: 1; }
+[data-theme="noir"] .fog {
+    position: absolute;
+    width: 48rem;
+    height: 22rem;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(150,154,166,.16) 0%, rgba(120,124,140,.07) 45%, transparent 72%);
+    filter: blur(36px);
+    will-change: transform, opacity;
+    animation: fog-drift linear infinite;
+}
+[data-theme="noir"] .fog-1 { top: 8%;  left: -30%; animation-duration: 46s; }
+[data-theme="noir"] .fog-2 { top: 38%; left: -40%; animation-duration: 62s; animation-delay: -14s; opacity: .8; }
+[data-theme="noir"] .fog-3 { top: 64%; left: -35%; animation-duration: 54s; animation-delay: -28s; }
+[data-theme="noir"] .fog-4 { top: 22%; left: -45%; animation-duration: 72s; animation-delay: -40s; opacity: .7; }
+@keyframes fog-drift {
+    0%   { transform: translateX(0)     scale(1);   }
+    50%  { transform: translateX(90vw)  scale(1.25); }
+    100% { transform: translateX(180vw) scale(1);   }
+}
+@media (prefers-reduced-motion: reduce) {
+    [data-theme="noir"] .fog { animation: none; }
 }
 
 /* ── Reset ────────────────────────────────────────────────────────────────── */
@@ -872,6 +1151,33 @@ select {
     grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
 }
 
+/* ── Reorder mode ─────────────────────────────────────────────────────────── */
+.btn-reorder {
+    margin-left: auto;
+    background: var(--surface2);
+    color: var(--parchment-dim);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: .2rem .8rem;
+    font-family: var(--font-serif);
+    font-size: .7rem;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all .15s;
+}
+.btn-reorder:hover { border-color: var(--brass); color: var(--brass); }
+.btn-reorder.active {
+    background: linear-gradient(135deg, rgba(var(--verdigris-rgb),.32), rgba(var(--verdigris-rgb),.7));
+    color: var(--parchment);
+    border-color: var(--verdigris);
+    box-shadow: 0 0 10px rgba(var(--verdigris-rgb),.5);
+}
+.book-grid.reordering .book-drag { cursor: grab; }
+.book-grid.reordering .book-card { pointer-events: none; }   /* let the wrapper own the drag */
+.book-drag.dragging { opacity: .4; cursor: grabbing; }
+.book-drag.dragging .book-card { outline: 2px dashed var(--verdigris); outline-offset: 2px; border-radius: 4px; }
+
 .book-card {
     background: var(--panel-bg);
     background-image: linear-gradient(160deg, rgba(var(--tint),.05) 0%, transparent 50%);
@@ -1194,10 +1500,6 @@ select {
     color: var(--parchment); font-size: .9rem; line-height: 1.55;
     white-space: pre-wrap; margin: .25rem 0;
 }
-
-/* Archive grid-density toggle (1/2/3 columns) */
-.grid-toggle { align-items: center; gap: .3rem; margin-left: auto; }
-.grid-toggle-label { color: var(--parchment-dim); font-size: .8rem; margin-right: .15rem; }
 
 /* One-per-row: cover on the left, full metadata + description on the right. */
 .book-card-wide { display: flex; flex-direction: row; align-items: stretch; }
