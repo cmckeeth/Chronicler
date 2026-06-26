@@ -171,27 +171,50 @@ fun NoirBackdrop(modifier: Modifier = Modifier) {
     }
     Canvas(modifier) {
         val w = size.width; val h = size.height
-        drawRect(Color(0xFF060608))
-        // Low ox-blood ember.
-        val ec = Offset(w * 0.5f, h * 1.02f); val er = hypot(w, h) * 0.5f
+        drawRect(Color(0xFF040406))
+        // Blood rose-window glow high above.
+        val rc = Offset(w * 0.5f, h * 0.08f); val rr = hypot(w, h) * 0.42f
         drawCircle(brush = Brush.radialGradient(
-            colors = listOf(Color(0xFF9E1B22).copy(alpha = 0.13f), Color(0x009E1B22)),
+            colors = listOf(Color(0xFFA8121B).copy(alpha = 0.18f), Color(0x00A8121B)),
+            center = rc, radius = rr), radius = rr, center = rc)
+        // Low ox-blood ember seeping from the floor.
+        val ec = Offset(w * 0.5f, h * 1.04f); val er = hypot(w, h) * 0.55f
+        drawCircle(brush = Brush.radialGradient(
+            colors = listOf(Color(0xFFA8121B).copy(alpha = 0.17f), Color(0x00A8121B)),
             center = ec, radius = er), radius = er, center = ec)
-        // Slow drifting banks of cold fog.
-        for (k in 0 until 4) {
-            val p = k * 1.9f
-            val cx = w * (0.5f + 0.55f * sin(t * 0.03f + p))
-            val cy = h * (0.16f + 0.22f * k)
-            val r = hypot(w, h) * 0.32f
+        // Thick, slow drifting banks of cold fog.
+        for (k in 0 until 6) {
+            val p = k * 1.6f
+            val cx = w * (0.5f + 0.6f * sin(t * 0.022f + p))
+            val cy = h * (0.1f + 0.16f * k)
+            val r = hypot(w, h) * 0.36f
             drawCircle(brush = Brush.radialGradient(
-                colors = listOf(Color(0xFF9A9EAA).copy(alpha = 0.09f), Color(0x009A9EAA)),
+                colors = listOf(Color(0xFF9A9EAA).copy(alpha = 0.13f),
+                                 Color(0xFF6E7280).copy(alpha = 0.05f), Color(0x009A9EAA)),
                 center = Offset(cx, cy), radius = r), radius = r, center = Offset(cx, cy),
                 blendMode = BlendMode.Plus)
         }
-        // Heavy vignette — transparent centre to near-black edges.
-        val vc = Offset(w * 0.5f, h * 0.45f); val vr = hypot(w, h) * 0.62f
+        // Embers rising from the dark — faint glowing red motes that fade in and out.
+        val span = h + 80f
+        for (i in 0 until 22) {
+            val fx = ((i * 89) % 1000) / 1000f
+            val speed = 55f + ((i * 31) % 70)
+            val sway = sin(t * 0.8f + i) * 18f
+            val x = fx * w + sway
+            val prog = (t * speed + i * 47f) % span
+            val y = h - prog
+            val life = 1f - prog / span
+            val a = (sin(life * Math.PI.toFloat())).coerceAtLeast(0f) * 0.9f
+            val er2 = (1.5f + (i % 3)) * 3f
+            drawCircle(brush = Brush.radialGradient(
+                colors = listOf(Color(0xFFE0464D).copy(alpha = a), Color(0x00E0464D)),
+                center = Offset(x, y), radius = er2), radius = er2, center = Offset(x, y),
+                blendMode = BlendMode.Plus)
+        }
+        // Heavy cathedral tunnel vignette — transparent centre to near-black edges.
+        val vc = Offset(w * 0.5f, h * 0.45f); val vr = hypot(w, h) * 0.6f
         drawCircle(brush = Brush.radialGradient(
-            colors = listOf(Color(0x00000000), Color(0xB8000000)),
+            colors = listOf(Color(0x00000000), Color(0xD6000000)),
             center = vc, radius = vr), radius = vr, center = vc)
     }
 }

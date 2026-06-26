@@ -40,6 +40,8 @@ struct ChroniclerApp: App {
             // Both variable TTFs; PS names DancingScript-Regular / Quicksand-Light.
             "DancingScript",
             "Quicksand",
+            // Blackletter Noir: heavy gothic textura wordmark (PS name UnifrakturMaguntia).
+            "UnifrakturMaguntia-Regular",
         ]
         for name in names {
             guard let url = Bundle.main.url(forResource: name, withExtension: "ttf") else { continue }

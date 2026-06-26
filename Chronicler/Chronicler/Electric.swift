@@ -425,17 +425,23 @@ struct ThemedBackground: View {
                     .ignoresSafeArea()
                 RainOverlay()
             } else if Theme.mode == .noir {
-                // Blackletter Noir: a heavy cathedral vignette, a low ox-blood ember, and
-                // slow drifting fog. Sharp and moody — no glow, no grid.
+                // Blackletter Noir: a blood rose-window glow high above, a heavy cathedral
+                // tunnel vignette closing the edges, a low ox-blood ember on the floor,
+                // thick drifting fog, and embers rising from the dark.
                 RadialGradient(
-                    colors: [Color.clear, Color.black.opacity(0.72)],
-                    center: .center, startRadius: 70, endRadius: 640)
+                    colors: [Theme.verdigris.opacity(0.18), Color.clear],
+                    center: UnitPoint(x: 0.5, y: 0.10), startRadius: 0, endRadius: 360)
                     .ignoresSafeArea()
                 RadialGradient(
-                    colors: [Theme.verdigris.opacity(0.13), Theme.bg.opacity(0.0)],
-                    center: .bottom, startRadius: 0, endRadius: 440)
+                    colors: [Color.clear, Color.black.opacity(0.84)],
+                    center: .center, startRadius: 50, endRadius: 700)
+                    .ignoresSafeArea()
+                RadialGradient(
+                    colors: [Theme.verdigris.opacity(0.17), Theme.bg.opacity(0.0)],
+                    center: .bottom, startRadius: 0, endRadius: 470)
                     .ignoresSafeArea()
                 FogOverlay()
+                EmberOverlay()
             }
             ElectricBackground(intensity: intensity)
         }
@@ -480,16 +486,50 @@ struct FogOverlay: View {
             let t = tl.date.timeIntervalSinceReferenceDate
             Canvas { ctx, size in
                 let w = size.width, h = size.height
-                for k in 0..<4 {
-                    let p = Double(k) * 1.9
-                    let cx = w * CGFloat(0.5 + 0.55 * sin(t * 0.03 + p))
-                    let cy = h * CGFloat(0.16 + 0.22 * Double(k))
-                    let r: CGFloat = 380
+                for k in 0..<6 {
+                    let p = Double(k) * 1.6
+                    let cx = w * CGFloat(0.5 + 0.6 * sin(t * 0.022 + p))
+                    let cy = h * CGFloat(0.1 + 0.16 * Double(k))
+                    let r: CGFloat = 440
                     ctx.fill(Path(ellipseIn: CGRect(x: cx - r, y: cy - r * 0.5, width: r * 2, height: r)),
                              with: .radialGradient(
-                                Gradient(colors: [Color(hex: 0x9a9eaa).opacity(0.10),
+                                Gradient(colors: [Color(hex: 0x9a9eaa).opacity(0.15),
+                                                  Color(hex: 0x6e7280).opacity(0.06),
                                                   Color(hex: 0x9a9eaa).opacity(0.0)]),
                                 center: CGPoint(x: cx, y: cy), startRadius: 0, endRadius: r))
+                }
+            }
+            .blendMode(.screen)
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+}
+
+// Blackletter-Noir-only: embers rising from the dark — faint glowing red motes that
+// drift up and fade. Deterministic from the clock; cheap additive screen blend.
+struct EmberOverlay: View {
+    var body: some View {
+        TimelineView(.animation) { tl in
+            let t = tl.date.timeIntervalSinceReferenceDate
+            Canvas { ctx, size in
+                let w = size.width, h = size.height
+                let span = Double(h + 80)
+                for i in 0..<22 {
+                    let fx = Double((i * 89) % 1000) / 1000.0
+                    let speed = 55.0 + Double((i * 31) % 70)        // slow upward px/s
+                    let sway = sin(t * 0.8 + Double(i)) * 18
+                    let x = CGFloat(fx) * w + CGFloat(sway)
+                    let prog = (t * speed + Double(i) * 47).truncatingRemainder(dividingBy: span)
+                    let y = h - CGFloat(prog)
+                    let life = 1.0 - prog / span
+                    let a = max(0.0, sin(life * .pi)) * 0.9          // fade in then out
+                    let r: CGFloat = 1.5 + CGFloat(i % 3)
+                    ctx.fill(Path(ellipseIn: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2)),
+                             with: .radialGradient(
+                                Gradient(colors: [Color(hex: 0xe0464d).opacity(a),
+                                                  Color(hex: 0xe0464d).opacity(0)]),
+                                center: CGPoint(x: x, y: y), startRadius: 0, endRadius: r * 3))
                 }
             }
             .blendMode(.screen)

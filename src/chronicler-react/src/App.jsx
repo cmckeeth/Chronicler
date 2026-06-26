@@ -143,14 +143,31 @@ function AcademiaFX() {
   );
 }
 
-// Blackletter-Noir-only backdrop: slow drifting cathedral fog banks.
+// Blackletter-Noir-only backdrop: a blood rose window, a cathedral arch, thick drifting
+// fog banks, and embers rising from the dark.
 function NoirFX() {
+  const embers = Array.from({ length: 16 }, (_, i) => {
+    const left = (i * 6.1 + (i % 5) * 4.3) % 100;
+    const dur = 7 + ((i * 29) % 70) / 10;     // 7–14s
+    const delay = ((i * 41) % 100) / 10;      // 0–10s
+    const size = 2 + (i % 3);                 // 2–4px
+    return { left, dur, delay, size };
+  });
   return (
     <div className="noir-fx" aria-hidden="true">
+      <div className="rose-window" />
+      <div className="cathedral-arch" />
       <span className="fog fog-1" />
       <span className="fog fog-2" />
       <span className="fog fog-3" />
       <span className="fog fog-4" />
+      <span className="fog fog-5" />
+      <span className="fog fog-6" />
+      {embers.map((e, i) => (
+        <span key={i} className="ember"
+          style={{ left: `${e.left}%`, width: e.size, height: e.size,
+                   animationDuration: `${e.dur}s`, animationDelay: `${e.delay}s` }} />
+      ))}
     </div>
   );
 }
