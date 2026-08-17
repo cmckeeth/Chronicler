@@ -16,6 +16,9 @@ struct BookPlayerView: View {
     @State private var showInfo = false
     // Download state per chapter: 0 = none, 1 = downloading, 2 = downloaded.
     @State private var downloads: [Int: Int] = [:]
+    // True when the book was opened from the offline manifest because the server
+    // couldn't be reached: everything comes off disk and nothing is written back.
+    @State private var offline = false
 
     private var api: APIClient { auth.api }
 
@@ -38,13 +41,16 @@ struct BookPlayerView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 24) {
+                        if offline { offlineNotice }
                         header
                         if current != nil { AudioPlayerView(audio: audio, auth: auth) }
                         chapterList
-                        Divider().background(Theme.border)
-                        Button("⚙ Reset All Progress") { Task { await resetBook() } }
-                            .font(Theme.body(12)).foregroundColor(Theme.parchmentDim).opacity(0.5)
-                            .padding(.bottom, 12)
+                        if !offline {
+                            Divider().background(Theme.border)
+                            Button("⚙ Reset All Progress") { Task { await resetBook() } }
+                                .font(Theme.body(12)).foregroundColor(Theme.parchmentDim).opacity(0.5)
+                                .padding(.bottom, 12)
+                        }
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
@@ -64,6 +70,21 @@ struct BookPlayerView: View {
         .sheet(isPresented: $showChapterEdit) { chapterEditor }
     }
 
+    // Shown when the book was opened from disk because the server couldn't be reached.
+    private var offlineNotice: some View {
+        HStack(spacing: 8) {
+            Text("📱").font(.system(size: 13))
+            Text("Offline — playing downloaded chapters. Progress syncs when the server returns.")
+                .font(Theme.body(12)).foregroundColor(Theme.parchmentDim)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .background(Theme.surface2)
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Theme.rust.opacity(0.6), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+    }
+
     // ── Header (cover beside title/author/description) ──
     private var header: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -72,7 +93,10 @@ struct BookPlayerView: View {
                     .frame(width: 120, height: 120)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Theme.borderBrass, lineWidth: 1))
-                    .onLongPressGesture(minimumDuration: 0.6) { Task { await openMeta() } }
+                    .onLongPressGesture(minimumDuration: 0.6) {
+                        guard !offline else { return }   // editing needs the server
+                        Task { await openMeta() }
+                    }
                 VStack(alignment: .leading, spacing: 6) {
                     // Book title is Lora bold (matches the Archive list), NOT Cinzel Decorative.
                     Text(book.title).font(Theme.bodyBold(18)).foregroundColor(Theme.parchment)
@@ -150,7 +174,10 @@ struct BookPlayerView: View {
                 Spacer()
                 downloadAllControl
             }
-            ForEach(Array(zip(chapters, progresses).enumerated()), id: \.element.0.id) { _, pair in
+            // Offline: only the chapters actually on disk are listed — the rest can't play.
+            ForEach(Array(zip(chapters, progresses).enumerated())
+                        .filter { !offline || Downloads.isDownloaded(chapterId: $0.element.0.id) },
+                    id: \.element.0.id) { _, pair in
                 let (chapter, progress) = pair
                 let isCurrent = chapter.id == current?.id
                 HStack(spacing: 8) {
@@ -172,20 +199,23 @@ struct BookPlayerView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { selectChapter(chapter) }
                 .contextMenu {
-                    Button {
-                        openChapterEditor(chapter)
-                    } label: {
-                        Label("Edit chapter", systemImage: "pencil")
-                    }
-                    Button {
-                        Task { await completeChapter(chapter.id) }
-                    } label: {
-                        Label("Mark completed", systemImage: "checkmark.circle")
-                    }
-                    Button(role: .destructive) {
-                        Task { await resetChapter(chapter.id) }
-                    } label: {
-                        Label("Reset chapter", systemImage: "arrow.counterclockwise")
+                    // Everything but download management needs the server.
+                    if !offline {
+                        Button {
+                            openChapterEditor(chapter)
+                        } label: {
+                            Label("Edit chapter", systemImage: "pencil")
+                        }
+                        Button {
+                            Task { await completeChapter(chapter.id) }
+                        } label: {
+                            Label("Mark completed", systemImage: "checkmark.circle")
+                        }
+                        Button(role: .destructive) {
+                            Task { await resetChapter(chapter.id) }
+                        } label: {
+                            Label("Reset chapter", systemImage: "arrow.counterclockwise")
+                        }
                     }
                     if downloads[chapter.id] == 2 {
                         Button { removeDownload(chapter) } label: {
@@ -205,7 +235,9 @@ struct BookPlayerView: View {
     private var downloadAllControl: some View {
         let allDownloaded = !chapters.isEmpty && chapters.allSatisfy { downloads[$0.id] == 2 }
         let anyDownloading = chapters.contains { downloads[$0.id] == 1 }
-        if anyDownloading {
+        if offline {
+            EmptyView()                       // downloading needs the server
+        } else if anyDownloading {
             Text("⚙ Downloading…").font(Theme.body(12)).foregroundColor(Theme.brass)
         } else if allDownloaded {
             Button { removeAll() } label: {
@@ -373,25 +405,54 @@ struct BookPlayerView: View {
         audio.onProgress = { pos in Task { await saveChapterProgress(pos) } }
         audio.onEnded = { advanceChapter() }
         audio.setBoost(auth.volumeBoosted)
-        book = try? await api.getBook(bookId)
+
+        if let fetched = try? await api.getBook(bookId) {
+            book = fetched
+            offline = false
+        } else if let entry = Downloads.entry(bookId: bookId) {
+            // Server unreachable — fall back to what was saved with the download.
+            book = entry.book
+            offline = true
+        }
         guard book != nil else { return }
-        chapters = (try? await api.getChapters(bookId: bookId)) ?? []
-        // Load all chapter statuses in PARALLEL so they show immediately on open.
-        progresses = await withTaskGroup(of: (Int, ChapterProgress).self) { group in
-            for (i, c) in chapters.enumerated() {
-                group.addTask { (i, await api.getChapterProgress(c.id)) }
+
+        if !offline { chapters = (try? await api.getChapters(bookId: bookId)) ?? [] }
+        if chapters.isEmpty { chapters = Downloads.entry(bookId: bookId)?.chapters ?? [] }
+
+        if offline {
+            // Everything off disk: the positions saved while offline.
+            progresses = chapters.map { chapter in
+                let stored = Downloads.localProgress(chapterId: chapter.id)
+                return ChapterProgress(positionSeconds: stored?.positionSeconds ?? 0,
+                                       isListened: stored?.isListened ?? false)
             }
-            var result = Array(repeating: ChapterProgress(positionSeconds: 0, isListened: false),
-                               count: chapters.count)
-            for await (i, p) in group { result[i] = p }
-            return result
+        } else {
+            await flushOfflineProgress()
+            // Load all chapter statuses in PARALLEL so they show immediately on open.
+            progresses = await withTaskGroup(of: (Int, ChapterProgress).self) { group in
+                for (i, c) in chapters.enumerated() {
+                    group.addTask { (i, await api.getChapterProgress(c.id)) }
+                }
+                var result = Array(repeating: ChapterProgress(positionSeconds: 0, isListened: false),
+                                   count: chapters.count)
+                for await (i, p) in group { result[i] = p }
+                return result
+            }
+            // Mirror to disk so the offline library resumes at the same spot.
+            for (i, c) in chapters.enumerated() where Downloads.isDownloaded(chapterId: c.id) {
+                Downloads.setLocalProgress(chapterId: c.id, position: progresses[i].positionSeconds,
+                                           duration: 0, isListened: progresses[i].isListened, dirty: false)
+            }
         }
         // Seed download indicators from disk.
         for c in chapters { downloads[c.id] = Downloads.isDownloaded(chapterId: c.id) ? 2 : 0 }
 
         if chapters.isEmpty { return }
         // Resume at the FIRST chapter that isn't completed (earliest unfinished); else first.
-        let idx = progresses.firstIndex { !$0.isListened } ?? 0
+        // Offline, only chapters on disk are candidates.
+        let playable = chapters.indices.filter { !offline || Downloads.isDownloaded(chapterId: chapters[$0].id) }
+        guard let first = playable.first else { return }
+        let idx = playable.first { !progresses[$0].isListened } ?? first
         loadChapter(chapters[idx], startPosition: progresses[idx].positionSeconds)
     }
 
@@ -411,9 +472,13 @@ struct BookPlayerView: View {
     private func advanceChapter() {
         guard let cur = current,
               let idx = chapters.firstIndex(where: { $0.id == cur.id }),
-              idx < chapters.count - 1 else { return }
+              // Offline, skip over any chapter that isn't on disk.
+              let next = ((idx + 1)..<chapters.count).first(where: {
+                  !offline || Downloads.isDownloaded(chapterId: chapters[$0].id)
+              })
+        else { return }
         progresses[idx].isListened = true
-        loadChapter(chapters[idx + 1], startPosition: 0)
+        loadChapter(chapters[next], startPosition: 0)
         if auth.autoplayNext { audio.play() }   // continue into the next chapter
     }
 
@@ -422,39 +487,75 @@ struct BookPlayerView: View {
         downloads[chapter.id] = 1
         Task {
             let ok = await Downloads.download(chapterId: chapter.id,
-                                              url: api.audioURL(chapterId: chapter.id), token: api.token)
+                                              url: api.audioURL(chapterId: chapter.id), token: api.token,
+                                              mimeType: chapter.mimeType)
             downloads[chapter.id] = ok ? 2 : 0
+            if ok { await rememberForOffline() }
         }
     }
 
     private func removeDownload(_ chapter: Chapter) {
         Downloads.deleteChapter(chapterId: chapter.id)
         downloads[chapter.id] = 0
+        Downloads.pruneIfEmpty(bookId: bookId)
     }
 
     private func downloadAll() {
         Task {
+            var any = false
             for chapter in chapters {
                 if downloads[chapter.id] == 2 { continue }
                 downloads[chapter.id] = 1
                 let ok = await Downloads.download(chapterId: chapter.id,
-                                                  url: api.audioURL(chapterId: chapter.id), token: api.token)
+                                                  url: api.audioURL(chapterId: chapter.id), token: api.token,
+                                              mimeType: chapter.mimeType)
                 downloads[chapter.id] = ok ? 2 : 0
+                any = any || ok
             }
+            if any { await rememberForOffline() }
         }
     }
 
     private func removeAll() { chapters.forEach { removeDownload($0) } }
 
+    // Saves the book + chapter metadata (and its cover) alongside the audio so the
+    // offline library can list and play it with the server down.
+    private func rememberForOffline() async {
+        guard let book else { return }
+        Downloads.record(book: book, chapters: chapters)
+        await Downloads.cacheCover(bookId: book.id, api: api)
+    }
+
     private func saveChapterProgress(_ position: Double) async {
         guard let cur = current else { return }
         let duration = audio.duration
-        await api.saveChapterProgress(cur.id, position: position, duration: duration)  // send real duration so server marks finished
-        if let idx = chapters.firstIndex(where: { $0.id == cur.id }) {
+        let idx = chapters.firstIndex(where: { $0.id == cur.id })
+        let finished = duration > 0 && position / duration >= 0.95                      // 95% = finished
+        let listened = finished || (idx.map { progresses[$0].isListened } ?? false)
+
+        // Always record locally so an offline session resumes where it left off; when
+        // offline the entry is marked dirty and pushed on the next load that reaches the API.
+        if Downloads.isDownloaded(chapterId: cur.id) {
+            Downloads.setLocalProgress(chapterId: cur.id, position: position, duration: duration,
+                                       isListened: listened, dirty: offline)
+        }
+        if !offline {
+            await api.saveChapterProgress(cur.id, position: position, duration: duration)  // send real duration so server marks finished
+        }
+        if let idx {
             progresses[idx].positionSeconds = position
-            if duration > 0 && position / duration >= 0.95 {                            // 95% = finished
-                progresses[idx].isListened = true
-            }
+            if finished { progresses[idx].isListened = true }
+        }
+    }
+
+    // Pushes progress recorded while the server was unreachable. Only called on a load
+    // that already reached the API, so the server is known to be up.
+    private func flushOfflineProgress() async {
+        for (chapterId, stored) in Downloads.dirtyProgress() {
+            await api.saveChapterProgress(chapterId, position: stored.positionSeconds,
+                                          duration: stored.durationSeconds)
+            if stored.isListened { await api.completeChapter(chapterId) }
+            Downloads.clearDirty(chapterId: chapterId)
         }
     }
 

@@ -42,6 +42,10 @@ struct ChroniclerApp: App {
             "Quicksand",
             // Blackletter Noir: heavy gothic textura wordmark (PS name UnifrakturMaguntia).
             "UnifrakturMaguntia-Regular",
+            // Wild West: wood-type wordmark (Rye) + slab-serif UI/body (Zilla Slab).
+            "Rye-Regular",
+            "ZillaSlab-Regular",
+            "ZillaSlab-SemiBold",
         ]
         for name in names {
             guard let url = Bundle.main.url(forResource: name, withExtension: "ttf") else { continue }

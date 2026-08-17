@@ -2,7 +2,7 @@
 /* Steampunk: Cinzel/Lora (Victorian serif).  Tesla: Orbitron/Rajdhani (techno).
    Dark Academia: Cormorant Garamond + EB Garamond (elegant university serif).
    Blackletter Noir: Pirata One (blackletter wordmark) + Playfair Display (tall drama). */
-@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Dancing+Script:wght@600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=Pirata+One&family=UnifrakturMaguntia&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Dancing+Script:wght@600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=Pirata+One&family=UnifrakturMaguntia&family=Rye&family=Zilla+Slab:ital,wght@0,400;0,600;0,700;1,400&display=swap');
 
 /* ── Variables ────────────────────────────────────────────────────────────── */
 /* ══ DEFAULT = TESLA: electric, futuristic — cold steel-blue, neon, glass ══════
@@ -247,6 +247,54 @@
     --elec-3: 110,18,22;
     --elec-4: 180,46,52;
     --elec-spark: #e0a0a4;
+}
+
+/* ── WILD WEST: sun-bleached desert dusk, leather, sheriff-star gold, turquoise ──
+   Saloon wood-type, slab-serif body, mesas on the horizon and tumbleweeds rolling
+   past. Warm and dusty; the accent is Navajo-silver turquoise, no electricity. */
+:root[data-theme="west"] {
+    --bg:           #150e08;   /* dark tooled leather */
+    --bg2:          #1f150c;
+    --leather:      #2b1d10;
+    --surface:      #362514;
+    --surface2:     #442f1a;
+    --surface3:     #543a20;
+    --border:       #6d4a28;
+    --border-brass: #c08a45;   /* worn brass tack / boot buckle */
+    /* Sheriff-star gold — buttons, wordmark, fittings */
+    --brass:        #d9a441;
+    --brass-light:  #f0c46f;
+    --brass-pale:   #ffe3ab;
+    /* "Copper" reimagined as sun-scorched clay */
+    --copper:       #b4552b;
+    --copper-light: #d97a45;
+    --rust:         #c0392b;   /* rusted iron (errors) */
+    --parchment:    #f3e3c3;   /* sun-bleached wanted-poster paper */
+    --parchment-mid:#d6b98a;
+    --parchment-dim:#a8865c;
+    --ink:          #140c05;
+    --glow-brass:   0 0 16px #d9a44177, 0 0 34px #d9a44133;
+    --glow-copper:  0 0 12px #b4552b80;
+    --radius:       3px;        /* squared, like a nailed-up board */
+    /* Wood-type wordmark, slab serif everywhere else */
+    --font-display: 'Rye', 'Zilla Slab', Georgia, serif;
+    --font-serif:   'Zilla Slab', Georgia, serif;
+    --font-body:    'Zilla Slab', Georgia, serif;
+    --metal-hi:    255,227,171;
+    --tint:        217,164,65;
+    --panel-bg:    rgba(43,29,16,.62);
+    --panel-blur:  blur(3px);
+    --cover-filter: sepia(.3) saturate(.85) brightness(.94) contrast(1.06);
+    /* Accent = turquoise, the stone set in western silver */
+    --verdigris:      #3fb0a3;
+    --verdigris-rgb:  63,176,163;
+    --glow-verdigris: 0 0 16px #e0a33fcc, 0 0 36px #e0a33f55;   /* halo stays lantern-gold */
+    /* No electricity — steady lantern-gold "energy" channels (de-electrified below) */
+    --elec-1: 255,227,171;
+    --elec-2: 217,164,65;
+    --elec-3: 150,102,36;
+    --elec-4: 224,163,63;
+    --elec-spark: #ffe3ab;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1977,4 +2025,136 @@ select {
     font-style: italic;
     font-size: .82rem;
     color: var(--brass);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   WILD WEST MODE — desert dusk: a low sun, mesas + saguaros on the horizon,
+   hanging dust and tumbleweeds rolling across the flats. No electricity.
+   ══════════════════════════════════════════════════════════════════════════ */
+[data-theme="west"] .btn-primary:hover,
+[data-theme="west"] .btn-primary:focus,
+[data-theme="west"] .btn-primary:active,
+[data-theme="west"] .btn-secondary:hover,
+[data-theme="west"] .btn-secondary:active,
+[data-theme="west"] .book-card:hover,
+[data-theme="west"] .book-card:active,
+[data-theme="west"] .btn-play:hover,
+[data-theme="west"] .btn-play:active,
+[data-theme="west"] .btn-icon:hover,
+[data-theme="west"] .btn-icon:active,
+[data-theme="west"] input:focus,
+[data-theme="west"] select:focus {
+    animation: none !important;
+    /* a branded-leather frame: warm rim + steady gold bloom, no pulse */
+    box-shadow:
+        0 0 0 1px rgba(192,138,69,.7),
+        var(--glow-verdigris),
+        0 8px 22px rgba(0,0,0,.7);
+    filter: brightness(1.05);
+}
+[data-theme="west"] .chapter-active .chapter-title,
+[data-theme="west"] .chapter-item:hover .chapter-title,
+[data-theme="west"] .playing-badge {
+    animation: none !important;
+    text-shadow: var(--glow-verdigris);
+}
+[data-theme="west"] h1 {
+    font-weight: 400;
+    letter-spacing: 1px;
+}
+
+/* Desert dusk field: the sun burning low on the horizon + a dusty vignette + grain */
+[data-theme="west"] body {
+    background-image:
+        radial-gradient(ellipse at 50% 88%, rgba(240,138,48,.34) 0%, transparent 52%),
+        radial-gradient(ellipse at 50% 96%, rgba(156,68,24,.20) 0%, transparent 44%),
+        radial-gradient(circle at 50% 45%, transparent 26%, rgba(0,0,0,.62) 96%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.045'/%3E%3C/svg%3E");
+    background-size: auto, auto, auto, 300px 300px;
+    background-attachment: fixed;
+}
+/* A length of barbed wire strung across the top instead of the electric rail. */
+[data-theme="west"] body::before {
+    content: '✳—✳—✳—✳—✳—✳—✳—✳—✳—✳—✳—✳—✳—✳—✳—✳—✳—✳—✳—✳—✳—✳—✳—✳—✳—✳';
+    height: auto;
+    background: linear-gradient(#241a10, #150e08);
+    border-bottom: 1px solid var(--border-brass);
+    color: var(--border-brass);
+    font-size: .62rem;
+    letter-spacing: 2px;
+    padding: .3rem 1rem;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: clip;
+    text-shadow: 0 0 8px rgba(217,164,65,.4);
+}
+
+/* Desert layer (always in DOM, shown only for west) */
+.west-fx { display: none; }
+[data-theme="west"] .west-fx {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+[data-theme="west"] .auth-page,
+[data-theme="west"] .library-browser,
+[data-theme="west"] .book-player-page { position: relative; z-index: 1; }
+
+/* Mesas + saguaros cut flat against the sun, pinned to the bottom. */
+[data-theme="west"] .desert-horizon {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    width: 100%;
+    height: 34vh;
+    display: block;
+}
+[data-theme="west"] .desert-horizon .silhouette { fill: #1a0f07; }
+
+/* Fine dust hanging in the low light. */
+[data-theme="west"] .dust {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(232,196,137,.5);
+    will-change: transform;
+    animation: dust-drift linear infinite;
+}
+@keyframes dust-drift {
+    0%   { transform: translateX(-4vw) translateY(0);     opacity: 0; }
+    10%  { opacity: .55; }
+    50%  { transform: translateX(50vw) translateY(-14px); }
+    90%  { opacity: .5; }
+    100% { transform: translateX(106vw) translateY(6px);  opacity: 0; }
+}
+
+/* Tumbleweeds rolling across the flats: travel + spin + a hopping bounce. */
+[data-theme="west"] .tumbleweed {
+    position: absolute;
+    bottom: 1.2rem;
+    width: 44px;
+    height: 44px;
+    opacity: .8;
+    will-change: transform;
+    animation: tumble-roll linear infinite;
+}
+[data-theme="west"] .tumbleweed svg { width: 100%; height: 100%; display: block;
+    animation: tumble-spin linear infinite; }
+[data-theme="west"] .tumbleweed .brush { fill: none; stroke: #8a6231; stroke-width: 2.2; }
+@keyframes tumble-roll {
+    0%   { transform: translateX(-12vw) translateY(0); }
+    25%  { transform: translateX(16vw) translateY(-16px); }
+    50%  { transform: translateX(48vw) translateY(0); }
+    75%  { transform: translateX(80vw) translateY(-12px); }
+    100% { transform: translateX(114vw) translateY(0); }
+}
+@keyframes tumble-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+    [data-theme="west"] .dust,
+    [data-theme="west"] .tumbleweed,
+    [data-theme="west"] .tumbleweed svg { animation: none; }
+    [data-theme="west"] .tumbleweed { opacity: .35; }
 }

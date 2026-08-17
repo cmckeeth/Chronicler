@@ -34,6 +34,9 @@ struct Chapter: Codable, Identifiable, Hashable {
     let bookId: Int
     let title: String
     let trackNumber: Int
+    // Needed offline: AVFoundation types a local file by its extension, so downloads
+    // are saved with the extension this mime maps to.
+    var mimeType: String? = nil
 }
 
 struct ChapterProgress: Codable, Hashable {

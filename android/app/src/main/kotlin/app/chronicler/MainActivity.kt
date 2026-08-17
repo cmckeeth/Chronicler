@@ -73,16 +73,41 @@ fun App(auth: AuthStore) {
             } else if (Theme.themeMode == ThemeMode.NOIR) {
                 // Near-black field + drifting fog + heavy vignette, no electricity.
                 NoirBackdrop(modifier = Modifier.fillMaxSize())
+            } else if (Theme.themeMode == ThemeMode.WEST) {
+                // Desert dusk: low sun, mesas + saguaros, hanging dust, tumbleweeds.
+                WestBackdrop(modifier = Modifier.fillMaxSize())
             }
             // Inset content below the status bar / camera cutout and above the nav bar.
             Box(Modifier.fillMaxSize().systemBarsPadding()) {
                 if (!auth.isAuthenticated) {
-                    LoginScreen(auth)
+                    // Signing in needs the server; downloaded books don't — so the login
+                    // screen can hand off straight to the offline library.
+                    val offlineNav = rememberNavController()
+                    NavHost(navController = offlineNav, startDestination = "login") {
+                        composable("login") { LoginScreen(auth, onOfflineLibrary = { offlineNav.navigate("offline") }) }
+                        composable("offline") {
+                            OfflineScreen(auth, onBack = { offlineNav.popBackStack() },
+                                onOpenBook = { offlineNav.navigate("book/$it") })
+                        }
+                        composable(
+                            "book/{id}",
+                            arguments = listOf(navArgument("id") { type = NavType.IntType })
+                        ) { entry ->
+                            BookPlayerScreen(
+                                auth, offlineNav,
+                                bookId = entry.arguments?.getInt("id") ?: 0
+                            )
+                        }
+                    }
                 } else {
                     val nav = rememberNavController()
                     NavHost(navController = nav, startDestination = "landing") {
                         composable("landing") { LandingScreen(auth, nav) }
                         composable("archive") { ArchiveScreen(auth, nav) }
+                        composable("offline") {
+                            OfflineScreen(auth, onBack = { nav.popBackStack() },
+                                onOpenBook = { nav.navigate("book/$it") })
+                        }
                         composable(
                             "collection/{id}",
                             arguments = listOf(navArgument("id") { type = NavType.IntType })

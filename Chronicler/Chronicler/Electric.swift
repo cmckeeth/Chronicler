@@ -442,9 +442,158 @@ struct ThemedBackground: View {
                     .ignoresSafeArea()
                 FogOverlay()
                 EmberOverlay()
+            } else if Theme.mode == .west {
+                // Wild West: a low sun burning on the horizon, mesas cut out against it,
+                // hanging dust in the air and tumbleweeds rolling across the flats.
+                RadialGradient(
+                    colors: [Color(hex: 0xf08a30).opacity(0.42), Color(hex: 0x9c4418).opacity(0.16),
+                             Theme.bg.opacity(0.0)],
+                    center: UnitPoint(x: 0.5, y: 0.82), startRadius: 0, endRadius: 560)
+                    .ignoresSafeArea()
+                RadialGradient(
+                    colors: [Color.clear, Color.black.opacity(0.55)],
+                    center: .center, startRadius: 120, endRadius: 720)
+                    .ignoresSafeArea()
+                MesaSkyline()
+                DustOverlay()
+                TumbleweedOverlay()
             }
             ElectricBackground(intensity: intensity)
         }
+    }
+}
+
+// Wild-West-only: the horizon — a row of mesas/buttes and a few saguaro silhouettes cut
+// flat and black against the setting sun, pinned to the bottom of the screen.
+struct MesaSkyline: View {
+    var body: some View {
+        GeometryReader { geo in
+            Canvas { ctx, size in
+                let w = size.width, h = size.height
+                let base = h                       // ground line sits at the screen bottom
+                let silhouette = Color(hex: 0x1a0f07)
+
+                // Far mesas: flat-topped blocks with sloped shoulders.
+                func mesa(_ cx: CGFloat, _ width: CGFloat, _ height: CGFloat, _ shade: Double) {
+                    var p = Path()
+                    let l = cx - width / 2, r = cx + width / 2, top = base - height
+                    p.move(to: CGPoint(x: l, y: base))
+                    p.addLine(to: CGPoint(x: l + width * 0.18, y: top))
+                    p.addLine(to: CGPoint(x: r - width * 0.14, y: top))
+                    p.addLine(to: CGPoint(x: r, y: base))
+                    p.closeSubpath()
+                    ctx.fill(p, with: .color(silhouette.opacity(shade)))
+                }
+                mesa(w * 0.10, w * 0.40, h * 0.085, 0.85)
+                mesa(w * 0.55, w * 0.34, h * 0.062, 0.8)
+                mesa(w * 0.95, w * 0.32, h * 0.10, 0.9)
+
+                // A saguaro: trunk + two raised arms.
+                func saguaro(_ cx: CGFloat, _ scale: CGFloat) {
+                    let trunkW = 11 * scale, trunkH = 96 * scale
+                    let armW = 8 * scale
+                    var p = Path()
+                    p.addRoundedRect(in: CGRect(x: cx - trunkW / 2, y: base - trunkH,
+                                                width: trunkW, height: trunkH),
+                                     cornerSize: CGSize(width: trunkW / 2, height: trunkW / 2))
+                    // left arm: out then up
+                    p.addRoundedRect(in: CGRect(x: cx - 30 * scale, y: base - trunkH * 0.62,
+                                                width: armW, height: trunkH * 0.42),
+                                     cornerSize: CGSize(width: armW / 2, height: armW / 2))
+                    p.addRoundedRect(in: CGRect(x: cx - 30 * scale, y: base - trunkH * 0.62,
+                                                width: 30 * scale, height: armW),
+                                     cornerSize: CGSize(width: armW / 2, height: armW / 2))
+                    // right arm: shorter, higher
+                    p.addRoundedRect(in: CGRect(x: cx + 22 * scale, y: base - trunkH * 0.78,
+                                                width: armW, height: trunkH * 0.34),
+                                     cornerSize: CGSize(width: armW / 2, height: armW / 2))
+                    p.addRoundedRect(in: CGRect(x: cx, y: base - trunkH * 0.78,
+                                                width: 26 * scale, height: armW),
+                                     cornerSize: CGSize(width: armW / 2, height: armW / 2))
+                    ctx.fill(p, with: .color(silhouette.opacity(0.85)))
+                }
+                saguaro(w * 0.30, 0.62)
+                saguaro(w * 0.78, 0.45)
+
+                // Flat desert floor closing off the bottom.
+                ctx.fill(Path(CGRect(x: 0, y: base - 10, width: w, height: 40)),
+                         with: .color(silhouette.opacity(0.9)))
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+}
+
+// Wild-West-only: fine dust hanging in the low sun — slow motes drifting sideways.
+struct DustOverlay: View {
+    var body: some View {
+        TimelineView(.animation) { tl in
+            let t = tl.date.timeIntervalSinceReferenceDate
+            Canvas { ctx, size in
+                let w = size.width, h = size.height
+                for i in 0..<70 {
+                    let fy = Double((i * 61) % 1000) / 1000.0
+                    let speed = 12.0 + Double((i * 29) % 26)
+                    let x = CGFloat((t * speed + Double(i) * 91).truncatingRemainder(dividingBy: Double(w + 60))) - 30
+                    let bob = CGFloat(sin(t * 0.6 + Double(i)) * 6)
+                    let y = CGFloat(fy) * h + bob
+                    let r: CGFloat = 1 + CGFloat(i % 3)
+                    ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r, height: r)),
+                             with: .color(Color(hex: 0xe8c489).opacity(0.16)))
+                }
+            }
+            .blendMode(.screen)
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+}
+
+// Wild-West-only: tumbleweeds rolling across the flats — tangled balls of line that
+// spin as they travel and bounce along the ground. Deterministic from the clock.
+struct TumbleweedOverlay: View {
+    var body: some View {
+        TimelineView(.animation) { tl in
+            let t = tl.date.timeIntervalSinceReferenceDate
+            Canvas { ctx, size in
+                let w = size.width, h = size.height
+                for k in 0..<3 {
+                    let period = 17.0 + Double(k) * 7          // seconds to cross
+                    let phase = ((t / period) + Double(k) * 0.37).truncatingRemainder(dividingBy: 1)
+                    let radius: CGFloat = 15 - CGFloat(k) * 3
+                    let x = CGFloat(phase) * (w + 160) - 80
+                    // hops along the ground; higher weeds sit further back up the screen
+                    let ground = h - 14 - CGFloat(k) * 16
+                    let hop = CGFloat(abs(sin(phase * .pi * 9))) * (18 - CGFloat(k) * 4)
+                    let cy = ground - hop - radius
+                    let spin = phase * .pi * 2 * 7
+
+                    // A tangled ball of brush: several ragged closed loops at different
+                    // radii, each with per-vertex jitter, so it reads as a knot of twigs
+                    // rather than a wheel. Jitter is a fixed function of the indices, so
+                    // the shape is stable across frames and resume-safe.
+                    for ring in 0..<4 {
+                        let ringScale = CGFloat(0.45 + 0.2 * Double(ring))
+                        let tilt = spin * (ring % 2 == 0 ? 1 : -0.8) + Double(ring)
+                        var p = Path()
+                        let steps = 13
+                        for j in 0...steps {
+                            let a = tilt + Double(j) * (2 * .pi / Double(steps))
+                            let jitter = 0.72 + 0.5 * abs(sin(Double(j) * 3.1 + Double(ring) * 1.7 + Double(k)))
+                            let rr = radius * ringScale * CGFloat(jitter)
+                            let pt = CGPoint(x: x + rr * CGFloat(cos(a)), y: cy + rr * CGFloat(sin(a)) * 0.9)
+                            if j == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
+                        }
+                        p.closeSubpath()
+                        ctx.stroke(p, with: .color(Color(hex: 0x8a6231).opacity(0.75)), lineWidth: 1.2)
+                    }
+                }
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
     }
 }
 

@@ -12,10 +12,11 @@ export default function Downloads() {
       </div>
 
       <div className="empty-state" style={{paddingTop:'4rem'}}>
-        <p style={{fontSize:'1.1rem',marginBottom:'.75rem'}}>Not available in the browser.</p>
+        <p style={{fontSize:'1.1rem',marginBottom:'.75rem'}}>Nothing stored in this browser.</p>
         <p style={{fontSize:'.85rem',opacity:.7}}>
-          Downloads are stored locally on your device and are only available in the Android app.
-          Open the app to manage offline listening.
+          The web app streams straight from the server, so there's nothing to play while it's
+          unreachable. The iOS and Android apps keep downloaded chapters on the device and can
+          play them offline — open one of those to listen without a connection.
         </p>
       </div>
     </div>

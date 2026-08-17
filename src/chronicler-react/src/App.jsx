@@ -186,6 +186,70 @@ function GardenFX() {
   );
 }
 
+// Wild-West-only backdrop: mesas and saguaros cut flat against the low sun, dust
+// hanging in the light, and tumbleweeds rolling across the flats.
+function WestFX() {
+  const dust = Array.from({ length: 44 }, (_, i) => ({
+    top: (i * 2.3 + (i % 6) * 4.1) % 100,          // scattered up the screen
+    size: 1 + (i % 3),                              // 1–3px motes
+    dur: 26 + ((i * 31) % 40),                      // 26–66s to cross
+    delay: -((i * 37) % 60),                        // staggered, already in flight
+  }));
+  // Four ragged rings per tumbleweed — a knot of brush, not a wheel.
+  const brush = [16, 13, 19, 11].map((r, i) => (
+    <circle key={i} className="brush" cx="22" cy="22" r={r}
+      strokeDasharray={`${4 + i * 3} ${3 + i}`} />
+  ));
+  const weeds = [
+    { dur: 17, delay: 0, scale: 1 },
+    { dur: 24, delay: -9, scale: 0.72 },
+    { dur: 31, delay: -18, scale: 0.55 },
+  ];
+  return (
+    <div className="west-fx" aria-hidden="true">
+      {/* Horizon: three mesas + two saguaros, black against the sunset. */}
+      <svg className="desert-horizon" viewBox="0 0 1000 340" preserveAspectRatio="xMidYMax slice">
+        <g className="silhouette">
+          {/* flat-topped buttes with sloped shoulders */}
+          <polygon points="  -80,340   30,215  330,215  440,340" opacity=".85" />
+          <polygon points="  400,340  470,250  700,250  770,340" opacity=".8" />
+          <polygon points="  790,340  860,205 1080,205 1150,340" opacity=".9" />
+          {/* saguaro: trunk + two raised arms */}
+          <g opacity=".85">
+            <rect x="292" y="196" width="16" height="144" rx="8" />
+            <rect x="252" y="240" width="12" height="62"  rx="6" />
+            <rect x="252" y="240" width="46" height="12"  rx="6" />
+            <rect x="330" y="222" width="12" height="52"  rx="6" />
+            <rect x="300" y="222" width="42" height="12"  rx="6" />
+          </g>
+          <g opacity=".85">
+            <rect x="742" y="248" width="11" height="92" rx="5" />
+            <rect x="714" y="278" width="9"  height="40" rx="4" />
+            <rect x="714" y="278" width="32" height="9"  rx="4" />
+          </g>
+          {/* desert floor */}
+          <rect x="0" y="326" width="1000" height="20" opacity=".9" />
+        </g>
+      </svg>
+
+      {dust.map((d, i) => (
+        <span key={i} className="dust"
+          style={{ top: `${d.top}%`, width: d.size, height: d.size,
+                   animationDuration: `${d.dur}s`, animationDelay: `${d.delay}s` }} />
+      ))}
+
+      {weeds.map((w, i) => (
+        <span key={i} className="tumbleweed"
+          style={{ animationDuration: `${w.dur}s`, animationDelay: `${w.delay}s`,
+                   width: 44 * w.scale, height: 44 * w.scale,
+                   bottom: `${1.2 + i * 1.1}rem` }}>
+          <svg viewBox="0 0 44 44" style={{ animationDuration: `${w.dur / 7}s` }}>{brush}</svg>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function CornerControls() {
   const [theme, setTheme] = useState(() => localStorage.getItem('chronicler_theme') || 'tesla');
   useEffect(() => {
@@ -209,6 +273,7 @@ function CornerControls() {
         <option value="garden">🌿 Garden</option>
         <option value="academia">📖 Dark Academia</option>
         <option value="noir">🦇 Blackletter Noir</option>
+        <option value="west">🤠 Wild West</option>
       </select>
     </div>
   );
@@ -223,6 +288,7 @@ export default function App() {
       <GardenFX />
       <AcademiaFX />
       <NoirFX />
+      <WestFX />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Protected><Library /></Protected>} />

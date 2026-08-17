@@ -7,11 +7,23 @@ actor CoverCache {
     private var cache: [Int: Data] = [:]
     func data(for bookId: Int, api: APIClient) async -> Data? {
         if let cached = cache[bookId] { return cached }
-        guard let data = await api.coverData(bookId) else { return nil }
-        cache[bookId] = data
-        return data
+        if let data = await api.coverData(bookId) {
+            cache[bookId] = data
+            // Keep a copy beside the audio so the offline library still has art.
+            if Downloads.entry(bookId: bookId) != nil { Downloads.saveCover(bookId: bookId, data: data) }
+            return data
+        }
+        // Server unreachable — fall back to the copy saved with the download.
+        if let disk = Downloads.coverData(bookId: bookId) {
+            cache[bookId] = disk
+            return disk
+        }
+        return nil
     }
-    func invalidate(_ bookId: Int) { cache[bookId] = nil }
+    func invalidate(_ bookId: Int) {
+        cache[bookId] = nil
+        Downloads.deleteCover(bookId: bookId)
+    }
 }
 
 // Separate cache so collection ids don't collide with book ids in CoverCache.
@@ -104,6 +116,13 @@ extension View {
                 .colorMultiply(Color(hex: 0xd8b070))
                 .brightness(-0.12)        // aged ~.88 brightness
                 .contrast(1.05)
+        } else if Theme.mode == .west {
+            // West = sun-baked: warm amber wash, desaturated, dimmed like old paper.
+            self
+                .saturation(0.72)
+                .colorMultiply(Color(hex: 0xe8c088))
+                .brightness(-0.08)
+                .contrast(1.06)
         } else if Theme.mode == .garden {
             // Garden = lush/crisp: a saturation bump, no sepia, so foliage pops.
             self

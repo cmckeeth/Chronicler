@@ -73,6 +73,17 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
     var editChapter by remember { mutableStateOf<Chapter?>(null) }
     // Download state per chapter: 0 = none, 1 = downloading, 2 = downloaded.
     val downloads = remember { mutableStateMapOf<Int, Int>() }
+    // True when the book was opened from the offline manifest because the server couldn't
+    // be reached: everything comes off disk and nothing is written back.
+    var offline by remember { mutableStateOf(false) }
+
+    // Saves the book + chapter metadata (and its cover) alongside the audio so the offline
+    // library can list and play it with the server down.
+    suspend fun rememberForOffline() {
+        val b = book ?: return
+        Downloads.record(context, b, chapters)
+        Downloads.cacheCover(context, b.id, api)
+    }
 
     fun loadChapter(ch: Chapter, start: Double) {
         current = ch
@@ -85,19 +96,25 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
         scope.launch {
             val ok = Downloads.download(context, ch.id, api.audioUrl(ch.id))
             downloads[ch.id] = if (ok) 2 else 0
+            if (ok) rememberForOffline()
         }
     }
     fun removeDownload(ch: Chapter) {
         Downloads.deleteChapter(context, ch.id)
         downloads[ch.id] = 0
+        Downloads.pruneIfEmpty(context, bookId)
     }
     fun downloadAll() {
         scope.launch {
+            var any = false
             for (ch in chapters) {
                 if (downloads[ch.id] == 2) continue
                 downloads[ch.id] = 1
-                downloads[ch.id] = if (Downloads.download(context, ch.id, api.audioUrl(ch.id))) 2 else 0
+                val ok = Downloads.download(context, ch.id, api.audioUrl(ch.id))
+                downloads[ch.id] = if (ok) 2 else 0
+                any = any || ok
             }
+            if (any) rememberForOffline()
         }
     }
     fun removeAll() { chapters.forEach { removeDownload(it) } }
@@ -107,10 +124,18 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
             scope.launch {
                 current?.let { cur ->
                     val dur = audio.duration
-                    api.saveChapterProgress(cur.id, pos, dur)        // send real duration so server marks finished
                     val idx = chapters.indexOfFirst { it.id == cur.id }
+                    val finished = dur > 0 && pos / dur >= 0.95        // 95% = finished
+                    val listened = finished || (idx >= 0 && progresses[idx].isListened)
+                    // Always record locally so an offline session resumes where it left off;
+                    // when offline the entry is marked dirty and pushed on the next online load.
+                    if (Downloads.isDownloaded(context, cur.id)) {
+                        Downloads.setLocalProgress(context, cur.id, pos, dur, listened, dirty = offline)
+                    }
+                    if (!offline) {
+                        api.saveChapterProgress(cur.id, pos, dur)      // send real duration so server marks finished
+                    }
                     if (idx >= 0) {
-                        val finished = dur > 0 && pos / dur >= 0.95   // 95% = finished
                         progresses = progresses.toMutableList().also {
                             it[idx] = it[idx].copy(positionSeconds = pos,
                                 isListened = it[idx].isListened || finished)
@@ -122,26 +147,65 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
         audio.onEnded = end@{
             val cur = current ?: return@end
             val idx = chapters.indexOfFirst { it.id == cur.id }
-            if (idx in 0 until chapters.size - 1) {
-                progresses = progresses.toMutableList().also { it[idx] = it[idx].copy(isListened = true) }
-                loadChapter(chapters[idx + 1], 0.0)
-                if (auth.autoplayNext) audio.play()   // continue into the next chapter
-            }
+            if (idx < 0) return@end
+            // Offline, skip over any chapter that isn't on disk.
+            val next = (idx + 1 until chapters.size).firstOrNull {
+                !offline || Downloads.isDownloaded(context, chapters[it].id)
+            } ?: return@end
+            progresses = progresses.toMutableList().also { it[idx] = it[idx].copy(isListened = true) }
+            loadChapter(chapters[next], 0.0)
+            if (auth.autoplayNext) audio.play()   // continue into the next chapter
         }
 
         audio.setBoost(auth.volumeBoosted)
-        book = api.getBook(bookId) ?: return@LaunchedEffect
-        chapters = api.getChapters(bookId)
-        // Load all chapter statuses in parallel so they show immediately on open.
-        progresses = coroutineScope {
-            chapters.map { ch -> async { api.getChapterProgress(ch.id) } }.awaitAll()
+
+        val fetched = api.getBook(bookId)
+        if (fetched != null) {
+            book = fetched
+        } else {
+            // Server unreachable — fall back to what was saved with the download.
+            val entry = Downloads.entry(context, bookId) ?: return@LaunchedEffect
+            book = entry.book
+            offline = true
+        }
+
+        if (!offline) chapters = api.getChapters(bookId)
+        if (chapters.isEmpty()) chapters = Downloads.entry(context, bookId)?.chapters ?: emptyList()
+
+        if (offline) {
+            // Everything off disk: the positions saved while offline.
+            progresses = chapters.map { ch ->
+                val stored = Downloads.localProgress(context, ch.id)
+                ChapterProgress(stored?.positionSeconds ?: 0.0, stored?.isListened ?: false)
+            }
+        } else {
+            // Push anything recorded while the server was unreachable, then read it back.
+            Downloads.dirtyProgress(context).forEach { (chapterId, stored) ->
+                api.saveChapterProgress(chapterId, stored.positionSeconds, stored.durationSeconds)
+                if (stored.isListened) api.completeChapter(chapterId)
+                Downloads.clearDirty(context, chapterId)
+            }
+            // Load all chapter statuses in parallel so they show immediately on open.
+            progresses = coroutineScope {
+                chapters.map { ch -> async { api.getChapterProgress(ch.id) } }.awaitAll()
+            }
+            // Mirror to disk so the offline library resumes at the same spot.
+            chapters.forEachIndexed { i, ch ->
+                if (Downloads.isDownloaded(context, ch.id)) {
+                    Downloads.setLocalProgress(context, ch.id, progresses[i].positionSeconds, 0.0,
+                        progresses[i].isListened, dirty = false)
+                }
+            }
         }
         chapters.forEach { downloads[it.id] = if (Downloads.isDownloaded(context, it.id)) 2 else 0 }
         if (chapters.isNotEmpty()) {
             // Resume at the FIRST chapter that isn't completed (earliest unfinished),
-            // picking up at its saved position. Falls back to the first chapter.
-            var idx = progresses.indexOfFirst { !it.isListened }
-            if (idx < 0) idx = 0
+            // picking up at its saved position. Offline, only chapters on disk qualify.
+            val playable = chapters.indices.filter {
+                !offline || Downloads.isDownloaded(context, chapters[it].id)
+            }
+            val idx = playable.firstOrNull { !progresses[it].isListened }
+                ?: playable.firstOrNull() ?: return@LaunchedEffect
             loadChapter(chapters[idx], progresses[idx].positionSeconds)
         }
     }
@@ -159,6 +223,19 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
         }
         Spacer(Modifier.height(8.dp))
         val b = book
+        // Shown when the book was opened from disk because the server couldn't be reached.
+        if (offline && b != null) {
+            Row(Modifier.fillMaxWidth()
+                .background(Theme.surface2, RoundedCornerShape(4.dp))
+                .padding(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("📱", fontSize = 13.sp)
+                Text("Offline — playing downloaded chapters. Progress syncs when the server returns.",
+                    color = Theme.parchmentDim, fontSize = 12.sp)
+            }
+            Spacer(Modifier.height(8.dp))
+        }
         if (b == null) {
             Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
                 Text("Consulting the archive...", color = Theme.parchmentDim)
@@ -166,7 +243,7 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
         } else {
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.Top) {
                 CoverImage(b, api, Modifier.size(120.dp).clip(RoundedCornerShape(4.dp))
-                    .clickable { scope.launch { showMeta = true } })
+                    .clickable { if (!offline) scope.launch { showMeta = true } })   // editing needs the server
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f).clickable { showInfo = true }) {
                     Text(b.title, color = Theme.parchment, fontSize = 18.sp, fontWeight = FontWeight.Bold,
@@ -201,6 +278,7 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
                 val allDownloaded = chapters.isNotEmpty() && chapters.all { downloads[it.id] == 2 }
                 val anyDownloading = chapters.any { downloads[it.id] == 1 }
                 when {
+                    offline -> Unit                       // downloading needs the server
                     anyDownloading -> Text("⚙ Downloading…", color = Theme.brass, fontSize = 12.sp)
                     allDownloaded -> TextButton(onClick = { removeAll() }) {
                         Text("✕ Remove all", color = Theme.parchmentDim, fontSize = 12.sp)
@@ -212,6 +290,8 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
             }
             Spacer(Modifier.height(8.dp))
             chapters.forEachIndexed { idx, ch ->
+                // Offline: only the chapters actually on disk are listed — the rest can't play.
+                if (offline && !Downloads.isDownloaded(context, ch.id)) return@forEachIndexed
                 val pr = progresses.getOrElse(idx) { ChapterProgress() }
                 val isCurrent = ch.id == current?.id
                 Box {
@@ -266,6 +346,8 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
                         containerColor = Theme.surface2,
                         border = androidx.compose.foundation.BorderStroke(1.dp, Theme.verdigris),
                         modifier = Modifier.background(Theme.surface2)) {
+                        // Everything but download management needs the server.
+                        if (!offline) {
                         DropdownMenuItem(
                             text = {
                                 Text("↺ Reset chapter", color = Theme.parchment,
@@ -301,6 +383,7 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
                                 menuChapterId = null
                                 editChapter = ch
                             })
+                        }
                         if (downloads[ch.id] == 2) {
                             DropdownMenuItem(
                                 text = {
@@ -321,13 +404,15 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
             }
 
             Spacer(Modifier.height(20.dp))
-            TextButton(onClick = {
-                scope.launch {
-                    api.resetBook(bookId)
-                    progresses = progresses.map { ChapterProgress() }
+            if (!offline) {
+                TextButton(onClick = {
+                    scope.launch {
+                        api.resetBook(bookId)
+                        progresses = progresses.map { ChapterProgress() }
+                    }
+                }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                    Text("⚙ Reset All Progress", color = Theme.parchmentDim, fontSize = 12.sp)
                 }
-            }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                Text("⚙ Reset All Progress", color = Theme.parchmentDim, fontSize = 12.sp)
             }
             Spacer(Modifier.height(16.dp))
         }

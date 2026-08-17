@@ -16,7 +16,9 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
 @Composable
-fun LoginScreen(auth: AuthStore) {
+fun LoginScreen(auth: AuthStore, onOfflineLibrary: () -> Unit = {}) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val hasDownloads = remember { Downloads.hasAny(context) }
     var mode by remember { mutableStateOf("login") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -65,6 +67,11 @@ fun LoginScreen(auth: AuthStore) {
                 shape = RoundedCornerShape(4.dp),
                 modifier = Modifier.fillMaxWidth()
             ) { Text(if (mode == "login") "Sign In" else "Create Account") }
+
+            // Signing in needs the server; downloaded books don't.
+            if (hasDownloads) {
+                LocalDownloadsButton(serverDown = false, onClick = onOfflineLibrary)
+            }
         }
     }
 }

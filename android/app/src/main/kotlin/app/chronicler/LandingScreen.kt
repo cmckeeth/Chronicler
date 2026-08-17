@@ -44,6 +44,8 @@ import kotlin.math.sin
 @Composable
 fun LandingScreen(auth: AuthStore, nav: NavController) {
     val context = LocalContext.current
+    var connected by remember { mutableStateOf(true) }
+    val hasDownloads = remember { Downloads.hasAny(context) }
     androidx.compose.runtime.LaunchedEffect(Unit) { StartupSound.play(context) }
 
     Box(Modifier.fillMaxSize()) {   // transparent: the app-wide electric backdrop shows through
@@ -92,6 +94,13 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
                     fontFamily = Theme.serif,
                     style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
             }
+
+            // Downloaded books play with the server down — always reachable from here,
+            // and called out when the archive can't be loaded.
+            if (hasDownloads) {
+                Spacer(Modifier.height(18.dp))
+                LocalDownloadsButton(serverDown = !connected) { nav.navigate("offline") }
+            }
         }
 
         Column(Modifier.align(Alignment.TopEnd).padding(8.dp),
@@ -102,7 +111,8 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
             ThemeSwitcher(auth)
         }
 
-        UpdateBanner(auth.api, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp))
+        UpdateBanner(auth.api, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
+            onStatus = { connected = it })
 
         // Steampunk-only: lush rising steam plumes drifting over everything (non-interactive).
         if (Theme.themeMode == ThemeMode.STEAMPUNK) SteamOverlay()
@@ -326,6 +336,7 @@ private fun ThemeMode.label(): String = when (this) {
     ThemeMode.GARDEN -> "🌿 Garden"
     ThemeMode.ACADEMIA -> "📖 Dark Academia"
     ThemeMode.NOIR -> "🦇 Blackletter Noir"
+    ThemeMode.WEST -> "🤠 Wild West"
 }
 
 // Theme selector as a compact DROPDOWN: a themed outlined field shows the current theme;
@@ -375,7 +386,10 @@ private fun ThemeSwitcher(auth: AuthStore) {
 // Status bar + self-update prompt, ported from the Blazor UpdateBanner.
 // Shared by the landing and archive pages.
 @Composable
-fun UpdateBanner(api: ApiClient, modifier: Modifier = Modifier) {
+fun UpdateBanner(api: ApiClient, modifier: Modifier = Modifier,
+                 // Lets the hosting screen react to the connection state (e.g. surface
+                 // Local Downloads).
+                 onStatus: (Boolean) -> Unit = {}) {
     val context = LocalContext.current
     val current = remember {
         runCatching {
@@ -391,6 +405,7 @@ fun UpdateBanner(api: ApiClient, modifier: Modifier = Modifier) {
         while (true) {
             val v = api.getLatestVersion()
             connected = v != null
+            onStatus(connected)
             if (v != null) latest = v
             kotlinx.coroutines.delay(10_000)
         }

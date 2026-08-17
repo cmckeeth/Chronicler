@@ -21,7 +21,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
@@ -31,6 +33,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.unit.dp
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.max
@@ -219,6 +222,108 @@ fun NoirBackdrop(modifier: Modifier = Modifier) {
     }
 }
 
+// WEST-only backdrop: a low sun burning on the horizon, mesas and saguaros cut flat
+// against it, dust hanging in the air, and tumbleweeds rolling across the flats.
+// Mirrors the iOS MesaSkyline + DustOverlay + TumbleweedOverlay.
+@Composable
+fun WestBackdrop(modifier: Modifier = Modifier) {
+    var t by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        val start = withFrameNanos { it }
+        while (true) { val now = withFrameNanos { it }; t = (now - start) / 1_000_000_000f }
+    }
+    Canvas(modifier) {
+        val w = size.width; val h = size.height
+        drawRect(Color(0xFF150E08))
+
+        // Setting sun burning just below the horizon.
+        val sc = Offset(w * 0.5f, h * 0.82f); val sr = hypot(w, h) * 0.5f
+        drawCircle(brush = Brush.radialGradient(
+            colors = listOf(Color(0xFFF08A30).copy(alpha = 0.42f),
+                            Color(0xFF9C4418).copy(alpha = 0.16f), Color(0x00F08A30)),
+            center = sc, radius = sr), radius = sr, center = sc)
+        // Dusk vignette closing the corners.
+        val vc = Offset(w * 0.5f, h * 0.5f); val vr = hypot(w, h) * 0.62f
+        drawCircle(brush = Brush.radialGradient(
+            colors = listOf(Color(0x00000000), Color(0x8C000000)),
+            center = vc, radius = vr), radius = vr, center = vc)
+
+        // Mesas: flat-topped blocks with sloped shoulders, black against the sun.
+        val silhouette = Color(0xFF1A0F07)
+        fun mesa(cx: Float, width: Float, height: Float, shade: Float) {
+            val l = cx - width / 2; val r = cx + width / 2; val top = h - height
+            val p = Path().apply {
+                moveTo(l, h); lineTo(l + width * 0.18f, top)
+                lineTo(r - width * 0.14f, top); lineTo(r, h); close()
+            }
+            drawPath(p, silhouette.copy(alpha = shade))
+        }
+        mesa(w * 0.10f, w * 0.40f, h * 0.085f, 0.85f)
+        mesa(w * 0.55f, w * 0.34f, h * 0.062f, 0.80f)
+        mesa(w * 0.95f, w * 0.32f, h * 0.10f, 0.90f)
+
+        // Saguaros: trunk + two raised arms.
+        fun saguaro(cx: Float, scale: Float) {
+            val trunkW = 11f * scale * density; val trunkH = 96f * scale * density
+            val armW = 8f * scale * density
+            fun bar(x: Float, y: Float, bw: Float, bh: Float) =
+                drawRoundRect(color = silhouette.copy(alpha = 0.85f),
+                    topLeft = Offset(x, y), size = Size(bw, bh),
+                    cornerRadius = CornerRadius(armW / 2, armW / 2))
+            bar(cx - trunkW / 2, h - trunkH, trunkW, trunkH)
+            bar(cx - 30f * scale * density, h - trunkH * 0.62f, armW, trunkH * 0.42f)
+            bar(cx - 30f * scale * density, h - trunkH * 0.62f, 30f * scale * density, armW)
+            bar(cx + 22f * scale * density, h - trunkH * 0.78f, armW, trunkH * 0.34f)
+            bar(cx, h - trunkH * 0.78f, 26f * scale * density, armW)
+        }
+        saguaro(w * 0.30f, 0.62f)
+        saguaro(w * 0.78f, 0.45f)
+
+        // Flat desert floor closing off the bottom.
+        drawRect(silhouette.copy(alpha = 0.9f),
+            topLeft = Offset(0f, h - 10f * density), size = Size(w, 40f * density))
+
+        // Fine dust hanging in the low sun.
+        for (i in 0 until 70) {
+            val fy = ((i * 61) % 1000) / 1000f
+            val speed = 12f + ((i * 29) % 26)
+            val x = ((t * speed + i * 91f) % (w + 60f)) - 30f
+            val y = fy * h + sin(t * 0.6f + i) * 6f
+            val r = (1f + (i % 3)) * density
+            drawCircle(Color(0xFFE8C489).copy(alpha = 0.16f), radius = r, center = Offset(x, y),
+                blendMode = BlendMode.Plus)
+        }
+
+        // Tumbleweeds: tangled balls of brush rolling and hopping across the flats.
+        for (k in 0 until 3) {
+            val period = 17f + k * 7f
+            val phase = ((t / period) + k * 0.37f) % 1f
+            val radius = (15f - k * 3f) * density
+            val x = phase * (w + 160f * density) - 80f * density
+            val ground = h - (14f + k * 16f) * density
+            val hop = abs(sin(phase * Math.PI.toFloat() * 9f)) * (18f - k * 4f) * density
+            val cy = ground - hop - radius
+            val spin = phase * Math.PI.toFloat() * 2f * 7f
+            for (ring in 0 until 4) {
+                val ringScale = 0.45f + 0.2f * ring
+                val tilt = spin * (if (ring % 2 == 0) 1f else -0.8f) + ring
+                val steps = 13
+                val p = Path()
+                for (j in 0..steps) {
+                    val a = tilt + j * (2f * Math.PI.toFloat() / steps)
+                    val jitter = 0.72f + 0.5f * abs(sin(j * 3.1f + ring * 1.7f + k))
+                    val rr = radius * ringScale * jitter
+                    val px = x + rr * cos(a); val py = cy + rr * sin(a) * 0.9f
+                    if (j == 0) p.moveTo(px, py) else p.lineTo(px, py)
+                }
+                p.close()
+                drawPath(p, Color(0xFF8A6231).copy(alpha = 0.75f),
+                    style = Stroke(width = 1.2f * density))
+            }
+        }
+    }
+}
+
 private fun DrawScope.drawField(t: Float, intensity: Float) {
     val w = size.width; val h = size.height
 
@@ -340,6 +445,12 @@ fun Modifier.charged(): Modifier = composed {
         val shape = RoundedCornerShape(0.dp)
         this
             .shadow(4.dp, shape, spotColor = Color.Black, ambientColor = Color.Black)
+            .border(1.dp, Theme.borderBrass.copy(alpha = 0.35f), shape)
+    } else if (Theme.themeMode == ThemeMode.WEST) {
+        // No electricity: a steady sun-baked leather edge with squared 3.dp corners.
+        val shape = RoundedCornerShape(3.dp)
+        this
+            .shadow(4.dp, shape, spotColor = Theme.brass, ambientColor = Color.Black)
             .border(1.dp, Theme.borderBrass.copy(alpha = 0.35f), shape)
     } else {
         // Glassy Tesla edge: soft 10.dp corners, faint translucent cyan fill + pulsing border.

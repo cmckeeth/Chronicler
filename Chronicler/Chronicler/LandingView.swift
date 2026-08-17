@@ -4,11 +4,15 @@ enum Route: Hashable {
     case archive
     case book(Book)
     case collection(Collection)
+    case offline
 }
 
 struct LandingView: View {
     @EnvironmentObject var auth: AuthStore
     @EnvironmentObject var themeStore: ThemeStore
+
+    @State private var connected = true
+    @State private var hasDownloads = false
 
     var body: some View {
         ZStack {
@@ -58,6 +62,15 @@ struct LandingView: View {
                     .electricPanel(bg: Theme.surface, corner: 6, alpha: 0.8, glowRadius: 20)
                 }
 
+                // Downloaded books are playable with the server down — always reachable
+                // from here, and called out when the archive can't be loaded.
+                if hasDownloads {
+                    NavigationLink(value: Route.offline) {
+                        LocalDownloadsButton(serverDown: !connected)
+                    }
+                    .padding(.top, 18)
+                }
+
                 Spacer()
                 Spacer()
             }
@@ -71,12 +84,15 @@ struct LandingView: View {
                         .font(Theme.body(11)).foregroundColor(Theme.parchmentDim).opacity(0.5)
                 }
                 Spacer()
-                UpdateBanner(api: auth.api).padding(.bottom, 12)
+                UpdateBanner(api: auth.api, onStatus: { connected = $0 }).padding(.bottom, 12)
             }
             .padding()
         }
         .navigationBarBackButtonHidden(true)
-        .onAppear { StartupSound.shared.play() }
+        .onAppear {
+            StartupSound.shared.play()
+            hasDownloads = Downloads.hasAny()
+        }
     }
 
     // Runtime theme switcher: ⚡ Tesla (electric blue), ⚙ Steampunk (brass, no
@@ -90,6 +106,7 @@ struct LandingView: View {
             Text("🌿 Garden").tag(ThemeMode.garden)
             Text("📖 Dark Academia").tag(ThemeMode.academia)
             Text("🦇 Blackletter Noir").tag(ThemeMode.noir)
+            Text("🤠 Wild West").tag(ThemeMode.west)
         }
         .pickerStyle(.menu)
         .font(Theme.body(11))
@@ -173,6 +190,8 @@ private struct GardenRoseBackground: View {
 // the dot + version + Connected / Server unreachable. Shared by landing + archive.
 struct UpdateBanner: View {
     let api: APIClient
+    // Lets the hosting screen react to the connection state (e.g. surface Local Downloads).
+    var onStatus: ((Bool) -> Void)? = nil
     @State private var connected = false
 
     private var version: String {
@@ -190,6 +209,7 @@ struct UpdateBanner: View {
         .task {
             while !Task.isCancelled {
                 connected = (await api.getLatestVersion()) != nil
+                onStatus?(connected)
                 try? await Task.sleep(nanoseconds: 10_000_000_000)
             }
         }

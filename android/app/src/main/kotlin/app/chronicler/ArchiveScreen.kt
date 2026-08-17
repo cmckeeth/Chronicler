@@ -16,7 +16,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -107,7 +109,17 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
         val shownCollections = if (searching || tab == "books") emptyList() else collections
         when {
             loading -> center("Consulting the archive...", Theme.parchmentDim)
-            error != null -> center("The pneumatic tubes have failed: $error", Theme.rust)
+            error != null -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("The pneumatic tubes have failed: $error", color = Theme.rust,
+                        fontSize = 14.sp, textAlign = TextAlign.Center)
+                    // The archive is out of reach, but downloaded books still play.
+                    if (Downloads.hasAny(LocalContext.current)) {
+                        LocalDownloadsButton(serverDown = true) { nav.navigate("offline") }
+                    }
+                }
+            }
             filtered.isEmpty() && shownCollections.isEmpty() -> center(
                 if (searching) "No volumes match this filter."
                 else if (allBooks.isEmpty() && collections.isEmpty()) "The archive lies empty, traveller."

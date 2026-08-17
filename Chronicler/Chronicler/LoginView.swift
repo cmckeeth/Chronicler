@@ -8,6 +8,8 @@ struct LoginView: View {
     @State private var password = ""
     @State private var error: String?
     @State private var busy = false
+    @State private var showOffline = false
+    @State private var hasDownloads = false
 
     var body: some View {
         ZStack {
@@ -47,12 +49,25 @@ struct LoginView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                 }
                 .disabled(busy)
+
+                // Signing in needs the server; downloaded books don't.
+                if hasDownloads {
+                    Button { showOffline = true } label: {
+                        LocalDownloadsButton(serverDown: false)
+                    }
+                    .padding(.top, 4)
+                }
             }
             .padding(24)
             .background(Theme.surface)
             .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.border, lineWidth: 1))
             .clipShape(RoundedRectangle(cornerRadius: 6))
             .padding(28)
+        }
+        .onAppear { hasDownloads = Downloads.hasAny() }
+        .fullScreenCover(isPresented: $showOffline) {
+            OfflineLibrarySheet(onClose: { showOffline = false })
+                .environmentObject(auth)
         }
     }
 

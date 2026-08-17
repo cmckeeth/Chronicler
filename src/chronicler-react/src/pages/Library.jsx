@@ -106,7 +106,13 @@ export default function Library() {
       {loading ? (
         <div className="loading">Consulting the archive...</div>
       ) : error ? (
-        <div className="empty-state"><p>The pneumatic tubes have failed: {error}</p></div>
+        /* Archive out of reach — offer the downloads route, same as the native apps. */
+        <div className="empty-state">
+          <p>The pneumatic tubes have failed: {error}</p>
+          <button className="btn-secondary" style={{marginTop:'1rem'}} onClick={() => nav('/downloads')}>
+            📥 Server unreachable — Local Downloads
+          </button>
+        </div>
       ) : filtered.length === 0 && shownCollections.length === 0 ? (
         <div className="empty-state">
           <p>{books.length === 0 && collections.length === 0 ? 'The archive lies empty, traveller.' : 'No volumes match this filter.'}</p>

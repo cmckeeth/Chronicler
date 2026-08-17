@@ -96,6 +96,21 @@ fun coverColorFilter(): ColorFilter {
             m.timesAssign(tint)
             ColorFilter.colorMatrix(m)
         }
+        ThemeMode.WEST -> {
+            // sun-baked: warm amber wash, slightly desaturated, dimmed like old paper
+            // (~ sepia-ish saturate(.72) brightness(.92) contrast(1.06)).
+            val m = ColorMatrix().also { saturate(it, 0.72f) }
+            m.timesAssign(contrast(1.06f))
+            val b = 0.92f
+            val tint = ColorMatrix(floatArrayOf(
+                1.06f * b, 0f, 0f, 0f, 0f,
+                0f, 0.94f * b, 0f, 0f, 0f,
+                0f, 0f, 0.74f * b, 0f, 0f,
+                0f, 0f, 0f, 1f, 0f,
+            ))
+            m.timesAssign(tint)
+            ColorFilter.colorMatrix(m)
+        }
     }
 }
 
@@ -103,10 +118,17 @@ fun coverColorFilter(): ColorFilter {
 fun CoverImage(book: Book, api: ApiClient, modifier: Modifier = Modifier) {
     var image by remember(book.id) { mutableStateOf(coverCache[book.id]) }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
     androidx.compose.runtime.LaunchedEffect(book.id) {
         if (image == null && book.hasCover) {
-            api.coverBytes(book.id)?.let { bytes ->
-                val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            // Server first; fall back to the copy saved with the offline download.
+            val bytes = api.coverBytes(book.id)?.also {
+                if (Downloads.entry(context, book.id) != null) {
+                    runCatching { Downloads.coverFile(context, book.id).writeBytes(it) }
+                }
+            } ?: Downloads.coverBytes(context, book.id)
+            bytes?.let {
+                val bmp = BitmapFactory.decodeByteArray(it, 0, it.size)
                 if (bmp != null) {
                     val ib = bmp.asImageBitmap()
                     coverCache[book.id] = ib

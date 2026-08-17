@@ -100,9 +100,19 @@ struct ArchiveView: View {
             Spacer(); Text("Consulting the archive...")
                 .font(Theme.serif(15)).foregroundColor(Theme.parchmentDim); Spacer()
         } else if let error {
-            Spacer(); Text("The pneumatic tubes have failed: \(error)")
-                .font(Theme.body(14)).foregroundColor(Theme.rust)
-                .multilineTextAlignment(.center); Spacer()
+            Spacer()
+            VStack(spacing: 16) {
+                Text("The pneumatic tubes have failed: \(error)")
+                    .font(Theme.body(14)).foregroundColor(Theme.rust)
+                    .multilineTextAlignment(.center)
+                // The archive is out of reach, but downloaded books still play.
+                if Downloads.hasAny() {
+                    NavigationLink(value: Route.offline) {
+                        LocalDownloadsButton(serverDown: true)
+                    }
+                }
+            }
+            Spacer()
         } else if filtered.isEmpty && !showCollections {
             Spacer(); Text(books.isEmpty && collections.isEmpty
                             ? "The archive lies empty, traveller."
