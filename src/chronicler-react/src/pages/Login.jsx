@@ -27,7 +27,22 @@ export default function Login() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <h1>Chronicler</h1>
+        {/* Ransom Note cuts every letter from a different magazine; the CSS shows one
+            mark and hides the other based on the active theme. */}
+        <h1>
+          <span className="plain-mark">Chronicler</span>
+          <span className="ransom-mark" aria-label="Chronicler">
+            {'Chronicler'.split('').map((ch, i) => (
+              <span key={i} style={{
+                fontFamily: ['Special Elite', 'Rye', 'Zilla Slab', 'Alfa Slab One', 'Cinzel', 'Monoton'][i % 6],
+                background: ['#f4f1e8', '#141414', '#ff2d55', '#e8e4d9', '#00b3a4', '#d6d0bd'][(i * 5 + 2) % 6],
+                color: [1, 2, 4].includes((i * 5 + 2) % 6) ? '#f4f1e8' : '#141414',
+                transform: `rotate(${((i % 5) - 2) * 3.4}deg) translateY(${((i % 4) - 2) * 1.6}px)`,
+                fontSize: `${1 + (i % 3) * 0.09}em`,
+              }}>{ch}</span>
+            ))}
+          </span>
+        </h1>
         <p className="auth-subtitle">Your audiobook library</p>
 
         <div className="auth-tabs">

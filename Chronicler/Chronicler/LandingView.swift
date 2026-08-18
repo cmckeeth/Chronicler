@@ -48,12 +48,16 @@ struct LandingView: View {
                 // the downloads on this device instead of a button that would fail.
                 NavigationLink(value: connected ? Route.archive : Route.offline) {
                     VStack(spacing: 4) {
-                        Text("Chronicler")
-                            .font(Theme.display(48))
-                            .foregroundStyle(Theme.brassGradient)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.4)
-                            .glowVerdigris()
+                        if themeStore.mode == .ransom {
+                            RansomWordmark(text: "Chronicler", size: 34)
+                        } else {
+                            Text("Chronicler")
+                                .font(Theme.display(48))
+                                .foregroundStyle(Theme.brassGradient)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.4)
+                                .glowVerdigris()
+                        }
                         Text(connected ? "Your Audiobook Library" : "Server unreachable")
                             .font(Theme.serif(15))
                             .foregroundColor(connected ? Theme.parchmentDim : Theme.rust)
@@ -100,6 +104,9 @@ struct LandingView: View {
             Text("📖 Dark Academia").tag(ThemeMode.academia)
             Text("🦇 Blackletter Noir").tag(ThemeMode.noir)
             Text("🤠 Wild West").tag(ThemeMode.west)
+            Text("🌴 Neon Sunset").tag(ThemeMode.neon)
+            Text("🌋 Molten Forge").tag(ThemeMode.forge)
+            Text("✂️ Ransom Note").tag(ThemeMode.ransom)
         }
         .pickerStyle(.menu)
         .font(Theme.body(11))
@@ -175,6 +182,44 @@ private struct GardenRoseBackground: View {
         .ignoresSafeArea()
         .allowsHitTesting(false)
         .onAppear { grow = 1.0 }
+    }
+}
+
+
+// Ransom-Note-only wordmark: every letter is cut from a different magazine, so each one
+// gets its own face, rotation, size jitter and paper swatch. Deterministic from the
+// character index (no RNG) so it looks hand-made but never reflows between renders.
+struct RansomWordmark: View {
+    let text: String
+    var size: CGFloat
+
+    // Faces already bundled for the other themes — mixing them IS the effect.
+    private let faces = ["SpecialElite-Regular", "Rye-Regular", "ZillaSlab-SemiBold",
+                         "AlfaSlabOne-Regular", "Cinzel-Regular", "Monoton-Regular"]
+    // Newsprint / marker swatches behind each letter.
+    private let swatches: [UInt] = [0xf4f1e8, 0x141414, 0xff2d55, 0xe8e4d9, 0x00b3a4, 0xd6d0bd]
+
+    var body: some View {
+        HStack(spacing: 1) {
+            ForEach(Array(text.enumerated()), id: \.offset) { i, ch in
+                let face = faces[i % faces.count]
+                let swatch = Color(hex: swatches[(i * 5 + 2) % swatches.count])
+                // Dark swatches need light ink and vice versa.
+                let dark = [0x141414, 0xff2d55, 0x00b3a4].contains(Int(swatches[(i * 5 + 2) % swatches.count]))
+                let tilt = Double((i % 5) - 2) * 3.4
+                let jitter = 1 + CGFloat((i % 3)) * 0.09
+                Text(String(ch))
+                    .font(.custom(face, size: size * jitter * Theme.fontScale))
+                    .foregroundColor(dark ? Color(hex: 0xf4f1e8) : Color(hex: 0x141414))
+                    .padding(.horizontal, 3).padding(.vertical, 1)
+                    .background(swatch)
+                    .overlay(Rectangle().stroke(Color.black.opacity(0.35), lineWidth: 0.8))
+                    .rotationEffect(.degrees(tilt))
+                    .offset(y: CGFloat((i % 4) - 2) * 1.6)
+                    .shadow(color: .black.opacity(0.35), radius: 0, x: 1.5, y: 1.5)
+            }
+        }
+        .padding(.vertical, 6)
     }
 }
 

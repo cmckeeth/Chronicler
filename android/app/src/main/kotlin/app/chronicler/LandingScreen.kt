@@ -88,9 +88,13 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
                     .padding(horizontal = 34.dp, vertical = 30.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Chronicler", color = Theme.brass, fontSize = 40.sp, fontWeight = FontWeight.Bold,
-                    fontFamily = Theme.display, maxLines = 1, softWrap = false,
-                    style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
+                if (Theme.themeMode == ThemeMode.RANSOM) {
+                    RansomWordmark("Chronicler", 26.sp)
+                } else {
+                    Text("Chronicler", color = Theme.brass, fontSize = 40.sp, fontWeight = FontWeight.Bold,
+                        fontFamily = Theme.display, maxLines = 1, softWrap = false,
+                        style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
+                }
                 Text(if (connected) "Your Audiobook Library" else "Server unreachable",
                     color = if (connected) Theme.parchmentDim else Theme.rust, fontSize = 15.sp,
                     fontFamily = Theme.serif)
@@ -336,6 +340,9 @@ private fun ThemeMode.label(): String = when (this) {
     ThemeMode.ACADEMIA -> "📖 Dark Academia"
     ThemeMode.NOIR -> "🦇 Blackletter Noir"
     ThemeMode.WEST -> "🤠 Wild West"
+    ThemeMode.NEON -> "🌴 Neon Sunset"
+    ThemeMode.FORGE -> "🌋 Molten Forge"
+    ThemeMode.RANSOM -> "✂️ Ransom Note"
 }
 
 // Theme selector as a compact DROPDOWN: a themed outlined field shows the current theme;
@@ -377,6 +384,39 @@ private fun ThemeSwitcher(auth: AuthStore) {
                     },
                     onClick = { auth.setThemeMode(mode); StartupSound.playTheme(context); expanded = false }
                 )
+            }
+        }
+    }
+}
+
+
+// RANSOM-only wordmark: every letter is cut from a different magazine, so each gets its
+// own face, rotation, size jitter and paper swatch. Deterministic from the character
+// index (no RNG) so it looks hand-made but never reflows between recompositions.
+@Composable
+fun RansomWordmark(text: String, size: androidx.compose.ui.unit.TextUnit) {
+    val faces = Theme.ransomFaces
+    val swatches = listOf(Color(0xFFF4F1E8), Color(0xFF141414), Color(0xFFFF2D55),
+                          Color(0xFFE8E4D9), Color(0xFF00B3A4), Color(0xFFD6D0BD))
+    // Dark swatches need light ink and vice versa.
+    val darkSwatch = setOf(1, 2, 4)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        text.forEachIndexed { i, ch ->
+            val sw = (i * 5 + 2) % swatches.size
+            val tilt = ((i % 5) - 2) * 3.4f
+            val jitter = 1f + (i % 3) * 0.09f
+            Box(
+                Modifier
+                    .rotate(tilt)
+                    .offset(y = (((i % 4) - 2) * 1.6f).dp)
+                    .background(swatches[sw])
+                    .border(0.8.dp, Color.Black.copy(alpha = 0.35f))
+                    .padding(horizontal = 3.dp, vertical = 1.dp)
+            ) {
+                Text(ch.toString(),
+                    color = if (sw in darkSwatch) Color(0xFFF4F1E8) else Color(0xFF141414),
+                    fontSize = size * jitter,
+                    fontFamily = faces[i % faces.size])
             }
         }
     }

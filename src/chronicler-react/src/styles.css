@@ -2,7 +2,7 @@
 /* Steampunk: Cinzel/Lora (Victorian serif).  Tesla: Orbitron/Rajdhani (techno).
    Dark Academia: Cormorant Garamond + EB Garamond (elegant university serif).
    Blackletter Noir: Pirata One (blackletter wordmark) + Playfair Display (tall drama). */
-@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Dancing+Script:wght@600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=Pirata+One&family=UnifrakturMaguntia&family=Rye&family=Zilla+Slab:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Dancing+Script:wght@600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=Pirata+One&family=UnifrakturMaguntia&family=Rye&family=Zilla+Slab:ital,wght@0,400;0,600;0,700;1,400&family=Monoton&family=Michroma&family=Alfa+Slab+One&family=Special+Elite&display=swap');
 
 /* ── Variables ────────────────────────────────────────────────────────────── */
 /* ══ DEFAULT = TESLA: electric, futuristic — cold steel-blue, neon, glass ══════
@@ -295,6 +295,135 @@
     --elec-3: 150,102,36;
     --elec-4: 224,163,63;
     --elec-spark: #ffe3ab;
+}
+
+/* ── NEON SUNSET: 1984 vaporwave — indigo void, hot-magenta chrome, cyan ────────
+   A banded sun on the horizon over a wireframe grid scrolling toward you, palms in
+   silhouette, CRT scanlines. The only theme besides Tesla that pulses. */
+:root[data-theme="neon"] {
+    --bg:           #150726;   /* indigo void */
+    --bg2:          #1e0a35;
+    --leather:      #2a0f45;
+    --surface:      #33124f;
+    --surface2:     #431a63;
+    --surface3:     #552279;
+    --border:       #7b34a8;
+    --border-brass: #ff4fd8;   /* magenta tube */
+    --brass:        #ff4fd8;
+    --brass-light:  #ff8ce6;
+    --brass-pale:   #ffc4f2;
+    --copper:       #22e0ff;   /* cyan chrome */
+    --copper-light: #7defff;
+    --rust:         #ff2d7a;
+    --parchment:    #f2e9ff;
+    --parchment-mid:#c9a8ea;
+    --parchment-dim:#9670c4;
+    --ink:          #0d0418;
+    --glow-brass:   0 0 18px #ff4fd8aa, 0 0 40px #ff4fd855;
+    --glow-copper:  0 0 14px #22e0ffaa;
+    --radius:       12px;       /* 80s dashboard curves */
+    --font-display: 'Monoton', 'Orbitron', sans-serif;
+    --font-serif:   'Michroma', 'Orbitron', sans-serif;
+    --font-body:    'Rajdhani', 'Michroma', sans-serif;   /* Michroma is too wide for body */
+    --metal-hi:    255,196,242;
+    --tint:        255,79,216;
+    --panel-bg:    rgba(51,18,79,.55);
+    --panel-blur:  blur(3px);
+    --cover-filter: saturate(1.5) contrast(1.12) hue-rotate(-6deg);
+    --verdigris:      #22e0ff;
+    --verdigris-rgb:  34,224,255;
+    --glow-verdigris: 0 0 18px #ff4fd8dd, 0 0 42px #22e0ff66;
+    --elec-1: 255,140,230;
+    --elec-2: 255,79,216;
+    --elec-3: 34,224,255;
+    --elec-4: 156,43,255;
+    --elec-spark: #ffffff;
+}
+
+/* ── MOLTEN FORGE: obsidian and lava ───────────────────────────────────────────
+   Black rock with fissures glowing from within, a churning pool along the bottom,
+   sparks spitting upward. Metal is molten orange; the accent is white-hot. */
+:root[data-theme="forge"] {
+    --bg:           #0b0705;   /* obsidian */
+    --bg2:          #140a06;
+    --leather:      #1c100a;
+    --surface:      #241309;
+    --surface2:     #30190c;
+    --surface3:     #3d2110;
+    --border:       #5c3315;
+    --border-brass: #ff8a1f;
+    --brass:        #ff8a1f;   /* molten */
+    --brass-light:  #ffab4d;
+    --brass-pale:   #ffd7a1;
+    --copper:       #e02b0a;
+    --copper-light: #ff5a2a;
+    --rust:         #e02b0a;
+    --parchment:    #ffe8d6;
+    --parchment-mid:#d8a878;
+    --parchment-dim:#a87a52;
+    --ink:          #050302;
+    --glow-brass:   0 0 18px #ff8a1faa, 0 0 40px #e02b0a55;
+    --glow-copper:  0 0 14px #e02b0aaa;
+    --radius:       1px;        /* hard iron corners */
+    --font-display: 'Alfa Slab One', 'Zilla Slab', Georgia, serif;
+    --font-serif:   'Zilla Slab', Georgia, serif;
+    --font-body:    'Zilla Slab', Georgia, serif;
+    --metal-hi:    255,215,161;
+    --tint:        255,138,31;
+    --panel-bg:    rgba(36,19,9,.72);
+    --panel-blur:  blur(1px);
+    --cover-filter: saturate(1.1) contrast(1.18) brightness(.95) sepia(.2);
+    --verdigris:      #ffd23f;   /* white-hot */
+    --verdigris-rgb:  255,210,63;
+    --glow-verdigris: 0 0 18px #ff8a1fdd, 0 0 44px #e02b0a66;
+    --elec-1: 255,233,168;
+    --elec-2: 255,138,31;
+    --elec-3: 181,34,0;
+    --elec-4: 255,90,42;
+    --elec-spark: #ffe9a8;
+}
+
+/* ── RANSOM NOTE: photocopied punk zine ────────────────────────────────────────
+   The one LIGHT theme. Newsprint paper, black ink, hot-pink accent, halftone dots
+   and toner streaks, cards taped on slightly askew. Nothing glows — it's paper. */
+:root[data-theme="ransom"] {
+    --bg:           #e8e4d9;   /* newsprint */
+    --bg2:          #f1ede2;
+    --leather:      #dcd7c8;
+    --surface:      #f4f1e8;
+    --surface2:     #e4dfd0;
+    --surface3:     #d6d0bd;
+    --border:       #8c8677;
+    --border-brass: #141414;   /* ink, not metal */
+    --brass:        #141414;
+    --brass-light:  #2e2e2e;
+    --brass-pale:   #4a4a4a;
+    --copper:       #00b3a4;
+    --copper-light: #2ad4c6;
+    --rust:         #d11a3a;
+    --parchment:    #141414;   /* text is INK on this theme */
+    --parchment-mid:#3d3d3d;
+    --parchment-dim:#6b6b6b;
+    --ink:          #f4f1e8;   /* and "ink" is the paper it sits on */
+    --glow-brass:   2px 2px 0 rgba(0,0,0,.4);
+    --glow-copper:  2px 2px 0 rgba(0,0,0,.3);
+    --radius:       1px;
+    --font-display: 'Special Elite', 'Courier New', monospace;
+    --font-serif:   'Special Elite', 'Courier New', monospace;
+    --font-body:    'Special Elite', 'Courier New', monospace;
+    --metal-hi:    20,20,20;
+    --tint:        20,20,20;
+    --panel-bg:    #f4f1e8;
+    --panel-blur:  none;
+    --cover-filter: saturate(.15) contrast(1.55) brightness(1.06);
+    --verdigris:      #ff2d55;   /* marker pink */
+    --verdigris-rgb:  255,45,85;
+    --glow-verdigris: 1px 1px 0 rgba(0,0,0,.45);
+    --elec-1: 20,20,20;
+    --elec-2: 255,45,85;
+    --elec-3: 0,179,164;
+    --elec-4: 140,134,119;
+    --elec-spark: #ff2d55;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2161,3 +2290,194 @@ select {
     [data-theme="west"] .tumbleweed svg { animation: none; }
     [data-theme="west"] .tumbleweed { opacity: .35; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NEON SUNSET MODE — banded sun, scrolling perspective grid, palms, scanlines.
+   ══════════════════════════════════════════════════════════════════════════ */
+[data-theme="neon"] h1 { letter-spacing: 2px; }
+[data-theme="neon"] body {
+    background-image:
+        linear-gradient(#2a0b4a 0%, rgba(122,17,112,.65) 42%, rgba(255,79,216,.22) 62%, #0d0418 62%, #0d0418 100%);
+    background-attachment: fixed;
+}
+[data-theme="neon"] body::before {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #22e0ff 30%, #ff4fd8 50%, #22e0ff 70%, transparent);
+    box-shadow: 0 0 12px rgba(255,79,216,.8);
+}
+.neon-fx { display: none; }
+[data-theme="neon"] .neon-fx {
+    display: block; position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+}
+[data-theme="neon"] .auth-page,
+[data-theme="neon"] .library-browser,
+[data-theme="neon"] .book-player-page { position: relative; z-index: 1; }
+/* Banded sun: a gradient disc with repeating transparent bands punched through it. */
+[data-theme="neon"] .neon-sun {
+    position: absolute;
+    left: 50%; top: 62%;
+    width: 42vmin; height: 42vmin;
+    transform: translate(-50%, -72%);
+    border-radius: 50%;
+    background:
+        repeating-linear-gradient(to bottom,
+            transparent 0 6px, #150726 6px 10px),
+        linear-gradient(#ffe14f, #ff4fd8 55%, #9c2bff);
+    box-shadow: 0 0 60px rgba(255,79,216,.55);
+}
+/* Grid floor: two repeating-gradients, the horizontal one scrolling toward the viewer. */
+[data-theme="neon"] .neon-grid {
+    position: absolute;
+    left: -50%; right: -50%; bottom: 0;
+    height: 38%;
+    background:
+        repeating-linear-gradient(to right, rgba(34,224,255,.35) 0 1px, transparent 1px 7%),
+        repeating-linear-gradient(to bottom, rgba(34,224,255,.45) 0 1px, transparent 1px 12%);
+    transform: perspective(30vmin) rotateX(72deg);
+    transform-origin: bottom center;
+    animation: neon-scroll 2.6s linear infinite;
+}
+@keyframes neon-scroll { to { background-position: 0 0, 0 12%; } }
+[data-theme="neon"] .neon-horizon {
+    position: absolute; left: 0; right: 0; bottom: 38%;
+    height: 2px; background: #ff8ce6; box-shadow: 0 0 16px 3px rgba(255,140,230,.8);
+}
+/* Palms: a trunk with fronds, in silhouette either side of the sun. */
+[data-theme="neon"] .neon-palm {
+    position: absolute; bottom: 34%;
+    width: 3px; height: 22vmin;
+    background: #120423;
+    transform-origin: bottom center;
+}
+[data-theme="neon"] .neon-palm::before,
+[data-theme="neon"] .neon-palm::after {
+    content: ''; position: absolute; top: -1px; left: -14px;
+    width: 32px; height: 16px;
+    border-top: 3px solid #120423;
+    border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+}
+[data-theme="neon"] .neon-palm::after { transform: rotate(38deg); left: -6px; }
+[data-theme="neon"] .neon-palm-l { left: 13%; transform: rotate(4deg); }
+[data-theme="neon"] .neon-palm-r { right: 12%; transform: rotate(-5deg) scale(.85); }
+/* CRT: scanlines plus a bright band rolling down the tube. */
+[data-theme="neon"] .neon-scan {
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(to bottom, rgba(0,0,0,.18) 0 1px, transparent 1px 3px);
+}
+[data-theme="neon"] .neon-roll {
+    position: absolute; left: 0; right: 0; height: 80px;
+    background: linear-gradient(transparent, rgba(255,255,255,.05), transparent);
+    animation: neon-roll 7s linear infinite;
+}
+@keyframes neon-roll { from { top: -80px; } to { top: 100%; } }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOLTEN FORGE MODE — glowing fissures, a churning pool, spitting sparks.
+   ══════════════════════════════════════════════════════════════════════════ */
+[data-theme="forge"] body {
+    background-image:
+        radial-gradient(ellipse at 50% 104%, rgba(255,106,18,.34) 0%, transparent 55%),
+        radial-gradient(circle at 50% 45%, transparent 22%, rgba(0,0,0,.62) 96%);
+    background-attachment: fixed;
+}
+[data-theme="forge"] body::before {
+    height: 3px;
+    background: linear-gradient(90deg, #b52200, #ff6a12 35%, #ffd23f 50%, #ff6a12 65%, #b52200);
+    box-shadow: 0 0 14px rgba(255,138,31,.7);
+}
+.forge-fx { display: none; }
+[data-theme="forge"] .forge-fx {
+    display: block; position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+}
+[data-theme="forge"] .auth-page,
+[data-theme="forge"] .library-browser,
+[data-theme="forge"] .book-player-page { position: relative; z-index: 1; }
+/* The pool: a hot band at the very bottom whose top edge ripples. */
+[data-theme="forge"] .lava-pool {
+    position: absolute; left: -5%; right: -5%; bottom: -2%;
+    height: 8%;
+    background: linear-gradient(#ffd23f, #ff6a12 45%, #b52200);
+    border-radius: 45% 55% 0 0 / 18% 22% 0 0;
+    box-shadow: 0 -18px 50px rgba(255,106,18,.55);
+    animation: lava-churn 7s ease-in-out infinite alternate;
+}
+@keyframes lava-churn {
+    from { border-radius: 45% 55% 0 0 / 18% 22% 0 0; }
+    to   { border-radius: 58% 42% 0 0 / 24% 16% 0 0; }
+}
+/* Fissures: thin glowing cracks climbing off the pool, each breathing on its own beat. */
+[data-theme="forge"] .fissure {
+    position: absolute; bottom: 6%;
+    width: 2px;
+    background: linear-gradient(to top, #ffe9a8, #ff6a12 60%, transparent);
+    box-shadow: 0 0 10px 2px rgba(255,106,18,.55);
+    animation: fissure-breathe ease-in-out infinite alternate;
+}
+@keyframes fissure-breathe { from { opacity: .3; } to { opacity: 1; } }
+/* Sparks: rising off the pool, cooling and fading. */
+[data-theme="forge"] .spark {
+    position: absolute; bottom: 6%;
+    width: 3px; height: 3px; border-radius: 50%;
+    background: #ffe9a8;
+    box-shadow: 0 0 8px 2px rgba(255,60,0,.7);
+    animation: spark-rise linear infinite;
+}
+@keyframes spark-rise {
+    0%   { transform: translateY(0) translateX(0); opacity: 0; }
+    12%  { opacity: 1; }
+    100% { transform: translateY(-62vh) translateX(3vw); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    [data-theme="forge"] .spark,
+    [data-theme="forge"] .fissure,
+    [data-theme="forge"] .lava-pool,
+    [data-theme="neon"] .neon-grid,
+    [data-theme="neon"] .neon-roll { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RANSOM NOTE MODE — photocopied paper, cut-out lettering, everything askew.
+   The one light theme: text is ink, panels are paper, nothing glows.
+   ══════════════════════════════════════════════════════════════════════════ */
+[data-theme="ransom"] body {
+    background-image:
+        radial-gradient(circle at 1px 1px, rgba(0,0,0,.07) 1px, transparent 1.4px),
+        repeating-linear-gradient(to right, rgba(0,0,0,.035) 0 8px, transparent 8px 90px);
+    background-size: 6px 6px, auto;
+    background-attachment: fixed;
+}
+/* A strip of tape across the top instead of a glowing rail. */
+[data-theme="ransom"] body::before {
+    height: 22px;
+    background: rgba(216,210,190,.8);
+    border-bottom: 1px solid rgba(0,0,0,.15);
+    box-shadow: none;
+}
+/* Cards: hard offset shadow, no glow, and a deliberate half-degree tilt. */
+[data-theme="ransom"] .book-card,
+[data-theme="ransom"] .auth-card {
+    box-shadow: 3px 3px 0 rgba(0,0,0,.55) !important;
+    border: 1.5px solid #141414;
+    transform: rotate(-.5deg);
+}
+[data-theme="ransom"] .book-card:nth-child(even) { transform: rotate(.6deg); }
+[data-theme="ransom"] .book-card:hover,
+[data-theme="ransom"] .btn-primary:hover,
+[data-theme="ransom"] .btn-secondary:hover,
+[data-theme="ransom"] input:focus,
+[data-theme="ransom"] select:focus {
+    animation: none !important;
+    box-shadow: 4px 4px 0 rgba(0,0,0,.7) !important;
+    filter: none;
+}
+/* The wordmark: every letter cut from a different magazine. */
+[data-theme="ransom"] .ransom-mark { display: inline-flex; gap: 1px; align-items: center; }
+[data-theme="ransom"] .ransom-mark span {
+    display: inline-block;
+    padding: 1px 4px;
+    border: 1px solid rgba(0,0,0,.35);
+    box-shadow: 1.5px 1.5px 0 rgba(0,0,0,.35);
+    line-height: 1.05;
+}
+.ransom-mark { display: none; }
+[data-theme="ransom"] .plain-mark { display: none; }

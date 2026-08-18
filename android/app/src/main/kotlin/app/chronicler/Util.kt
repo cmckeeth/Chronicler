@@ -96,6 +96,44 @@ fun coverColorFilter(): ColorFilter {
             m.timesAssign(tint)
             ColorFilter.colorMatrix(m)
         }
+        ThemeMode.NEON -> {
+            // VHS dub: saturation cranked, magenta lift, punchy contrast.
+            val m = ColorMatrix().also { saturate(it, 1.5f) }
+            m.timesAssign(contrast(1.12f))
+            val b = 1.02f
+            m.timesAssign(ColorMatrix(floatArrayOf(
+                1.00f * b, 0f, 0f, 0f, 0f,
+                0f, 0.78f * b, 0f, 0f, 0f,
+                0f, 0f, 0.94f * b, 0f, 0f,
+                0f, 0f, 0f, 1f, 0f,
+            )))
+            ColorFilter.colorMatrix(m)
+        }
+        ThemeMode.FORGE -> {
+            // Lit by the pool: hot amber wash, deep shadows, high contrast.
+            val m = ColorMatrix().also { saturate(it, 1.1f) }
+            m.timesAssign(contrast(1.18f))
+            val b = 0.95f
+            m.timesAssign(ColorMatrix(floatArrayOf(
+                1.00f * b, 0f, 0f, 0f, 0f,
+                0f, 0.72f * b, 0f, 0f, 0f,
+                0f, 0f, 0.47f * b, 0f, 0f,
+                0f, 0f, 0f, 1f, 0f,
+            )))
+            ColorFilter.colorMatrix(m)
+        }
+        ThemeMode.RANSOM -> {
+            // Photocopied: near-monochrome, blown-out contrast, paper-white lift.
+            val m = ColorMatrix().also { saturate(it, 0.15f) }
+            m.timesAssign(contrast(1.55f))
+            m.timesAssign(ColorMatrix(floatArrayOf(
+                1.06f, 0f, 0f, 0f, 0f,
+                0f, 1.06f, 0f, 0f, 0f,
+                0f, 0f, 1.06f, 0f, 0f,
+                0f, 0f, 0f, 1f, 0f,
+            )))
+            ColorFilter.colorMatrix(m)
+        }
         ThemeMode.WEST -> {
             // sun-baked: warm amber wash, slightly desaturated, dimmed like old paper
             // (~ sepia-ish saturate(.72) brightness(.92) contrast(1.06)).

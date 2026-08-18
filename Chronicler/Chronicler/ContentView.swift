@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var auth: AuthStore
+    @EnvironmentObject var themeStore: ThemeStore
 
     var body: some View {
         Group {
@@ -22,10 +23,13 @@ struct ContentView: View {
                 LoginView()
             }
         }
-        .preferredColorScheme(.dark)
+        // Ransom Note is a LIGHT theme, and system-drawn chrome (text-field placeholders,
+        // picker labels) follows the colour scheme rather than our palette — forcing dark
+        // there made the search placeholder invisible on paper.
+        .preferredColorScheme(themeStore.mode == .ransom ? .light : .dark)
     }
 }
 
 #Preview {
-    ContentView().environmentObject(AuthStore())
+    ContentView().environmentObject(AuthStore()).environmentObject(ThemeStore())
 }

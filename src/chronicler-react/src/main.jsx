@@ -6,7 +6,7 @@ import './styles.css';
 // Apply the theme before first paint to avoid a flash of the default.
 // Precedence: ?theme= query (also persisted) > saved choice > tesla.
 const _urlTheme = new URLSearchParams(window.location.search).get('theme');
-const _validThemes = ['tesla', 'steampunk', 'garden', 'academia', 'noir', 'west'];
+const _validThemes = ['tesla', 'steampunk', 'garden', 'academia', 'noir', 'west', 'neon', 'forge', 'ransom'];
 const _theme = _validThemes.includes(_urlTheme)
   ? _urlTheme
   : (localStorage.getItem('chronicler_theme') || 'tesla');

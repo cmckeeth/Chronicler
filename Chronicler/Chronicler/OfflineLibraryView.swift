@@ -119,7 +119,8 @@ struct OfflineLibrarySheet: View {
                 }
         }
         .tint(Theme.brass)
-        .preferredColorScheme(.dark)
+        // Follows the palette: Ransom Note is light, everything else dark.
+        .preferredColorScheme(Theme.mode == .ransom ? .light : .dark)
     }
 }
 

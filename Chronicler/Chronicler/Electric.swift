@@ -457,6 +457,34 @@ struct ThemedBackground: View {
                 MesaSkyline()
                 DustOverlay()
                 TumbleweedOverlay()
+            } else if Theme.mode == .neon {
+                // Vaporwave: a magenta/indigo sky bleeding into a banded sun on the
+                // horizon, a wireframe grid scrolling toward the viewer, palms in
+                // silhouette, and a slow CRT flicker over the lot.
+                LinearGradient(colors: [Color(hex: 0x2a0b4a), Color(hex: 0x7a1170).opacity(0.65),
+                                        Color(hex: 0xff4fd8).opacity(0.22)],
+                               startPoint: .top, endPoint: .init(x: 0.5, y: 0.62))
+                    .ignoresSafeArea()
+                NeonSunGrid()
+                ScanlineOverlay()
+            } else if Theme.mode == .forge {
+                // Obsidian with heat rising: a molten pool churning along the bottom,
+                // glowing fissures cracking the rock, and sparks spitting upward.
+                RadialGradient(
+                    colors: [Color(hex: 0xff6a12).opacity(0.34), Color(hex: 0x8c1f04).opacity(0.14),
+                             Theme.bg.opacity(0.0)],
+                    center: UnitPoint(x: 0.5, y: 1.02), startRadius: 0, endRadius: 620)
+                    .ignoresSafeArea()
+                RadialGradient(
+                    colors: [Color.clear, Color.black.opacity(0.62)],
+                    center: .center, startRadius: 90, endRadius: 700)
+                    .ignoresSafeArea()
+                LavaFissures()
+                SparkOverlay()
+            } else if Theme.mode == .ransom {
+                // Photocopied paper: toner grain, halftone dots, a couple of streaks, and
+                // tape strips at the corners. Light, flat, deliberately cheap-looking.
+                XeroxPaper()
             }
             ElectricBackground(intensity: intensity)
         }
@@ -591,6 +619,285 @@ struct TumbleweedOverlay: View {
                     }
                 }
             }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+}
+
+
+// ── Neon Sunset FX ───────────────────────────────────────────────────────────
+
+// Vaporwave-only: a banded sun sitting on the horizon with a wireframe grid floor
+// scrolling toward the viewer, plus palm silhouettes flanking it. The grid is drawn in
+// perspective: rows are spaced by a squared progression so they bunch at the horizon,
+// and the whole set slides forward on a loop. Deterministic from the clock.
+struct NeonSunGrid: View {
+    var body: some View {
+        TimelineView(.animation) { tl in
+            let t = tl.date.timeIntervalSinceReferenceDate
+            Canvas { ctx, size in
+                let w = size.width, h = size.height
+                let horizon = h * 0.62
+
+                // Sun: a disc clipped to horizontal bands, sinking into the horizon.
+                let sunR = min(w, h) * 0.20
+                let cx = w / 2, cy = horizon - sunR * 0.28
+                var disc = Path(ellipseIn: CGRect(x: cx - sunR, y: cy - sunR,
+                                                  width: sunR * 2, height: sunR * 2))
+                ctx.fill(disc, with: .linearGradient(
+                    Gradient(colors: [Color(hex: 0xffe14f), Color(hex: 0xff4fd8), Color(hex: 0x9c2bff)]),
+                    startPoint: CGPoint(x: cx, y: cy - sunR), endPoint: CGPoint(x: cx, y: cy + sunR)))
+                // Band gaps widen toward the bottom of the disc.
+                var band = 0.0
+                var i = 0
+                while band < sunR * 2 {
+                    let gap = 3.0 + Double(i) * 1.5
+                    let y = cy - sunR + band
+                    ctx.fill(Path(CGRect(x: cx - sunR, y: y, width: sunR * 2, height: gap * 0.55)),
+                             with: .color(Color(hex: 0x150726).opacity(0.9)))
+                    band += gap + 6
+                    i += 1
+                }
+                disc = Path(ellipseIn: CGRect(x: cx - sunR, y: cy - sunR,
+                                              width: sunR * 2, height: sunR * 2))
+                ctx.stroke(disc, with: .color(Color(hex: 0xff8ce6).opacity(0.9)), lineWidth: 2)
+
+                // Ground below the horizon reads darker so the grid pops.
+                ctx.fill(Path(CGRect(x: 0, y: horizon, width: w, height: h - horizon)),
+                         with: .linearGradient(
+                            Gradient(colors: [Color(hex: 0x1b0733), Color(hex: 0x0d0418)]),
+                            startPoint: CGPoint(x: 0, y: horizon), endPoint: CGPoint(x: 0, y: h)))
+
+                let grid = Color(hex: 0x22e0ff)
+                // Horizontal rows: perspective spacing, scrolling forward on a 2.6s loop.
+                let phase = (t / 2.6).truncatingRemainder(dividingBy: 1)
+                for k in 0..<16 {
+                    let p = (Double(k) + phase) / 16                 // 0 at horizon → 1 at viewer
+                    let y = horizon + (h - horizon) * p * p          // squared = perspective bunching
+                    if y > h { continue }
+                    ctx.stroke(Path { pth in
+                        pth.move(to: CGPoint(x: 0, y: y)); pth.addLine(to: CGPoint(x: w, y: y))
+                    }, with: .color(grid.opacity(0.10 + 0.5 * p)), lineWidth: 0.6 + 1.4 * p)
+                }
+                // Verticals: fan out from a vanishing point at the horizon centre.
+                for k in -9...9 {
+                    let xBottom = cx + CGFloat(k) * (w / 6)
+                    ctx.stroke(Path { pth in
+                        pth.move(to: CGPoint(x: cx, y: horizon))
+                        pth.addLine(to: CGPoint(x: xBottom, y: h))
+                    }, with: .color(grid.opacity(0.30)), lineWidth: 1)
+                }
+                // Horizon glow line.
+                ctx.stroke(Path { pth in
+                    pth.move(to: CGPoint(x: 0, y: horizon)); pth.addLine(to: CGPoint(x: w, y: horizon))
+                }, with: .color(Color(hex: 0xff8ce6).opacity(0.85)), lineWidth: 2)
+
+                // Palms: a leaning trunk with drooping fronds, flanking the sun.
+                func palm(_ baseX: CGFloat, _ scale: CGFloat, _ flip: CGFloat) {
+                    let baseY = horizon + 6
+                    let hgt = min(w, h) * 0.26 * scale
+                    var trunk = Path()
+                    trunk.move(to: CGPoint(x: baseX, y: baseY))
+                    trunk.addQuadCurve(to: CGPoint(x: baseX + 16 * scale * flip, y: baseY - hgt),
+                                       control: CGPoint(x: baseX + 2 * scale * flip, y: baseY - hgt * 0.6))
+                    ctx.stroke(trunk, with: .color(Color(hex: 0x120423)), lineWidth: 4 * scale)
+                    let topX = baseX + 16 * scale * flip, topY = baseY - hgt
+                    for f in 0..<6 {
+                        let a = Double(f) / 5 * .pi - .pi * 0.08
+                        var frond = Path()
+                        frond.move(to: CGPoint(x: topX, y: topY))
+                        frond.addQuadCurve(
+                            to: CGPoint(x: topX + CGFloat(cos(a)) * 34 * scale,
+                                        y: topY + CGFloat(abs(sin(a))) * 8 * scale + 16 * scale),
+                            control: CGPoint(x: topX + CGFloat(cos(a)) * 22 * scale,
+                                             y: topY - 14 * scale))
+                        ctx.stroke(frond, with: .color(Color(hex: 0x120423)), lineWidth: 3 * scale)
+                    }
+                }
+                palm(w * 0.13, 1.0, 1)
+                palm(w * 0.88, 0.85, -1)
+            }
+            .drawingGroup()
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+}
+
+// Neon-only: CRT scanlines plus a slow brightness roll, so the whole screen reads as a
+// tube rather than a panel. Cheap: thin dark bands drawn every 3pt.
+struct ScanlineOverlay: View {
+    var body: some View {
+        TimelineView(.animation) { tl in
+            let t = tl.date.timeIntervalSinceReferenceDate
+            Canvas { ctx, size in
+                var y = 0.0
+                while y < size.height {
+                    ctx.fill(Path(CGRect(x: 0, y: y, width: size.width, height: 1)),
+                             with: .color(Color.black.opacity(0.18)))
+                    y += 3
+                }
+                // The roll: a soft bright band sweeping down the screen every ~7s.
+                let rollY = CGFloat((t / 7).truncatingRemainder(dividingBy: 1)) * size.height
+                ctx.fill(Path(CGRect(x: 0, y: rollY - 40, width: size.width, height: 80)),
+                         with: .linearGradient(
+                            Gradient(colors: [Color.white.opacity(0), Color.white.opacity(0.05),
+                                              Color.white.opacity(0)]),
+                            startPoint: CGPoint(x: 0, y: rollY - 40),
+                            endPoint: CGPoint(x: 0, y: rollY + 40)))
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+}
+
+// ── Molten Forge FX ──────────────────────────────────────────────────────────
+
+// Forge-only: a churning molten pool along the bottom plus glowing fissures cracking
+// up through the rock. The pool surface is a sine sum so it deforms without repeating
+// obviously; the fissures pulse on independent periods.
+struct LavaFissures: View {
+    var body: some View {
+        TimelineView(.animation) { tl in
+            let t = tl.date.timeIntervalSinceReferenceDate
+            Canvas { ctx, size in
+                let w = size.width, h = size.height
+
+                // Molten pool: a wavy top edge filled with a hot gradient.
+                let surface = h * 0.96
+                var pool = Path()
+                pool.move(to: CGPoint(x: 0, y: h))
+                var x = 0.0
+                while x <= Double(w) {
+                    let y = surface
+                        + sin(x / 70 + t * 0.7) * 7
+                        + sin(x / 33 - t * 1.1) * 4
+                    pool.addLine(to: CGPoint(x: x, y: y))
+                    x += 6
+                }
+                pool.addLine(to: CGPoint(x: w, y: h))
+                pool.closeSubpath()
+                ctx.fill(pool, with: .linearGradient(
+                    Gradient(colors: [Color(hex: 0xffd23f), Color(hex: 0xff6a12), Color(hex: 0xb52200)]),
+                    startPoint: CGPoint(x: 0, y: surface - 10), endPoint: CGPoint(x: 0, y: h)))
+                ctx.stroke(pool, with: .color(Color(hex: 0xffe9a8).opacity(0.8)), lineWidth: 1.5)
+
+                // Fissures: jagged cracks climbing from the pool, breathing on their own
+                // periods so the rock looks alive rather than animated in lockstep.
+                let fissureX: [CGFloat] = [0.06, 0.17, 0.23, 0.38, 0.52, 0.61, 0.74, 0.83, 0.94]
+                for (k, fxFrac) in fissureX.enumerated() {
+                    let fx = w * fxFrac
+                    let period = 2.2 + Double(k % 4) * 0.9
+                    let pulse = 0.35 + 0.65 * (0.5 - 0.5 * cos(t / period * 2 * .pi))
+                    let len = h * CGFloat(0.05 + 0.05 * Double(k % 4))
+                    var crack = Path()
+                    crack.move(to: CGPoint(x: fx, y: surface))
+                    var yy = surface
+                    var xx = fx
+                    var seg = 0
+                    while yy > surface - len {
+                        yy -= 14
+                        xx += CGFloat(sin(Double(seg) * 2.3 + Double(k)) * 9)
+                        crack.addLine(to: CGPoint(x: xx, y: yy))
+                        seg += 1
+                    }
+                    ctx.stroke(crack, with: .color(Color(hex: 0xff6a12).opacity(0.22 * pulse)),
+                               style: StrokeStyle(lineWidth: 9, lineCap: .round))
+                    ctx.stroke(crack, with: .color(Color(hex: 0xffb04a).opacity(0.75 * pulse)),
+                               style: StrokeStyle(lineWidth: 2.6, lineCap: .round))
+                    ctx.stroke(crack, with: .color(Color(hex: 0xffe9a8).opacity(0.9 * pulse)),
+                               style: StrokeStyle(lineWidth: 1, lineCap: .round))
+                }
+            }
+            .blendMode(.screen)
+            .drawingGroup()
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+}
+
+// Forge-only: sparks spitting up off the pool, rising fast, cooling from white to red
+// and fading. Deterministic per index so it survives resume.
+struct SparkOverlay: View {
+    var body: some View {
+        TimelineView(.animation) { tl in
+            let t = tl.date.timeIntervalSinceReferenceDate
+            Canvas { ctx, size in
+                let w = size.width, h = size.height
+                let span = Double(h * 0.8)
+                for i in 0..<40 {
+                    let fx = Double((i * 83) % 1000) / 1000.0
+                    let speed = 110.0 + Double((i * 47) % 130)
+                    let prog = (t * speed + Double(i) * 37).truncatingRemainder(dividingBy: span)
+                    let life = 1 - prog / span
+                    let sway = sin(t * 1.6 + Double(i)) * 14
+                    let x = CGFloat(fx) * w + CGFloat(sway)
+                    let y = h * 0.96 - CGFloat(prog)
+                    let r = CGFloat(1 + (i % 3))
+                    // hot core fading to red as it climbs
+                    let hot = Color(hex: 0xffe9a8).opacity(life * 0.95)
+                    let cool = Color(hex: 0xff3c00).opacity(life * 0.5)
+                    ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r * 2.6, height: r * 2.6)),
+                             with: .color(cool))
+                    ctx.fill(Path(ellipseIn: CGRect(x: x + r * 0.6, y: y + r * 0.6,
+                                                    width: r, height: r)), with: .color(hot))
+                }
+            }
+            .blendMode(.screen)
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+}
+
+// ── Ransom Note FX ───────────────────────────────────────────────────────────
+
+// Ransom-only: the page itself. Halftone dot screen, toner streaks down the sheet, and
+// two strips of tape at the corners. Static apart from a barely-perceptible tape flutter,
+// because photocopies don't animate.
+struct XeroxPaper: View {
+    var body: some View {
+        Canvas { ctx, size in
+            let w = size.width, h = size.height
+            // Halftone: a dot screen, denser toward the edges like a bad copy.
+            var y = 0.0
+            var row = 0
+            while y < Double(h) {
+                var x = (row % 2 == 0) ? 0.0 : 3.0
+                while x < Double(w) {
+                    let edge = max(abs(x / Double(w) - 0.5), abs(y / Double(h) - 0.5)) * 2
+                    let a = 0.03 + 0.09 * edge * edge
+                    ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: 1.4, height: 1.4)),
+                             with: .color(Color.black.opacity(a)))
+                    x += 6
+                }
+                y += 6
+                row += 1
+            }
+            // Toner streaks: a few vertical smears, the classic dying-drum artefact.
+            for k in 0..<5 {
+                let sx = w * CGFloat(0.14 + 0.18 * Double(k))
+                let sw = CGFloat(6 + (k % 3) * 5)
+                ctx.fill(Path(CGRect(x: sx, y: 0, width: sw, height: h)),
+                         with: .linearGradient(
+                            Gradient(colors: [Color.black.opacity(0.05), Color.black.opacity(0.0),
+                                              Color.black.opacity(0.035)]),
+                            startPoint: CGPoint(x: sx, y: 0), endPoint: CGPoint(x: sx, y: h)))
+            }
+            // Tape: translucent strips across two corners, rotated by hand.
+            func tape(_ rect: CGRect, _ deg: Double) {
+                var path = Path(rect)
+                path = path.applying(CGAffineTransform(translationX: -rect.midX, y: -rect.midY)
+                    .concatenating(CGAffineTransform(rotationAngle: deg * .pi / 180))
+                    .concatenating(CGAffineTransform(translationX: rect.midX, y: rect.midY)))
+                ctx.fill(path, with: .color(Color(hex: 0xd8d2be).opacity(0.75)))
+                ctx.stroke(path, with: .color(Color.black.opacity(0.10)), lineWidth: 1)
+            }
+            tape(CGRect(x: -26, y: 52, width: 120, height: 26), -38)
+            tape(CGRect(x: w - 94, y: h - 96, width: 120, height: 26), -38)
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
@@ -755,8 +1062,8 @@ extension View {
 struct ChargedRow: ViewModifier {
     @State private var on = false
     func body(content: Content) -> some View {
-        // Steampunk + Garden: steady edged row, no pulsing charge. Tesla: pulses.
-        if Theme.mode != .tesla {
+        // Steady edged row everywhere except the electric themes (Tesla, Neon).
+        if Theme.mode != .tesla && Theme.mode != .neon {
             content
                 .overlay(RoundedRectangle(cornerRadius: 4)
                     .stroke(Theme.glow.opacity(0.22), lineWidth: 1))

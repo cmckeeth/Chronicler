@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.drawscope.rotate
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.hypot
@@ -324,6 +325,221 @@ fun WestBackdrop(modifier: Modifier = Modifier) {
     }
 }
 
+
+// NEON-only backdrop: a banded sun on the horizon, a wireframe grid scrolling toward the
+// viewer in perspective, palm silhouettes, and CRT scanlines with a slow brightness roll.
+// Mirrors the iOS NeonSunGrid + ScanlineOverlay.
+@Composable
+fun NeonBackdrop(modifier: Modifier = Modifier) {
+    var t by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        val start = withFrameNanos { it }
+        while (true) { val now = withFrameNanos { it }; t = (now - start) / 1_000_000_000f }
+    }
+    Canvas(modifier) {
+        val w = size.width; val h = size.height
+        val horizon = h * 0.62f
+
+        // Sky: indigo bleeding to magenta at the horizon.
+        drawRect(Brush.verticalGradient(
+            listOf(Color(0xFF2A0B4A), Color(0xFF7A1170).copy(alpha = 0.65f),
+                   Color(0xFFFF4FD8).copy(alpha = 0.22f)),
+            startY = 0f, endY = horizon), size = Size(w, horizon))
+
+        // Sun: a gradient disc with widening horizontal band gaps punched out of it.
+        val sunR = minOf(w, h) * 0.20f
+        val cx = w / 2f; val cy = horizon - sunR * 0.28f
+        drawCircle(brush = Brush.verticalGradient(
+            listOf(Color(0xFFFFE14F), Color(0xFFFF4FD8), Color(0xFF9C2BFF)),
+            startY = cy - sunR, endY = cy + sunR), radius = sunR, center = Offset(cx, cy))
+        var band = 0f; var i = 0
+        while (band < sunR * 2) {
+            val gap = 3f + i * 1.5f
+            drawRect(Color(0xFF150726).copy(alpha = 0.9f),
+                topLeft = Offset(cx - sunR, cy - sunR + band), size = Size(sunR * 2, gap * 0.55f))
+            band += gap + 6f; i++
+        }
+        drawCircle(Color(0xFFFF8CE6).copy(alpha = 0.9f), radius = sunR, center = Offset(cx, cy),
+            style = Stroke(width = 2f))
+
+        // Ground.
+        drawRect(Brush.verticalGradient(listOf(Color(0xFF1B0733), Color(0xFF0D0418)),
+            startY = horizon, endY = h), topLeft = Offset(0f, horizon), size = Size(w, h - horizon))
+
+        val grid = Color(0xFF22E0FF)
+        // Rows: squared spacing bunches them at the horizon; the set scrolls forward.
+        val phase = (t / 2.6f) % 1f
+        for (k in 0 until 16) {
+            val p = (k + phase) / 16f
+            val y = horizon + (h - horizon) * p * p
+            if (y > h) continue
+            drawLine(grid.copy(alpha = 0.10f + 0.5f * p), Offset(0f, y), Offset(w, y),
+                strokeWidth = 0.6f + 1.4f * p)
+        }
+        // Verticals fanning from the vanishing point.
+        for (k in -9..9) {
+            drawLine(grid.copy(alpha = 0.30f), Offset(cx, horizon),
+                Offset(cx + k * (w / 6f), h), strokeWidth = 1f)
+        }
+        drawLine(Color(0xFFFF8CE6).copy(alpha = 0.85f), Offset(0f, horizon), Offset(w, horizon),
+            strokeWidth = 2f)
+
+        // Palms: leaning trunk plus drooping fronds.
+        fun palm(baseX: Float, scale: Float, flip: Float) {
+            val baseY = horizon + 6f
+            val hgt = minOf(w, h) * 0.26f * scale
+            val topX = baseX + 16f * scale * flip; val topY = baseY - hgt
+            val trunk = Path().apply {
+                moveTo(baseX, baseY)
+                quadraticBezierTo(baseX + 2f * scale * flip, baseY - hgt * 0.6f, topX, topY)
+            }
+            drawPath(trunk, Color(0xFF120423), style = Stroke(width = 4f * scale))
+            for (f in 0 until 6) {
+                val a = f / 5f * Math.PI.toFloat() - Math.PI.toFloat() * 0.08f
+                val frond = Path().apply {
+                    moveTo(topX, topY)
+                    quadraticBezierTo(topX + cos(a) * 22f * scale, topY - 14f * scale,
+                        topX + cos(a) * 34f * scale,
+                        topY + abs(sin(a)) * 8f * scale + 16f * scale)
+                }
+                drawPath(frond, Color(0xFF120423), style = Stroke(width = 3f * scale))
+            }
+        }
+        palm(w * 0.13f, 1.0f, 1f)
+        palm(w * 0.88f, 0.85f, -1f)
+
+        // CRT scanlines + a bright band rolling down every ~7s.
+        var y = 0f
+        while (y < h) { drawRect(Color.Black.copy(alpha = 0.18f), Offset(0f, y), Size(w, 1f)); y += 3f }
+        val rollY = ((t / 7f) % 1f) * h
+        drawRect(Brush.verticalGradient(
+            listOf(Color.Transparent, Color.White.copy(alpha = 0.05f), Color.Transparent),
+            startY = rollY - 40f, endY = rollY + 40f),
+            topLeft = Offset(0f, rollY - 40f), size = Size(w, 80f))
+    }
+}
+
+// FORGE-only backdrop: a churning molten pool along the bottom, glowing fissures cracking
+// up through the rock, and sparks spitting upward. Mirrors iOS LavaFissures + SparkOverlay.
+@Composable
+fun ForgeBackdrop(modifier: Modifier = Modifier) {
+    var t by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        val start = withFrameNanos { it }
+        while (true) { val now = withFrameNanos { it }; t = (now - start) / 1_000_000_000f }
+    }
+    Canvas(modifier) {
+        val w = size.width; val h = size.height
+        drawRect(Color(0xFF0B0705))
+        // Heat rising from below, then a vignette closing the corners.
+        val hc = Offset(w * 0.5f, h * 1.02f); val hr = hypot(w, h) * 0.62f
+        drawCircle(brush = Brush.radialGradient(
+            listOf(Color(0xFFFF6A12).copy(alpha = 0.34f), Color(0xFF8C1F04).copy(alpha = 0.14f),
+                   Color(0x00FF6A12)), center = hc, radius = hr), radius = hr, center = hc)
+        val vc = Offset(w * 0.5f, h * 0.5f); val vr = hypot(w, h) * 0.6f
+        drawCircle(brush = Brush.radialGradient(listOf(Color(0x00000000), Color(0x9E000000)),
+            center = vc, radius = vr), radius = vr, center = vc)
+
+        val surface = h * 0.96f
+        // Fissures: shorter cracks near the pool, unevenly spaced, each breathing on its
+        // own period so the rock looks alive rather than animated in lockstep.
+        val fissureX = floatArrayOf(0.06f, 0.17f, 0.23f, 0.38f, 0.52f, 0.61f, 0.74f, 0.83f, 0.94f)
+        fissureX.forEachIndexed { k, fxFrac ->
+            val fx = w * fxFrac
+            val period = 2.2f + (k % 4) * 0.9f
+            val pulse = 0.35f + 0.65f * (0.5f - 0.5f * cos(t / period * 2f * Math.PI.toFloat()))
+            val len = h * (0.05f + 0.05f * (k % 4))
+            val crack = Path().apply {
+                moveTo(fx, surface)
+                var yy = surface; var xx = fx; var seg = 0
+                while (yy > surface - len) {
+                    yy -= 14f; xx += sin(seg * 2.3f + k) * 9f
+                    lineTo(xx, yy); seg++
+                }
+            }
+            drawPath(crack, Color(0xFFFF6A12).copy(alpha = 0.22f * pulse),
+                style = Stroke(width = 9f, cap = StrokeCap.Round))
+            drawPath(crack, Color(0xFFFFB04A).copy(alpha = 0.75f * pulse),
+                style = Stroke(width = 2.6f, cap = StrokeCap.Round))
+            drawPath(crack, Color(0xFFFFE9A8).copy(alpha = 0.9f * pulse),
+                style = Stroke(width = 1f, cap = StrokeCap.Round))
+        }
+
+        // Molten pool: a wavy top edge over a hot gradient.
+        val pool = Path().apply {
+            moveTo(0f, h)
+            var x = 0f
+            while (x <= w) {
+                lineTo(x, surface + sin(x / 70f + t * 0.7f) * 7f + sin(x / 33f - t * 1.1f) * 4f)
+                x += 6f
+            }
+            lineTo(w, h); close()
+        }
+        drawPath(pool, Brush.verticalGradient(
+            listOf(Color(0xFFFFD23F), Color(0xFFFF6A12), Color(0xFFB52200)),
+            startY = surface - 10f, endY = h))
+        drawPath(pool, Color(0xFFFFE9A8).copy(alpha = 0.8f), style = Stroke(width = 1.5f))
+
+        // Sparks: rising fast, cooling white → red, fading out.
+        val span = h * 0.8f
+        for (i in 0 until 40) {
+            val fx = ((i * 83) % 1000) / 1000f
+            val speed = 110f + ((i * 47) % 130)
+            val prog = (t * speed + i * 37f) % span
+            val life = 1f - prog / span
+            val x = fx * w + sin(t * 1.6f + i) * 14f
+            val y = surface - prog
+            val r = 1f + (i % 3)
+            drawCircle(Color(0xFFFF3C00).copy(alpha = life * 0.5f), radius = r * 1.3f,
+                center = Offset(x, y), blendMode = BlendMode.Plus)
+            drawCircle(Color(0xFFFFE9A8).copy(alpha = life * 0.95f), radius = r * 0.5f,
+                center = Offset(x, y), blendMode = BlendMode.Plus)
+        }
+    }
+}
+
+// RANSOM-only backdrop: the page itself — halftone dot screen, toner streaks, and two
+// strips of tape at the corners. Static, because photocopies don't animate.
+@Composable
+fun RansomBackdrop(modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+        val w = size.width; val h = size.height
+        drawRect(Color(0xFFE8E4D9))
+        // Halftone, denser toward the edges like a bad copy.
+        var y = 0f; var row = 0
+        while (y < h) {
+            var x = if (row % 2 == 0) 0f else 3f
+            while (x < w) {
+                val edge = maxOf(abs(x / w - 0.5f), abs(y / h - 0.5f)) * 2f
+                drawCircle(Color.Black.copy(alpha = 0.03f + 0.09f * edge * edge),
+                    radius = 0.7f, center = Offset(x, y))
+                x += 6f
+            }
+            y += 6f; row++
+        }
+        // Toner streaks: the classic dying-drum artefact.
+        for (k in 0 until 5) {
+            val sx = w * (0.14f + 0.18f * k)
+            val sw = 6f + (k % 3) * 5f
+            drawRect(Brush.verticalGradient(
+                listOf(Color.Black.copy(alpha = 0.05f), Color.Transparent,
+                       Color.Black.copy(alpha = 0.035f)), startY = 0f, endY = h),
+                topLeft = Offset(sx, 0f), size = Size(sw, h))
+        }
+        // Tape strips, rotated by hand.
+        fun tape(left: Float, top: Float) {
+            rotate(-38f, pivot = Offset(left + 60f, top + 13f)) {
+                drawRect(Color(0xFFD8D2BE).copy(alpha = 0.75f),
+                    topLeft = Offset(left, top), size = Size(120f, 26f))
+                drawRect(Color.Black.copy(alpha = 0.10f), topLeft = Offset(left, top),
+                    size = Size(120f, 26f), style = Stroke(width = 1f))
+            }
+        }
+        tape(-26f, 52f)
+        tape(w - 94f, h - 96f)
+    }
+}
+
 private fun DrawScope.drawField(t: Float, intensity: Float) {
     val w = size.width; val h = size.height
 
@@ -422,7 +638,19 @@ private fun DrawScope.strokeBolt(pts: List<Offset>, alpha: Float, scale: Float) 
 // A light electric "charge" — faint pulsing border. For elements that should feel
 // energized without the full panel treatment (e.g. every chapter row). Mirrors iOS charged().
 fun Modifier.charged(): Modifier = composed {
-    if (Theme.themeMode == ThemeMode.GARDEN) {
+    if (Theme.themeMode == ThemeMode.NEON) {
+        // Pulsing magenta edge over a cyan rim — the other electric theme.
+        val shape = RoundedCornerShape(12.dp)
+        val tr = rememberInfiniteTransition(label = "neon")
+        val p by tr.animateFloat(
+            initialValue = 0.25f, targetValue = 0.7f,
+            animationSpec = infiniteRepeatable(tween(1900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+            label = "n")
+        this
+            .shadow((4f + 10f * p).dp, shape, spotColor = Theme.brass, ambientColor = Theme.copper)
+            .border(1.dp, Theme.copper.copy(alpha = 0.5f), shape)
+            .border((1.2f + 1f * p).dp, Theme.brass.copy(alpha = 0.4f + 0.5f * p), shape)
+    } else if (Theme.themeMode == ThemeMode.GARDEN) {
         // No electricity, no glass: a steady, soft green edge with generous 16.dp corners.
         val shape = RoundedCornerShape(16.dp)
         this
@@ -446,6 +674,16 @@ fun Modifier.charged(): Modifier = composed {
         this
             .shadow(4.dp, shape, spotColor = Color.Black, ambientColor = Color.Black)
             .border(1.dp, Theme.borderBrass.copy(alpha = 0.35f), shape)
+    } else if (Theme.themeMode == ThemeMode.FORGE) {
+        // A steady hot edge with hard corners.
+        val shape = RoundedCornerShape(1.dp)
+        this
+            .shadow(4.dp, shape, spotColor = Theme.brass, ambientColor = Theme.rust)
+            .border(1.dp, Theme.brass.copy(alpha = 0.4f), shape)
+    } else if (Theme.themeMode == ThemeMode.RANSOM) {
+        // Paper: a thin ink rule, no glow at all.
+        val shape = RoundedCornerShape(1.dp)
+        this.border(1.dp, Theme.parchment.copy(alpha = 0.35f), shape)
     } else if (Theme.themeMode == ThemeMode.WEST) {
         // No electricity: a steady sun-baked leather edge with squared 3.dp corners.
         val shape = RoundedCornerShape(3.dp)

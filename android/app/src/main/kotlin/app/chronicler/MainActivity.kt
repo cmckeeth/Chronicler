@@ -76,6 +76,15 @@ fun App(auth: AuthStore) {
             } else if (Theme.themeMode == ThemeMode.WEST) {
                 // Desert dusk: low sun, mesas + saguaros, hanging dust, tumbleweeds.
                 WestBackdrop(modifier = Modifier.fillMaxSize())
+            } else if (Theme.themeMode == ThemeMode.NEON) {
+                // Vaporwave: banded sun, scrolling perspective grid, palms, scanlines.
+                NeonBackdrop(modifier = Modifier.fillMaxSize())
+            } else if (Theme.themeMode == ThemeMode.FORGE) {
+                // Obsidian and lava: glowing fissures, molten pool, spitting sparks.
+                ForgeBackdrop(modifier = Modifier.fillMaxSize())
+            } else if (Theme.themeMode == ThemeMode.RANSOM) {
+                // Photocopied paper: halftone, toner streaks, tape at the corners.
+                RansomBackdrop(modifier = Modifier.fillMaxSize())
             }
             // Inset content below the status bar / camera cutout and above the nav bar.
             Box(Modifier.fillMaxSize().systemBarsPadding()) {

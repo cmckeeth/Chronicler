@@ -128,6 +128,26 @@ extension View {
                 .colorMultiply(Color(hex: 0xe8c088))
                 .brightness(-0.08)
                 .contrast(1.06)
+        } else if Theme.mode == .neon {
+            // Neon = VHS dub: saturation cranked, magenta lift, punchy contrast.
+            self
+                .saturation(1.5)
+                .colorMultiply(Color(hex: 0xffc8f0))
+                .contrast(1.12)
+                .brightness(0.02)
+        } else if Theme.mode == .forge {
+            // Forge = lit by the pool: hot amber wash, deep shadows, high contrast.
+            self
+                .saturation(1.1)
+                .colorMultiply(Color(hex: 0xffb877))
+                .contrast(1.18)
+                .brightness(-0.05)
+        } else if Theme.mode == .ransom {
+            // Ransom = photocopied: near-monochrome, blown-out contrast, paper-white lift.
+            self
+                .saturation(0.15)
+                .contrast(1.55)
+                .brightness(0.06)
         } else if Theme.mode == .garden {
             // Garden = lush/crisp: a saturation bump, no sepia, so foliage pops.
             self

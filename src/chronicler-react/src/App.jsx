@@ -250,6 +250,51 @@ function WestFX() {
   );
 }
 
+// Neon-Sunset-only backdrop: a banded sun on the horizon, a wireframe grid scrolling
+// toward the viewer, palm silhouettes, and CRT scanlines with a slow brightness roll.
+function NeonFX() {
+  return (
+    <div className="neon-fx" aria-hidden="true">
+      <div className="neon-sun" />
+      <div className="neon-horizon" />
+      <div className="neon-grid" />
+      <span className="neon-palm neon-palm-l" />
+      <span className="neon-palm neon-palm-r" />
+      <div className="neon-scan" />
+      <div className="neon-roll" />
+    </div>
+  );
+}
+
+// Molten-Forge-only backdrop: a churning pool along the bottom, glowing fissures
+// climbing off it, and sparks rising and cooling.
+function ForgeFX() {
+  // Uneven spacing so the cracks read as rock, not as a row of tally marks.
+  const fissures = [6, 17, 23, 38, 52, 61, 74, 83, 94].map((left, i) => ({
+    left, height: 5 + (i % 4) * 5, dur: 2.2 + (i % 4) * 0.9,
+  }));
+  const sparks = Array.from({ length: 26 }, (_, i) => ({
+    left: (i * 83) % 100,
+    dur: 3.2 + ((i * 47) % 130) / 40,
+    delay: -((i * 37) % 60) / 10,
+    size: 2 + (i % 3),
+  }));
+  return (
+    <div className="forge-fx" aria-hidden="true">
+      {fissures.map((f, i) => (
+        <span key={i} className="fissure"
+          style={{ left: `${f.left}%`, height: `${f.height}vh`, animationDuration: `${f.dur}s` }} />
+      ))}
+      {sparks.map((s, i) => (
+        <span key={i} className="spark"
+          style={{ left: `${s.left}%`, width: s.size, height: s.size,
+                   animationDuration: `${s.dur}s`, animationDelay: `${s.delay}s` }} />
+      ))}
+      <div className="lava-pool" />
+    </div>
+  );
+}
+
 function CornerControls() {
   const [theme, setTheme] = useState(() => localStorage.getItem('chronicler_theme') || 'tesla');
   useEffect(() => {
@@ -274,6 +319,9 @@ function CornerControls() {
         <option value="academia">📖 Dark Academia</option>
         <option value="noir">🦇 Blackletter Noir</option>
         <option value="west">🤠 Wild West</option>
+        <option value="neon">🌴 Neon Sunset</option>
+        <option value="forge">🌋 Molten Forge</option>
+        <option value="ransom">✂️ Ransom Note</option>
       </select>
     </div>
   );
@@ -289,6 +337,8 @@ export default function App() {
       <AcademiaFX />
       <NoirFX />
       <WestFX />
+      <NeonFX />
+      <ForgeFX />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Protected><Library /></Protected>} />

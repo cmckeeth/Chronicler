@@ -46,6 +46,14 @@ struct ChroniclerApp: App {
             "Rye-Regular",
             "ZillaSlab-Regular",
             "ZillaSlab-SemiBold",
+            // Neon Sunset: hollow neon-tube wordmark + wide techno UI face.
+            "Monoton-Regular",
+            "Michroma-Regular",
+            // Molten Forge: heavy molten slab.
+            "AlfaSlabOne-Regular",
+            // Ransom Note: photocopied typewriter (the wordmark mixes several of the
+            // above per letter — see RansomWordmark).
+            "SpecialElite-Regular",
         ]
         for name in names {
             guard let url = Bundle.main.url(forResource: name, withExtension: "ttf") else { continue }
