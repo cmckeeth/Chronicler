@@ -3,6 +3,10 @@ services:
     build:
       context: src/chronicler-react
       dockerfile: Dockerfile
+      args:
+        # Set by deploy.sh (VERSION + git commit count). Falls back to the
+        # package.json version for a bare `docker compose up`.
+        APP_VERSION: ${APP_VERSION:-}
     ports:
       - "5161:5161"
     depends_on:

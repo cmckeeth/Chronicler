@@ -31,7 +31,10 @@ if [ ! -f "$ASC_KEY_PATH" ]; then
   exit 1
 fi
 
-echo "Deploying iOS build $(git rev-list --count HEAD) to TestFlight (team $APPLE_TEAM_ID)…"
+# Version = VERSION file (major.minor) + commit count (patch), matching deploy.sh.
+# The Fastfile computes the same thing and passes it to xcodebuild.
+echo "Deploying iOS $(tr -d '[:space:]' < ../VERSION).$(git rev-list --count HEAD)" \
+     "(build $(git rev-list --count HEAD)) to TestFlight (team $APPLE_TEAM_ID)…"
 if command -v bundle >/dev/null 2>&1 && [ -f Gemfile.lock ]; then
   bundle exec fastlane beta
 else

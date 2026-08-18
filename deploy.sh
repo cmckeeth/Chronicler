@@ -8,37 +8,34 @@ GRADLE_BUILD="$ANDROID_DIR/app/build.gradle.kts"
 API_UPDATES_DIR="updates"
 export ANDROID_HOME="${ANDROID_HOME:-/home/corbin/Android/Sdk}"
 
-# ── Version bump ──────────────────────────────────────────────────────────────
-# Auto-increment patch from the last built APK. To jump major/minor, just set a
-# higher versionName in build.gradle.kts — the manual value wins when it's ahead.
+# ── Version ───────────────────────────────────────────────────────────────────
+# Derived, never stored: major.minor comes from the repo-root VERSION file, the
+# patch is the git commit count. Every deploy therefore ships a higher version
+# with nothing to bump or commit, and all three frontends (iOS via the fastlane
+# Fastfile, web via the APP_VERSION build arg below) compute the SAME number.
+# To cut a feature release, edit VERSION — that's the only manual step.
+#
+# The old scheme inferred the next version from the newest APK filename in
+# updates/ and sed'd it into build.gradle.kts without ever committing, so the
+# repo said 3.2.0 while the server served 3.2.59. Nothing is written now.
 
-LAST_VER=$(ls "$API_UPDATES_DIR"/Chronicler-v*.apk 2>/dev/null \
-    | sed 's/.*Chronicler-v\(.*\)\.apk/\1/' \
-    | sort -t. -k1,1n -k2,2n -k3,3n \
-    | tail -n1) || true
+BASE_VER=$(tr -d '[:space:]' < VERSION)
+BUILD_NUM=$(git rev-list --count HEAD)
+NEW_VER="$BASE_VER.$BUILD_NUM"
 
-GRADLE_VER=$(grep 'versionName' "$GRADLE_BUILD" | sed 's/.*"\(.*\)".*/\1/' | head -n1)
+MAJOR=$(echo "$BASE_VER" | cut -d. -f1)
+MINOR=$(echo "$BASE_VER" | cut -d. -f2)
+# versionCode must only ever increase or Android refuses the update. This scheme
+# leaves 4 digits for the patch and clears the 30259 that shipped under the old
+# major*10000+minor*100+patch formula.
+NEW_CODE=$((MAJOR * 1000000 + MINOR * 10000 + BUILD_NUM))
 
-if [[ -z "$LAST_VER" ]]; then
-    NEW_VER="$GRADLE_VER"
-else
-    # Candidate from auto patch-bump of the last APK...
-    PMAJOR=$(echo "$LAST_VER" | cut -d. -f1)
-    PMINOR=$(echo "$LAST_VER" | cut -d. -f2)
-    PPATCH=$(echo "$LAST_VER" | cut -d. -f3)
-    CANDIDATE="$PMAJOR.$PMINOR.$((PPATCH + 1))"
-    # ...but a manually-set higher versionName wins (major/minor bumps).
-    NEW_VER=$(printf '%s\n%s\n' "$CANDIDATE" "$GRADLE_VER" | sort -V | tail -n1)
-fi
-
-MAJOR=$(echo "$NEW_VER" | cut -d. -f1)
-MINOR=$(echo "$NEW_VER" | cut -d. -f2)
-PATCH=$(echo "$NEW_VER" | cut -d. -f3)
-NEW_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
-
-echo "Bumping $LAST_VER → $NEW_VER (versionCode $NEW_CODE)"
+echo "Version $NEW_VER (versionCode $NEW_CODE)"
 sed -i "s|versionName = \".*\"|versionName = \"$NEW_VER\"|" "$GRADLE_BUILD"
 sed -i "s|versionCode = .*|versionCode = $NEW_CODE|" "$GRADLE_BUILD"
+# The edits above are deliberately left uncommitted — they're regenerated from
+# VERSION + commit count on every build, so the server's working copy drifting
+# from the repo no longer matters.
 
 # ── Build Android APK (debug-signed, mirrors prior pipeline) ─────────────────
 
@@ -62,6 +59,10 @@ echo "APK saved: $API_UPDATES_DIR/Chronicler-v$NEW_VER.apk"
 # ── Deploy via docker compose ─────────────────────────────────────────────────
 
 echo "Deploying API..."
+# The web image builds from src/chronicler-react, which has neither .git nor the
+# repo-root VERSION in its build context — so the version is passed in as a build
+# arg (see docker-compose.yml + the Dockerfile) rather than read from disk.
+export APP_VERSION="$NEW_VER"
 docker compose up -d --build
 
 echo "Waiting for health check..."

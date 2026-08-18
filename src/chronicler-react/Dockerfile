@@ -3,6 +3,10 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
+# Version comes from deploy.sh (VERSION file + git commit count); vite falls back
+# to the package.json version when it's absent.
+ARG APP_VERSION=""
+ENV APP_VERSION=$APP_VERSION
 RUN npm run build
 
 FROM nginx:alpine
