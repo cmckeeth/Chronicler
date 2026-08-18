@@ -42,13 +42,17 @@ struct CoverImage: View {
     let book: Book
     let api: APIClient
     var placeholderScale: CGFloat = 1
+    // .fill crops to the frame (fine when the frame matches the art); .fit shows the
+    // whole cover letterboxed, which is what the uniform grid tiles want since the
+    // library mixes square audiobook art with tall book jackets.
+    var contentMode: ContentMode = .fill
 
     @State private var image: UIImage?
 
     var body: some View {
         Group {
             if let image {
-                Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
+                Image(uiImage: image).resizable().aspectRatio(contentMode: contentMode)
                     .coverTreatment()
             } else if book.hasCover {
                 placeholder(symbol: "⚙", opacity: 0.15)
@@ -77,13 +81,14 @@ struct CoverImage: View {
 struct CollectionCoverImage: View {
     let collection: Collection
     let api: APIClient
+    var contentMode: ContentMode = .fill
 
     @State private var image: UIImage?
 
     var body: some View {
         Group {
             if let image {
-                Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
+                Image(uiImage: image).resizable().aspectRatio(contentMode: contentMode)
                     .coverTreatment()
             } else if collection.hasCover {
                 placeholder(symbol: "⚙", opacity: 0.15)

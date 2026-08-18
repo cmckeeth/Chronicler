@@ -114,8 +114,12 @@ fun coverColorFilter(): ColorFilter {
     }
 }
 
+// contentScale: Crop fills the box (fine when the box matches the art); Fit shows the
+// whole cover letterboxed, which is what the uniform grid tiles want since the library
+// mixes square audiobook art with tall book jackets.
 @Composable
-fun CoverImage(book: Book, api: ApiClient, modifier: Modifier = Modifier) {
+fun CoverImage(book: Book, api: ApiClient, modifier: Modifier = Modifier,
+               contentScale: ContentScale = ContentScale.Crop) {
     var image by remember(book.id) { mutableStateOf(coverCache[book.id]) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -142,7 +146,7 @@ fun CoverImage(book: Book, api: ApiClient, modifier: Modifier = Modifier) {
         val img = image
         if (img != null) {
             Image(bitmap = img, contentDescription = book.title,
-                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(), contentScale = contentScale,
                 colorFilter = coverColorFilter())
         } else {
             Text(if (book.hasCover) "⚙" else "📚", fontSize = 36.sp)
@@ -157,7 +161,8 @@ fun invalidateCover(bookId: Int) { coverCache.remove(bookId) }
 private val collectionCoverCache = ConcurrentHashMap<Int, ImageBitmap>()
 
 @Composable
-fun CollectionCover(collection: Collection, api: ApiClient, modifier: Modifier = Modifier) {
+fun CollectionCover(collection: Collection, api: ApiClient, modifier: Modifier = Modifier,
+                    contentScale: ContentScale = ContentScale.Crop) {
     var image by remember(collection.id) { mutableStateOf(collectionCoverCache[collection.id]) }
 
     androidx.compose.runtime.LaunchedEffect(collection.id) {
@@ -177,7 +182,7 @@ fun CollectionCover(collection: Collection, api: ApiClient, modifier: Modifier =
         val img = image
         if (img != null) {
             Image(bitmap = img, contentDescription = collection.name,
-                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(), contentScale = contentScale,
                 colorFilter = coverColorFilter())
         } else {
             Text(if (collection.hasCover) "⚙" else "📚", fontSize = 36.sp)

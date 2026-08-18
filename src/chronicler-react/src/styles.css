@@ -1377,7 +1377,10 @@ select {
 .book-tooltip-val { color: var(--parchment); text-align: right; }
 
 .book-cover {
-    aspect-ratio: 2/3;
+    /* Square box, art fitted (see .book-cover img) so every tile is identical and no
+       cover gets cropped — the library mixes square audiobook art with tall jackets.
+       Matches the native grids. */
+    aspect-ratio: 1;
     overflow: hidden;
     border-top-left-radius: var(--radius);
     border-top-right-radius: var(--radius);
@@ -1398,7 +1401,7 @@ select {
 .book-cover img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     filter: var(--cover-filter);
     transition: filter .3s;
 }

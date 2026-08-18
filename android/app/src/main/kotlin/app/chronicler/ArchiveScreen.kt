@@ -315,7 +315,11 @@ internal fun BookCard(book: Book, api: ApiClient, wide: Boolean = false,
         // reserved) keep every tile the same height so the grid stays even.
         Column(container) {
             Box {
-                CoverImage(book, api, Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(2.dp)))
+                // A square box sized by the column with the art FITTED inside, so every
+                // tile is identical no matter the source aspect ratio.
+                CoverImage(book, api,
+                    Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(2.dp)),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit)
                 if (book.isFavorite) {
                     Text("★", color = Theme.brassPale, fontSize = 18.sp,
                         modifier = Modifier.align(Alignment.TopEnd).padding(6.dp))
@@ -347,7 +351,7 @@ private fun CollectionCard(collection: Collection, api: ApiClient, onOpen: () ->
                     .align(Alignment.TopEnd)
                     .padding(top = 4.dp)
                     .fillMaxWidth(0.92f)
-                    .height(146.dp)
+                    .aspectRatio(1f)
                     .clip(RoundedCornerShape(2.dp))
                     .background(Theme.surface3))
             Box(
@@ -355,11 +359,13 @@ private fun CollectionCard(collection: Collection, api: ApiClient, onOpen: () ->
                     .align(Alignment.TopStart)
                     .padding(top = 2.dp)
                     .fillMaxWidth(0.96f)
-                    .height(148.dp)
+                    .aspectRatio(1f)
                     .clip(RoundedCornerShape(2.dp))
                     .background(Theme.surface2))
+            // Square + fitted, matching the book tiles so both card types line up.
             CollectionCover(collection, api,
-                Modifier.fillMaxWidth(0.94f).height(150.dp).clip(RoundedCornerShape(2.dp)))
+                Modifier.fillMaxWidth(0.94f).aspectRatio(1f).clip(RoundedCornerShape(2.dp)),
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit)
             // "N books" badge, brass pill in the corner.
             Surface(color = Theme.brass, shape = RoundedCornerShape(50),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Theme.verdigris),

@@ -322,8 +322,15 @@ struct BookCardView: View {
     private var tallContent: some View {
         VStack(alignment: .leading, spacing: 4) {
             ZStack(alignment: .topTrailing) {
-                CoverImage(book: book, api: api)
-                    .frame(height: 150).frame(maxWidth: .infinity)
+                // A square box sized by the column, with the art FITTED inside it, so
+                // every tile is identical no matter the source aspect ratio. The old
+                // `.frame(height:).frame(maxWidth: .infinity)` proposed unbounded width
+                // to a `.fill` image, so a landscape cover claimed far more than its
+                // column and shoved the whole row off-screen.
+                Color.clear
+                    .aspectRatio(1, contentMode: .fit)
+                    .background(Theme.surface2)
+                    .overlay(CoverImage(book: book, api: api, contentMode: .fit))
                     .clipped()
                     .overlay(Rectangle().stroke(Theme.border, lineWidth: 1))
                 if isFavorite {
@@ -402,17 +409,21 @@ struct CollectionCardView: View {
             VStack(alignment: .leading, spacing: 4) {
                 ZStack(alignment: .topTrailing) {
                     // Stacked sheets peeking out behind the cover sell the "folder" look.
+                    // Same square box as the book tiles so the two card types line up.
                     ZStack {
                         Rectangle().fill(Theme.surface2)
-                            .frame(height: 150).frame(maxWidth: .infinity)
+                            .aspectRatio(1, contentMode: .fit)
                             .overlay(Rectangle().stroke(Theme.border, lineWidth: 1))
                             .offset(x: 6, y: 6)
                         Rectangle().fill(Theme.surface2)
-                            .frame(height: 150).frame(maxWidth: .infinity)
+                            .aspectRatio(1, contentMode: .fit)
                             .overlay(Rectangle().stroke(Theme.border, lineWidth: 1))
                             .offset(x: 3, y: 3)
-                        CollectionCoverImage(collection: collection, api: api)
-                            .frame(height: 150).frame(maxWidth: .infinity)
+                        Color.clear
+                            .aspectRatio(1, contentMode: .fit)
+                            .background(Theme.surface2)
+                            .overlay(CollectionCoverImage(collection: collection, api: api,
+                                                          contentMode: .fit))
                             .clipped()
                             .overlay(Rectangle().stroke(Theme.border, lineWidth: 1))
                     }
