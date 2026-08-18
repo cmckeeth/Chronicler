@@ -11,8 +11,9 @@ struct LandingView: View {
     @EnvironmentObject var auth: AuthStore
     @EnvironmentObject var themeStore: ThemeStore
 
+    // Starts optimistic so the common (online) case doesn't flash the offline panel
+    // during the first reachability poll; UpdateBanner corrects it within a second.
     @State private var connected = true
-    @State private var hasDownloads = false
 
     var body: some View {
         ZStack {
@@ -42,7 +43,10 @@ struct LandingView: View {
             VStack(spacing: 0) {
                 Spacer()
 
-                NavigationLink(value: Route.archive) {
+                // One action, and it follows the connection: the Archive needs the
+                // server, so when it can't be reached the panel becomes the way into
+                // the downloads on this device instead of a button that would fail.
+                NavigationLink(value: connected ? Route.archive : Route.offline) {
                     VStack(spacing: 4) {
                         Text("Chronicler")
                             .font(Theme.display(48))
@@ -50,9 +54,10 @@ struct LandingView: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.4)
                             .glowVerdigris()
-                        Text("Your Audiobook Library")
-                            .font(Theme.serif(15)).foregroundColor(Theme.parchmentDim)
-                        Text("Enter the Archive")
+                        Text(connected ? "Your Audiobook Library" : "Server unreachable")
+                            .font(Theme.serif(15))
+                            .foregroundColor(connected ? Theme.parchmentDim : Theme.rust)
+                        Text(connected ? "Enter the Archive" : "📥 Listen to Downloads")
                             .font(Theme.serif(16)).foregroundColor(Theme.brassPale)
                             .padding(.top, 16)
                             .glowVerdigris()
@@ -60,15 +65,6 @@ struct LandingView: View {
                     .padding(.horizontal, 34)
                     .padding(.vertical, 30)
                     .electricPanel(bg: Theme.surface, corner: 6, alpha: 0.8, glowRadius: 20)
-                }
-
-                // Downloaded books are playable with the server down — always reachable
-                // from here, and called out when the archive can't be loaded.
-                if hasDownloads {
-                    NavigationLink(value: Route.offline) {
-                        LocalDownloadsButton(serverDown: !connected)
-                    }
-                    .padding(.top, 18)
                 }
 
                 Spacer()
@@ -89,10 +85,7 @@ struct LandingView: View {
             .padding()
         }
         .navigationBarBackButtonHidden(true)
-        .onAppear {
-            StartupSound.shared.play()
-            hasDownloads = Downloads.hasAny()
-        }
+        .onAppear { StartupSound.shared.play() }
     }
 
     // Runtime theme switcher: ⚡ Tesla (electric blue), ⚙ Steampunk (brass, no

@@ -44,8 +44,9 @@ import kotlin.math.sin
 @Composable
 fun LandingScreen(auth: AuthStore, nav: NavController) {
     val context = LocalContext.current
+    // Starts optimistic so the common (online) case doesn't flash the offline panel
+    // during the first reachability poll; UpdateBanner corrects it within a second.
     var connected by remember { mutableStateOf(true) }
-    val hasDownloads = remember { Downloads.hasAny(context) }
     androidx.compose.runtime.LaunchedEffect(Unit) { StartupSound.play(context) }
 
     Box(Modifier.fillMaxSize()) {   // transparent: the app-wide electric backdrop shows through
@@ -77,9 +78,12 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // One action, and it follows the connection: the Archive needs the server,
+            // so when it can't be reached the panel becomes the way into the downloads
+            // on this device instead of a button that would fail.
             Column(
                 Modifier
-                    .clickable { nav.navigate("archive") }
+                    .clickable { nav.navigate(if (connected) "archive" else "offline") }
                     .electricPanel(Theme.surface, corner = 6.dp, alpha = 0.8f, elevation = 20.dp)
                     .padding(horizontal = 34.dp, vertical = 30.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -87,19 +91,14 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
                 Text("Chronicler", color = Theme.brass, fontSize = 40.sp, fontWeight = FontWeight.Bold,
                     fontFamily = Theme.display, maxLines = 1, softWrap = false,
                     style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
-                Text("Your Audiobook Library", color = Theme.parchmentDim, fontSize = 15.sp,
+                Text(if (connected) "Your Audiobook Library" else "Server unreachable",
+                    color = if (connected) Theme.parchmentDim else Theme.rust, fontSize = 15.sp,
                     fontFamily = Theme.serif)
                 Spacer(Modifier.height(16.dp))
-                Text("Enter the Archive", color = Theme.brassPale, fontSize = 18.sp,
+                Text(if (connected) "Enter the Archive" else "📥 Listen to Downloads",
+                    color = Theme.brassPale, fontSize = 18.sp,
                     fontFamily = Theme.serif,
                     style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
-            }
-
-            // Downloaded books play with the server down — always reachable from here,
-            // and called out when the archive can't be loaded.
-            if (hasDownloads) {
-                Spacer(Modifier.height(18.dp))
-                LocalDownloadsButton(serverDown = !connected) { nav.navigate("offline") }
             }
         }
 
