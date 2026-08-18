@@ -11,6 +11,11 @@ struct ArchiveView: View {
     @State private var loading = true
     @State private var refreshing = false
     @State private var error: String?
+    @State private var showFilters = false      // collapsed by default — covers first
+
+    // True when something other than the defaults is in force, so the collapsed
+    // Filters chip can advertise that it's hiding a filter.
+    private var filtersActive: Bool { favOnly || tab != "books" }
 
     // Grid density: user-chosen 1/2/3 columns, persisted across launches.
     @AppStorage("gridColumns") private var gridColumns = 3
@@ -50,46 +55,63 @@ struct ArchiveView: View {
     var body: some View {
         ZStack {
             ThemedBackground(intensity: 0.9)
-            VStack(spacing: 14) {
-                // Cinzel (serif), NOT Cinzel Decorative; verdigris electric glow.
-                Text("The Archive")
-                    .font(Theme.serif(24)).foregroundColor(Theme.brass)
-                    .tracking(3)
-                    .glowVerdigris()
-                    .padding(.vertical, 6)
-
+            VStack(spacing: 10) {
+                // Search stays out in the open; everything else (view tabs, favorites,
+                // grid density) hides behind one disclosure so the covers get the screen.
                 HStack(spacing: 8) {
                     TextField("Query the archive...", text: $search)
                         .font(Theme.body(14)).foregroundColor(Theme.parchment)
                         .tint(Theme.verdigris)            // verdigris cursor
-                        .padding(8)
+                        .padding(7)
                         .background(Theme.surface2)
                         .overlay(RoundedRectangle(cornerRadius: 4)
                             .stroke(Theme.verdigris.opacity(0.4), lineWidth: 1))
+                    Button { withAnimation(.easeInOut(duration: 0.18)) { showFilters.toggle() } } label: {
+                        // Reads as active while open OR while a non-default filter is on,
+                        // so a hidden filter can't quietly change what you're looking at.
+                        chipLabel(showFilters ? "Filters ▴" : "Filters ▾",
+                                  active: showFilters || filtersActive)
+                    }
                 }
 
-                chipGroup("", [("Books","books"),("Collections","collections")],
-                          selection: $tab)
-                HStack(spacing: 10) {
-                    if tab == "books" { favChip }
-                    Spacer()
-                    layoutChips
+                if showFilters {
+                    VStack(spacing: 8) {
+                        chipGroup("", [("Books","books"),("Collections","collections")],
+                                  selection: $tab)
+                        HStack(spacing: 10) {
+                            if tab == "books" { favChip }
+                            Spacer()
+                            layoutChips
+                        }
+                    }
                 }
 
                 content
 
+                // Slim status line: small type, compact refresh, minimal padding.
                 HStack {
-                    UpdateBanner(api: auth.api)
+                    UpdateBanner(api: auth.api, compact: true)
                     Spacer()
                     refreshButton
                 }
-                .padding(.top, 4)
             }
             .padding(.horizontal, 18)
-            .padding(.vertical, 14)
+            .padding(.top, 8)
+            .padding(.bottom, 6)
         }
-        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        // The title lives IN the navigation bar rather than below it. That bar is always
+        // there (it carries the back button), so an empty one plus a separate title row
+        // wasted a whole line above the grid.
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                // Cinzel (serif), NOT Cinzel Decorative; verdigris electric glow.
+                Text("The Archive")
+                    .font(Theme.serif(18)).foregroundColor(Theme.brass)
+                    .tracking(3)
+                    .glowVerdigris()
+            }
+        }
         .task { await load() }
         // Reload when crossing the search/browse boundary (root+collections vs flat books).
         .onChange(of: isSearching) { Task { await load() } }
@@ -140,17 +162,17 @@ struct ArchiveView: View {
         Button {
             Task { await refresh() }
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: 4) {
                 if refreshing {
-                    ProgressView().tint(Theme.ink).scaleEffect(0.7)
+                    ProgressView().tint(Theme.ink).scaleEffect(0.55)
                 } else {
-                    Text("↻").font(Theme.serif(14))
+                    Text("↻").font(Theme.serif(12))
                 }
                 Text(refreshing ? "Refreshing…" : "Refresh")
             }
-            .font(Theme.body(13))
+            .font(Theme.body(11))
             .foregroundColor(Theme.ink)
-            .padding(.horizontal, 18).padding(.vertical, 7)
+            .padding(.horizontal, 12).padding(.vertical, 4)
             .background(Theme.brass)
             .overlay(Capsule().stroke(Theme.verdigris, lineWidth: 1))
             .clipShape(Capsule())
@@ -201,19 +223,28 @@ struct ArchiveView: View {
                 Text(label).font(Theme.body(11)).foregroundColor(Theme.parchmentDim)
             }
             ForEach(options, id: \.1) { (title, value) in
-                let active = selection.wrappedValue == value
                 Button { selection.wrappedValue = value } label: {
-                    Text(title).font(Theme.body(12))
-                        .foregroundColor(active ? Theme.ink : Theme.parchmentMid)
-                        .padding(.horizontal, 10).padding(.vertical, 5)
-                        .background(active ? Theme.brass : Theme.surface2)
-                        .overlay(Capsule().stroke(active ? Theme.verdigris : .clear, lineWidth: 1))
-                        .clipShape(Capsule())
-                        .shadow(color: active ? Theme.verdigris.opacity(0.5) : .clear, radius: 8)
+                    chipLabel(title, active: selection.wrappedValue == value)
                 }
+            }
+            // Downloads is a separate screen rather than a tab, so it never reads as
+            // selected — it's the way to reach what's on this device while online.
+            NavigationLink(value: Route.offline) {
+                chipLabel("📥 Downloads", active: false)
             }
             Spacer()
         }
+    }
+
+    // Shared chip styling for the tab chips and the Downloads link.
+    private func chipLabel(_ title: String, active: Bool) -> some View {
+        Text(title).font(Theme.body(12))
+            .foregroundColor(active ? Theme.ink : Theme.parchmentMid)
+            .padding(.horizontal, 10).padding(.vertical, 5)
+            .background(active ? Theme.brass : Theme.surface2)
+            .overlay(Capsule().stroke(active ? Theme.verdigris : .clear, lineWidth: 1))
+            .clipShape(Capsule())
+            .shadow(color: active ? Theme.verdigris.opacity(0.5) : .clear, radius: 8)
     }
 
     // Browse view: ALL books + collections loaded; chips slice them client-side

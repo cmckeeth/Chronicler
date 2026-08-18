@@ -388,7 +388,10 @@ private fun ThemeSwitcher(auth: AuthStore) {
 fun UpdateBanner(api: ApiClient, modifier: Modifier = Modifier,
                  // Lets the hosting screen react to the connection state (e.g. surface
                  // Local Downloads).
-                 onStatus: (Boolean) -> Unit = {}) {
+                 onStatus: (Boolean) -> Unit = {},
+                 // Archive uses the compact form so the status line costs as little
+                 // height as possible — the covers want that space.
+                 compact: Boolean = false) {
     val context = LocalContext.current
     val current = remember {
         runCatching {
@@ -410,13 +413,15 @@ fun UpdateBanner(api: ApiClient, modifier: Modifier = Modifier,
         }
     }
 
+    val small = if (compact) 10.sp else 12.sp
     Row(modifier, verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("●", color = if (connected) Theme.verdigris else Theme.rust, fontSize = 10.sp)
-        Text("v$current", color = Theme.parchmentDim, fontSize = 12.sp)
+        horizontalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 8.dp)) {
+        Text("●", color = if (connected) Theme.verdigris else Theme.rust,
+            fontSize = if (compact) 7.sp else 10.sp)
+        Text("v$current", color = Theme.parchmentDim, fontSize = small)
         if (updateAvailable) {
             Text("⚡ v$latestVer available — tap to install",
-                color = Theme.brassPale, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                color = Theme.brassPale, fontSize = small, fontWeight = FontWeight.Bold,
                 style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris),
                 modifier = Modifier.clickable {
                     val url = "${ApiClient.BASE_URL}/api/update/apk/Chronicler-v$latestVer.apk"
@@ -426,7 +431,7 @@ fun UpdateBanner(api: ApiClient, modifier: Modifier = Modifier,
                 })
         } else {
             Text(if (connected) "Connected" else "Server unreachable",
-                color = Theme.parchmentDim, fontSize = 12.sp)
+                color = Theme.parchmentDim, fontSize = small)
         }
     }
 }

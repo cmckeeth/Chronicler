@@ -185,6 +185,9 @@ struct UpdateBanner: View {
     let api: APIClient
     // Lets the hosting screen react to the connection state (e.g. surface Local Downloads).
     var onStatus: ((Bool) -> Void)? = nil
+    // Archive uses the compact form so the status line costs as little height as
+    // possible — the covers want that space.
+    var compact: Bool = false
     @State private var connected = false
 
     private var version: String {
@@ -192,12 +195,13 @@ struct UpdateBanner: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
-            Text("●").font(.system(size: 10))
+        HStack(spacing: compact ? 5 : 8) {
+            Text("●").font(.system(size: compact ? 7 : 10))
                 .foregroundColor(connected ? Theme.verdigris : Theme.rust)
-            Text("v\(version)").font(Theme.body(12)).foregroundColor(Theme.parchmentDim)
+            Text("v\(version)")
+                .font(Theme.body(compact ? 10 : 12)).foregroundColor(Theme.parchmentDim)
             Text(connected ? "Connected" : "Server unreachable")
-                .font(Theme.body(12)).foregroundColor(Theme.parchmentDim)
+                .font(Theme.body(compact ? 10 : 12)).foregroundColor(Theme.parchmentDim)
         }
         .task {
             while !Task.isCancelled {

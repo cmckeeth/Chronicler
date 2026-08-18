@@ -35,6 +35,10 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
     var loading by remember { mutableStateOf(true) }
     var refreshing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var showFilters by remember { mutableStateOf(false) }   // collapsed by default — covers first
+    // True when something other than the defaults is in force, so the collapsed Filters
+    // chip can advertise that it's hiding a filter.
+    val filtersActive = favOnly || tab != "books"
     val scope = rememberCoroutineScope()
 
     suspend fun fetch() {
@@ -78,32 +82,51 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
         q.sortedBy { it.title.lowercase() }
     }
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 14.dp)) {
-        Text("The Archive", color = Theme.brass, fontSize = 24.sp, fontWeight = FontWeight.Bold,
+    // Top padding stays tight — the content already sits below the status bar via
+    // systemBarsPadding in MainActivity, so anything more was dead space above the title.
+    Column(Modifier.fillMaxSize().padding(start = 18.dp, end = 18.dp, top = 2.dp, bottom = 6.dp)) {
+        Text("The Archive", color = Theme.brass, fontSize = 18.sp, fontWeight = FontWeight.Bold,
             fontFamily = Theme.serif, letterSpacing = 2.sp,
             style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris),
-            modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 6.dp))
-        Spacer(Modifier.height(16.dp))
-        OutlinedTextField(value = search, onValueChange = { search = it },
-            placeholder = { Text("Query the archive...", color = Theme.parchmentDim) },
-            singleLine = true, modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Theme.parchment, unfocusedTextColor = Theme.parchment,
-                focusedContainerColor = Theme.surface2, unfocusedContainerColor = Theme.surface2,
-                focusedBorderColor = Theme.verdigris,
-                unfocusedBorderColor = Theme.verdigris.copy(alpha = 0.4f),
-                cursorColor = Theme.verdigris))
-        Spacer(Modifier.height(14.dp))
-        chipRow("", listOf("Books" to "books", "Collections" to "collections"),
-            tab) { tab = it }
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            if (tab == "books") favChip(favOnly) { favOnly = !favOnly }
-            Spacer(Modifier.weight(1f))
-            chipRow("Grid", listOf("1" to "1", "2" to "2", "3" to "3"),
-                auth.gridColumns.toString()) { auth.setGridSize(it.toInt()) }
+            modifier = Modifier.align(Alignment.CenterHorizontally))
+        Spacer(Modifier.height(8.dp))
+        // Search stays out in the open; everything else (view tabs, favorites, grid
+        // density) hides behind one disclosure so the covers get the screen.
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(value = search, onValueChange = { search = it },
+                placeholder = { Text("Query the archive...", color = Theme.parchmentDim) },
+                singleLine = true, modifier = Modifier.weight(1f),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Theme.parchment, unfocusedTextColor = Theme.parchment,
+                    focusedContainerColor = Theme.surface2, unfocusedContainerColor = Theme.surface2,
+                    focusedBorderColor = Theme.verdigris,
+                    unfocusedBorderColor = Theme.verdigris.copy(alpha = 0.4f),
+                    cursorColor = Theme.verdigris))
+            // Reads as active while open OR while a non-default filter is on, so a
+            // hidden filter can't quietly change what you're looking at.
+            filterChip(if (showFilters) "Filters ▴" else "Filters ▾",
+                active = showFilters || filtersActive) { showFilters = !showFilters }
         }
-        Spacer(Modifier.height(18.dp))
+        if (showFilters) {
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                chipRow("", listOf("Books" to "books", "Collections" to "collections"),
+                    tab) { tab = it }
+                // Downloads is a separate screen rather than a tab, so it never reads as
+                // selected — it's the way to reach what's on this device while online.
+                navChip("📥 Downloads") { nav.navigate("offline") }
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                if (tab == "books") favChip(favOnly) { favOnly = !favOnly }
+                Spacer(Modifier.weight(1f))
+                chipRow("Grid", listOf("1" to "1", "2" to "2", "3" to "3"),
+                    auth.gridColumns.toString()) { auth.setGridSize(it.toInt()) }
+            }
+        }
+        Spacer(Modifier.height(10.dp))
 
         // Collections appear only on the Collections tab (never while searching).
         val shownCollections = if (searching || tab == "books") emptyList() else collections
@@ -142,10 +165,11 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
             }
         }
 
-        Spacer(Modifier.height(10.dp))
+        // Slim status line: small type, compact refresh, minimal padding.
+        Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
-            UpdateBanner(auth.api)
+            modifier = Modifier.fillMaxWidth()) {
+            UpdateBanner(auth.api, compact = true)
             Spacer(Modifier.weight(1f))
             Surface(color = Theme.brass, shape = RoundedCornerShape(50),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Theme.verdigris),
@@ -155,16 +179,16 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
                     .clickable(enabled = !refreshing) { scope.launch { refresh() } }) {
                 Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 7.dp)) {
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
                     if (refreshing) {
                         CircularProgressIndicator(color = Theme.ink, strokeWidth = 2.dp,
-                            modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Refreshing…", color = Theme.ink, fontSize = 13.sp)
+                            modifier = Modifier.size(11.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Refreshing…", color = Theme.ink, fontSize = 11.sp)
                     } else {
-                        Text("↻", color = Theme.ink, fontSize = 14.sp, fontFamily = Theme.serif)
-                        Spacer(Modifier.width(6.dp))
-                        Text("Refresh", color = Theme.ink, fontSize = 13.sp)
+                        Text("↻", color = Theme.ink, fontSize = 12.sp, fontFamily = Theme.serif)
+                        Spacer(Modifier.width(4.dp))
+                        Text("Refresh", color = Theme.ink, fontSize = 11.sp)
                     }
                 }
             }
@@ -198,6 +222,28 @@ private fun chipRow(label: String, options: List<Pair<String, String>>, selected
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
             }
         }
+    }
+}
+
+// The Filters disclosure chip — same styling as a tab chip, but it opens the panel.
+@Composable
+private fun filterChip(title: String, active: Boolean, onClick: () -> Unit) {
+    Surface(color = if (active) Theme.brass else Theme.surface2,
+        shape = RoundedCornerShape(50),
+        border = if (active) androidx.compose.foundation.BorderStroke(1.dp, Theme.verdigris) else null,
+        modifier = Modifier.combinedClickableSafe { onClick() }) {
+        Text(title, color = if (active) Theme.ink else Theme.parchmentMid, fontSize = 12.sp,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
+    }
+}
+
+// A chip that navigates instead of toggling — styled like an inactive tab chip.
+@Composable
+private fun navChip(title: String, onClick: () -> Unit) {
+    Surface(color = Theme.surface2, shape = RoundedCornerShape(50),
+        modifier = Modifier.combinedClickableSafe { onClick() }) {
+        Text(title, color = Theme.parchmentMid, fontSize = 12.sp,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
     }
 }
 
