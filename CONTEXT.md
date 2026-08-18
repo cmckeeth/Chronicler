@@ -7,20 +7,28 @@ Personal audiobook library app. Built by Corbin McKeeth with Claude Code.
 | Layer | Tech |
 |-------|------|
 | API | ASP.NET Core minimal API (.NET 10), SQLite via EF Core, ASP.NET Identity, JWT auth |
-| Mobile | .NET MAUI Blazor Hybrid (Android + iOS) |
-| Web | React + Vite (separate app in `src/chronicler-react/`) |
-| Shared UI | Blazor Razor components (`Chronicler.Shared`) used by MAUI only |
+| iOS | Native Swift/SwiftUI (`Chronicler/Chronicler.xcodeproj`) |
+| Android | Native Kotlin/Compose (`android/`) |
+| Web | React + Vite (`src/chronicler-react/`) |
+| Legacy | .NET MAUI Blazor Hybrid (`src/Chronicler.Maui`) — retired, kept as fallback |
 | Hosting | Docker Compose on home server (192.168.1.71) |
 
 ## Projects
 
 ```
+Chronicler/                — native iOS app (Swift/SwiftUI) + fastlane
+android/                   — native Android app (Kotlin/Compose)
 src/
   Chronicler.Api/          — ASP.NET Core API + EF Core + migrations
-  Chronicler.Shared/       — Blazor components, services, CSS (used by MAUI)
-  Chronicler.Maui/         — MAUI shell (Android + iOS)
+  Chronicler.Shared/       — ApiClient (the API contract) + legacy Blazor components
+  Chronicler.Maui/         — retired MAUI shell
   chronicler-react/        — React web app (Vite, served by nginx in Docker)
+VERSION                    — major.minor; patch comes from the git commit count
+deploy.sh / deploy-ios.sh  — Android+web+API, and iOS→TestFlight
 ```
+
+All three frontends are independent clients of the same REST API. **Feature parity is
+mandatory** — see CLAUDE.md.
 
 ## Key URLs / Ports
 
@@ -47,42 +55,37 @@ src/
 ## Auth
 
 - JWT tokens, 90-day expiry
-- MAUI: stored in `SecureStorage` with key `chronicler_token`
-- Web (React): stored in `localStorage`
+- iOS: `UserDefaults` key `chronicler.token` (`AuthStore.swift`)
+- Android: `SharedPreferences` (`AuthStore.kt`)
+- Web: `localStorage` key `chronicler_token`
 - Password requirements: 6+ chars, no special character requirements
 
 ## Audio
 
-### Android
-- `NativeAudioPlayerService` using `Android.Media.MediaPlayer`
-- `MediaPlaybackRequiresUserGesture = false` set on WebView via `ChroniclerWebViewHandler`
-- Checks for local downloads before streaming; uses local file path if available
+### iOS — `AudioPlayerModel.swift`
+- `AVPlayer`; `AVAudioSession.playback` + `.spokenAudio`, so it ignores the mute switch
+- Skip ±30, speed, MPRemoteCommandCenter lock-screen controls, AirPlay route picker
+- Volume boost (~12 dB) via an `MTAudioProcessingTap` on the item's audio mix
+- Prefers a local download over streaming
 
-### iOS
-- `iOSAudioPlayerService` using `AVFoundation.AVPlayer`
-- `AVAudioSession.CategoryPlayback` configured on first play (plays through speaker, ignores mute switch)
-- Also checks local downloads first
+### Android — `AudioController.kt`
+- Media3/ExoPlayer, or `CastPlayer` when a Chromecast session connects (both are `Player`)
+- `MediaSessionCompat` for notification/lock-screen controls; `LoudnessEnhancer` for boost
+- Prefers a local download over streaming
 
-### Web (HTML5 fallback)
-- Used when no `IAudioPlayerService` is registered (browser)
-- `chronicler.js` handles play/pause/seek/rate/events
-- `timeupdate` throttled to 250ms to avoid bridge flooding
+### Web
+- Plain HTML5 `<audio>` in the React player; streaming only
 
-### Service registration (MauiProgram.cs)
-```csharp
-#if ANDROID
-    AddSingleton<IAudioPlayerService, NativeAudioPlayerService>()
-#elif IOS
-    AddSingleton<IAudioPlayerService, iOSAudioPlayerService>()
-#endif
-```
+## Downloads (offline) — native only
 
-## Downloads (offline)
-
-- `IDownloadService` / `MauiDownloadService` — MAUI only (not on web)
-- Files stored in `FileSystem.AppDataDirectory/downloads/`
-- JSON manifest tracks chapter → local file path mapping
-- Download page at `/downloads` (MAUI only)
+- iOS `Downloads.swift`, Android `Downloads.kt`; **web has none** (streams only)
+- Audio + `manifest.json` (book/chapter metadata) + `cover-<bookId>.img` + `progress.json`
+- iOS: `Application Support/downloads/` — **not** Caches, which iOS evicts under pressure
+- iOS filenames carry a real extension from the served MIME type; a generic `.audio` made
+  AVFoundation play silence with the timer stuck at 0:00
+- Offline progress is flagged `dirty` and pushed on the next load that reaches the API
+- Reachable from the Downloads chip in the Archive, and (when the server is down) from the
+  landing panel, the Archive error state, and the login screen
 
 ## Library Scanner
 
@@ -94,35 +97,52 @@ src/
 
 ## Versioning & OTA Updates
 
+**One source of truth:** repo-root `VERSION` holds `major.minor`; the patch is the git commit
+count. Derived at build time, never stored, so all three frontends report the same number and
+nothing needs bumping or committing. Edit `VERSION` to cut a feature release.
+
+This replaced three drifting schemes (iOS hand-typed in `project.pbxproj`, Android inferred
+from the newest APK filename on the server and never committed, web from `package.json`).
+The cost was real: three testers all on "3.2.6" carried no information, because builds
+315/325/327 all shipped as 3.2.6.
+
 ### Android
-- Deploy script on server auto-increments patch version based on highest APK in `updates/`
-- `deploy.sh` on server: bumps version, builds APK, restarts Docker
-- Webhook (`webhook.py`) triggers `git pull && ./deploy.sh` on POST to `:5162/deploy`
-- APK served at `/api/update/apk`, version at `/api/update/version`
-- MAUI app checks version on startup, shows update banner if newer available
-- Update banner only shown on Android (`DeviceInfo.Platform == Android`)
+- `deploy.sh` derives `versionName`/`versionCode`, builds the APK, brings containers up
+- `versionCode = major*1000000 + minor*10000 + patch` — must exceed the 30259 that shipped
+  under the old formula or Android refuses the update
+- Webhook (`webhook.py`) runs `git pull && ./deploy.sh` on POST to `:5162/deploy`
+- APK at `/api/update/apk`, version at `/api/update/version`; the app self-updates
 
 ### iOS
-- Manual USB build+deploy — use `/update-chronicler-ios` skill
-- Version synced from server at build time via `-p:ApplicationDisplayVersion=$VER`
-- Free Apple Developer account: app expires every 7 days, re-run skill to renew
-- Device UDID: `00008120-001C3D20216BC01E` (Hannah's iPhone)
-- Signing: `Apple Development: corbin.mckeeth@gmail.com (RXQYCD389C)`
-- Provisioning: `iOS Team Provisioning Profile: blackbird.llc.Chronicler`
-- .NET 10 SDK at `/usr/local/share/dotnet/dotnet` (not homebrew `dotnet`)
+- `./deploy-ios.sh` → fastlane `beta` lane → TestFlight. Creds in gitignored
+  `Chronicler/fastlane/.env`; `.p8` key alongside it
+- Team ID `ZSTUXP8336`, App Store Connect app id `6781088096`
+- `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` both passed via `xcargs`, so the stale
+  hardcoded value in `project.pbxproj` can't leak into a build
+- Build number = commit count, so the same commit can't be deployed twice
+- Two Apple agreements gate this (PLA for signing, Free Apps Agreement for upload) and expire
+  annually — see `docs/ios-distribution.md`
 
 ## Styling
 
-- Steampunk aesthetic: brass/copper/parchment palette + electric lime green accents
-- Main CSS: `src/Chronicler.Shared/wwwroot/steampunk.css`
-- MAUI-specific overrides: `src/Chronicler.Maui/wwwroot/css/app.css`
-- Fonts: Cinzel Decorative (titles), Cinzel (UI), Lora (body)
-- Playing state: slow green pulse animation on transmission controls box
+**Nine runtime themes**, identical across all three frontends: Tesla, Steampunk, Garden,
+Dark Academia, Blackletter Noir, Wild West, Neon Sunset, Molten Forge, Ransom Note.
+
+- Each theme is a palette (~19 tokens), a font trio, a panel style, an animated backdrop and
+  a cover filter. Token names are historical — `brass` is "the metal", `verdigris` is "the
+  accent", regardless of theme.
+- Web: `src/chronicler-react/src/styles.css` (`:root[data-theme="x"]`).
+  iOS: `Theme.swift` + `Electric.swift`. Android: `Theme.kt` + `Electric.kt`.
+- **Ransom Note is the only light theme** and doubles as a canary for anything that assumes a
+  dark ground.
+- Native fonts are bundled TTFs; the web pulls the same faces from Google Fonts.
 
 ## Key Design Decisions
 
-- **MAUI over native Android/iOS**: single C# codebase preference
-- **Blazor for MAUI, React for web**: Blazor components reused in MAUI; separate React app for browser (switched from Blazor web due to circuit connection issues)
+- **Native over MAUI**: the MAUI/Blazor hybrid was replaced by three native frontends over one
+  shared REST API. The C# backend stays authoritative; the shared-UI idea did not survive
+- **Parity is enforced by convention, not code**: every user-facing change ships to web, iOS and
+  Android or it isn't done
 - **No bookmark feature**: was built, then removed by user request
 - **Per-user favorites**: stored in `UserBookFavorite` join table (not on Book model)
 - **Covers as DB blobs**: loaded as base64 data URIs to avoid cross-origin WebView issues
@@ -136,4 +156,4 @@ src/
 - Repo path: `~/Servers/chronicler-server/Chronicler`
 - Docker Compose manages: `chronicler-api` + `chronicler-web` containers
 - Logs: `./logs/` directory, also accessible via `GET /api/logs`
-- Diagnostic messages: `POST /api/diag` (used by MAUI for debug logging)
+- Diagnostic messages: `POST /api/diag` (used by the native apps for debug logging)

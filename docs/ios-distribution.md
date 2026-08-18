@@ -62,15 +62,32 @@ Pipeline lives in `Chronicler/fastlane/` (`Fastfile` `beta` lane + `Appfile`), i
 
 ```bash
 brew install fastlane            # one time
-export APPLE_TEAM_ID=ZSTUXP8336
-export ASC_KEY_ID=<key id>
-export ASC_ISSUER_ID=<issuer id>
-export ASC_KEY_PATH=/absolute/path/to/AuthKey_XXXXXX.p8
 ./deploy-ios.sh                  # archives, signs (app-store), uploads to TestFlight
 ```
 
-Build number = git commit count (`number_of_commits`), so it's unique and monotonic — no
-agvtool/project edits.
+Nothing to export — `deploy-ios.sh` sources the gitignored `Chronicler/fastlane/.env`, which
+holds `APPLE_TEAM_ID`, `ASC_KEY_ID`, `ASC_ISSUER_ID` and `ASC_KEY_PATH`. The `.p8` sits beside
+it (gitignored via `AuthKey_*.p8`). If the `.env` is ever lost, the Issuer ID is recoverable
+from App Store Connect → Users and Access → Integrations.
+
+**Version:** `major.minor` from the repo-root `VERSION` file, patch and build number both from
+the git commit count. The Fastfile passes `MARKETING_VERSION` *and* `CURRENT_PROJECT_VERSION`
+via `xcargs`, so the hardcoded value in `project.pbxproj` is overridden and can't go stale.
+Because the build number is the commit count, **the same commit cannot be uploaded twice** —
+App Store Connect rejects duplicate build numbers. Commit something, then deploy.
+
+### When it fails: check the agreements first
+
+Two separate Apple agreements gate this, they expire annually, and neither error names itself
+usefully. Both were hit on 2026-08-17.
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `build_app` dies with **"Error packaging up the application"**, and `security find-identity -v -p codesigning` shows only an *Apple Development* identity | The **Program License Agreement** is out of date, which blocks creating the Apple **Distribution** certificate. Xcode shows *"Unable to process request - PLA Update available"* under Manage Certificates | Accept at [developer.apple.com/account](https://developer.apple.com/account) (Account Holder only), then Xcode → Settings → Accounts → Manage Certificates → **+** → Apple Distribution |
+| Upload dies with **"A required agreement is missing or has expired"** | The **Free Apps Agreement** in App Store Connect | App Store Connect → **Business** → accept. Current term runs to **2027-06-16** |
+
+Don't pipe `deploy-ios.sh` through `tail` — fastlane prints its own update changelog at the end,
+so the tail is that noise and the real error scrolls past. Redirect to a file and grep it.
 
 ### Invite testers
 - App Store Connect → **TestFlight** tab.

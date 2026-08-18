@@ -1,6 +1,7 @@
 # Chronicler
 
-Personal audiobook library — MAUI (iOS/Android) + Blazor Web + ASP.NET Core API.
+Personal audiobook library — ASP.NET Core API with three native frontends:
+Swift/SwiftUI (iOS), Kotlin/Compose (Android), React/Vite (web).
 
 Drop audio files in `Library/`, scan, play. Progress, bookmarks, and position sync across devices.
 
@@ -63,7 +64,18 @@ git pull && docker compose up -d --build
 ./deploy.sh
 ```
 
-This bumps the patch version, builds the APK, copies it to `updates/`, and restarts the API.
+Builds the Kotlin APK, copies it to `updates/`, and brings the containers up (API + web).
+The version is derived, not stored: the repo-root `VERSION` file supplies `major.minor`
+and the git commit count supplies the patch, so every deploy ships a higher version with
+nothing to bump. Edit `VERSION` to cut a feature release.
+
+In practice you don't run this by hand — POST to the deploy webhook and the server does
+`git pull && ./deploy.sh` itself:
+
+```bash
+curl -X POST http://192.168.1.71:5162/deploy -H "X-Deploy-Secret: <secret>"
+curl http://192.168.1.71:5162/deploy/status        # poll until "idle"
+```
 
 ### Install on device
 
@@ -83,36 +95,47 @@ The app checks for updates every 60 seconds. When a new APK is available, a bann
 
 ## Web
 
-Open `http://<server-ip>:5160` in any browser. Same login as the mobile app.
+Open `http://<server-ip>:5161` — the React app, served by nginx in the `chronicler-web`
+container (it proxies `/api` to the API on `:5160`). Same login as the mobile apps.
 
 ---
 
 ## iOS
 
-Sideloading from a URL is not supported on iOS. Options:
+The native Swift app lives at `Chronicler/Chronicler.xcodeproj` and ships through
+**TestFlight** (paid Apple Developer Program, already enrolled):
 
-| Method | Cost | Notes |
-|--------|------|-------|
-| Xcode direct install | Free | Dev machine required, for personal use |
-| AltStore | Free | Needs refresh every 7 days via your Mac |
-| TestFlight | $99/yr Apple dev account | Best for sharing with others |
-
-For dev/personal use, run from Xcode:
 ```bash
-dotnet build src/Chronicler.Maui/Chronicler.Maui.csproj -f net9.0-ios -c Debug
-# Then open in Xcode and run on device
+./deploy-ios.sh          # archive, sign, upload — creds come from Chronicler/fastlane/.env
 ```
+
+Build number is the git commit count, so it's unique and monotonic — but it also means you
+can't re-deploy the same commit twice.
+
+For local development, build to the Simulator (no signing needed):
+
+```bash
+cd Chronicler
+xcodebuild -project Chronicler.xcodeproj -scheme Chronicler \
+  -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -derivedDataPath build build
+xcrun simctl install booted build/Build/Products/Debug-iphonesimulator/Chronicler.app
+```
+
+Cabled installs to your own device and the full TestFlight setup are documented in
+[`docs/ios-distribution.md`](docs/ios-distribution.md).
 
 ---
 
-## CI/CD
+## Deploying
 
-Push to `main` → GitHub Actions builds the APK and deploys the API via `docker compose` on the self-hosted runner.
+| Target | Command | Ships |
+|---|---|---|
+| Android + web + API | POST to the deploy webhook | APK to `updates/`, both containers rebuilt |
+| iOS | `./deploy-ios.sh` | TestFlight build |
 
-Set the `JWT_KEY` secret in **GitHub → Settings → Secrets → Actions**:
-```
-JWT_KEY = <same value as your .env file>
-```
+The webhook deploys whatever is on `main`, so push before triggering it. There's no
+Android-only path — `deploy.sh` rebuilds the web container too.
 
 ---
 
@@ -122,4 +145,5 @@ JWT_KEY = <same value as your .env file>
 |----------|---------|-------------|
 | `JWT_KEY` | dev key (insecure) | Secret for signing JWT tokens — **change in production** |
 | `CHRONICLER_DB_PATH` | `/data/chronicler.db` | SQLite database path |
-| `CHRONICLER_API_URL` | `http://localhost:5160` | API base URL (used by Blazor Web) |
+| `CHRONICLER_API_URL` | `http://localhost:5160` | API base URL |
+| `APP_VERSION` | derived | Set by `deploy.sh` (VERSION + commit count); passed to the web image as a build arg |

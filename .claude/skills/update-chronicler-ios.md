@@ -1,53 +1,55 @@
 # /update-chronicler-ios
 
-Build and deploy the Chronicler iOS app to Hannah's iPhone over USB.
-Version is automatically synced from the server before building — no manual bumping needed.
+Ship the native iOS Swift app. **Superseded by `./deploy-ios.sh`** — this skill now just
+documents the two paths and the traps.
 
-## Prerequisites
-- iPhone plugged in via USB
-- Signing cert: `Apple Development: corbin.mckeeth@gmail.com (RXQYCD389C)`
-- Provisioning profile: `iOS Team Provisioning Profile: blackbird.llc.Chronicler`
-- Device UDID: `00008120-001C3D20216BC01E`
+> The old version of this skill built the retired MAUI app over USB with `dotnet build` and
+> synced its version from the server. All of that is gone: the app is Swift/SwiftUI at
+> `Chronicler/Chronicler.xcodeproj`, and the version derives from `VERSION` + commit count.
 
-## Steps
+## TestFlight (the normal path)
 
-Run from repo root (`/Users/Corbin.McKeeth/code/Chronicler`):
-
-**1. Fetch version from server:**
 ```bash
-VER=$(curl -sf http://192.168.1.71:5160/api/update/version | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])")
-APP_VER=$(echo $VER | awk -F. '{print $1*100 + $2*10 + $3}')
-echo "Building v$VER ($APP_VER)"
+./deploy-ios.sh
 ```
 
-**2. Restore:**
+Archives, signs `app-store`, uploads. Credentials come from the gitignored
+`Chronicler/fastlane/.env` — nothing to export.
+
+- Build number = git commit count, so **the same commit can't be uploaded twice**. Commit first.
+- Redirect the output to a file; don't pipe through `tail` (fastlane prints a changelog at the
+  end, so the tail is noise and the real error scrolls past).
+- Failures are usually an expired Apple agreement, not code. See the table in
+  `docs/ios-distribution.md`.
+- Processing takes 5–15 min before the build appears in TestFlight.
+
+## Cabled install (your own device)
+
+Paid team, so `-allowProvisioningUpdates` mints a 1-year profile — no weekly re-trust.
+
 ```bash
-/usr/local/share/dotnet/dotnet restore src/Chronicler.Shared/Chronicler.Shared.csproj
-/usr/local/share/dotnet/dotnet restore src/Chronicler.Maui/Chronicler.Maui.csproj \
-  -p:TargetFrameworks=net10.0-ios -r ios-arm64 --no-dependencies
+cd Chronicler
+xcodebuild -project Chronicler.xcodeproj -scheme Chronicler \
+  -sdk iphoneos -destination 'generic/platform=iOS' \
+  -derivedDataPath build-device -allowProvisioningUpdates build
+
+UDID=$(xcrun devicectl list devices | awk '/connected/ && /iPhone/ {print $(NF-2)}')
+APP=build-device/Build/Products/Debug-iphoneos/Chronicler.app
+xcrun devicectl device install app --device "$UDID" "$APP"
+xcrun devicectl device process launch --device "$UDID" blackbird.llc.Chronicler
 ```
 
-**3. Build (version injected via -p: flags):**
+Device must be connected **and unlocked** or you get `error 1011 unavailable` / `Locked`.
+
+## Simulator (development)
+
 ```bash
-/usr/local/share/dotnet/dotnet build src/Chronicler.Maui/Chronicler.Maui.csproj \
-  -f net10.0-ios -r ios-arm64 \
-  -p:TargetFrameworks=net10.0-ios \
-  -p:ApplicationDisplayVersion=$VER \
-  -p:ApplicationVersion=$APP_VER \
-  -p:CodesignKey="Apple Development: corbin.mckeeth@gmail.com (RXQYCD389C)" \
-  -p:CodesignProvision="iOS Team Provisioning Profile: blackbird.llc.Chronicler" \
-  --no-restore
+cd Chronicler
+xcodebuild -project Chronicler.xcodeproj -scheme Chronicler \
+  -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -derivedDataPath build build
+xcrun simctl install booted build/Build/Products/Debug-iphonesimulator/Chronicler.app
+xcrun simctl launch booted blackbird.llc.Chronicler
 ```
 
-**4. Install:**
-```bash
-xcrun devicectl device install app \
-  --device 00008120-001C3D20216BC01E \
-  src/Chronicler.Maui/bin/Debug/net10.0-ios/ios-arm64/Chronicler.Maui.app
-```
-
-## Notes
-- Uses .NET 10 SDK at `/usr/local/share/dotnet/dotnet` (not homebrew `dotnet`)
-- App expires on device after 7 days (free Apple ID) — just re-run to renew
-- Android updates are OTA; iOS always requires USB + this skill
-- The csproj version value is a fallback only — actual version always comes from server at build time
+Full reference: `docs/ios-distribution.md`.
