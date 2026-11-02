@@ -148,6 +148,18 @@ extension View {
                 .saturation(0.15)
                 .contrast(1.55)
                 .brightness(0.06)
+        } else if Theme.mode == .abyss {
+            // Abyss = seen through deep water: dimmed, desaturated, washed teal.
+            self
+                .saturation(0.7)
+                .colorMultiply(Color(hex: 0x9fe8e0))
+                .brightness(-0.1)
+                .contrast(1.05)
+        } else if Theme.mode == .arcade {
+            // Arcade = CRT phosphor: saturation and contrast both cranked.
+            self
+                .saturation(1.6)
+                .contrast(1.3)
         } else if Theme.mode == .garden {
             // Garden = lush/crisp: a saturation bump, no sepia, so foliage pops.
             self

@@ -1,7 +1,7 @@
 import SwiftUI
 import Combine
 
-// Nine runtime themes. Tesla = electric-blue look; Steampunk = Victorian brass/gold
+// Eleven runtime themes. Tesla = electric-blue look; Steampunk = Victorian brass/gold
 // with NO electricity; Garden = verdant greens + floral pink, soft/organic, NO electricity.
 // Academia = espresso/forest-green/cream/brass, rainy-university serif, NO electricity.
 // Noir = black/ox-blood/cold-gray/tarnished-silver, gothic, sharp shadows, NO electricity.
@@ -13,8 +13,13 @@ import Combine
 // white-hot accent, churning lava and spitting sparks.
 // Ransom = photocopied punk zine: the one LIGHT theme — newsprint paper, black ink,
 // hot-pink accent, cut-out ransom-note wordmark, everything slightly askew.
+// Abyss = the deep sea: teal bioluminescence on black water, violet accent, drifting
+// jellyfish, marine snow, and something very large that occasionally looks back.
+// Arcade = 1980s cabinet: black screen, yellow/pink/green phosphor, pixel fonts, a
+// marching invader formation. Hard pixel shadows, no blur anywhere.
 // Mirrors the web frontend's theme switcher.
-enum ThemeMode: String { case tesla, steampunk, garden, academia, noir, west, neon, forge, ransom }
+enum ThemeMode: String { case tesla, steampunk, garden, academia, noir, west, neon, forge, ransom,
+                             abyss, arcade }
 
 // Themed palette. Colors are computed properties that switch on `Theme.mode`.
 // TESLA values are the original hardcoded set; STEAMPUNK is a warmer brass set
@@ -26,11 +31,12 @@ enum Theme {
     private static var s: Bool { mode == .steampunk }
     private static var g: Bool { mode == .garden }
 
-    // Nine-way palette pick, in declaration order. Long, but it keeps the table below
+    // Eleven-way palette pick, in declaration order. Long, but it keeps the table below
     // readable as a matrix: one row per token, one column per theme.
     private static func pick(_ tesla: UInt, _ steampunk: UInt, _ garden: UInt,
                              _ academia: UInt, _ noir: UInt, _ west: UInt,
-                             _ neon: UInt, _ forge: UInt, _ ransom: UInt) -> Color {
+                             _ neon: UInt, _ forge: UInt, _ ransom: UInt,
+                             _ abyss: UInt, _ arcade: UInt) -> Color {
         switch mode {
         case .tesla:     return Color(hex: tesla)
         case .steampunk: return Color(hex: steampunk)
@@ -41,6 +47,8 @@ enum Theme {
         case .neon:      return Color(hex: neon)
         case .forge:     return Color(hex: forge)
         case .ransom:    return Color(hex: ransom)
+        case .abyss:     return Color(hex: abyss)
+        case .arcade:    return Color(hex: arcade)
         }
     }
 
@@ -48,30 +56,30 @@ enum Theme {
     // greens (metal→foliage, accent→floral pink). Academia = espresso wood, brass metal,
     // cream text, forest-green accent. Noir = near-black, tarnished-silver metal, cold-gray
     // text, ox-blood accent.
-    //                            ( tesla   ,  steampunk,  garden  ,  academia,  noir    ,  west    ,  neon    ,  forge   ,  ransom  )
-    static var bg: Color          { pick(0x05080f, 0x160d03, 0x0b1410, 0x161009, 0x040406, 0x150e08, 0x150726, 0x0b0705, 0xe8e4d9) }
-    static var bg2: Color         { pick(0x090e1a, 0x1e1206, 0x0f1c14, 0x1d150c, 0x08080b, 0x1f150c, 0x1e0a35, 0x140a06, 0xf1ede2) }
-    static var leather: Color     { pick(0x0b1424, 0x281809, 0x12241a, 0x2a1d10, 0x0c0c10, 0x2b1d10, 0x2a0f45, 0x1c100a, 0xdcd7c8) }
-    static var surface: Color     { pick(0x0f1a2e, 0x32200c, 0x16301f, 0x2f2211, 0x101015, 0x362514, 0x33124f, 0x241309, 0xf4f1e8) }
-    static var surface2: Color    { pick(0x142440, 0x3e280e, 0x1d3d28, 0x3a2b16, 0x17171e, 0x442f1a, 0x431a63, 0x30190c, 0xe4dfd0) }
-    static var surface3: Color    { pick(0x1b3052, 0x4a3012, 0x245031, 0x46351c, 0x212129, 0x543a20, 0x552279, 0x3d2110, 0xd6d0bd) }
-    static var border: Color      { pick(0x21405f, 0x6b4420, 0x2f5c3c, 0x5a4527, 0x2e2e38, 0x6d4a28, 0x7b34a8, 0x5c3315, 0x8c8677) }
-    static var borderBrass: Color { pick(0x3f86b8, 0xc08828, 0x6fae5f, 0x9a7b3e, 0x7e818c, 0xc08a45, 0xff4fd8, 0xff8a1f, 0x141414) }  // trim
+    //                            ( tesla   ,  steampunk,  garden  ,  academia,  noir    ,  west    ,  neon    ,  forge   ,  ransom  ,  abyss   ,  arcade  )
+    static var bg: Color          { pick(0x05080f, 0x160d03, 0x0b1410, 0x161009, 0x040406, 0x150e08, 0x150726, 0x0b0705, 0xe8e4d9, 0x020a12, 0x000000) }
+    static var bg2: Color         { pick(0x090e1a, 0x1e1206, 0x0f1c14, 0x1d150c, 0x08080b, 0x1f150c, 0x1e0a35, 0x140a06, 0xf1ede2, 0x041420, 0x0a0a14) }
+    static var leather: Color     { pick(0x0b1424, 0x281809, 0x12241a, 0x2a1d10, 0x0c0c10, 0x2b1d10, 0x2a0f45, 0x1c100a, 0xdcd7c8, 0x06202e, 0x10101e) }
+    static var surface: Color     { pick(0x0f1a2e, 0x32200c, 0x16301f, 0x2f2211, 0x101015, 0x362514, 0x33124f, 0x241309, 0xf4f1e8, 0x08283a, 0x14142a) }
+    static var surface2: Color    { pick(0x142440, 0x3e280e, 0x1d3d28, 0x3a2b16, 0x17171e, 0x442f1a, 0x431a63, 0x30190c, 0xe4dfd0, 0x0c3448, 0x1c1c3a) }
+    static var surface3: Color    { pick(0x1b3052, 0x4a3012, 0x245031, 0x46351c, 0x212129, 0x543a20, 0x552279, 0x3d2110, 0xd6d0bd, 0x114258, 0x26264c) }
+    static var border: Color      { pick(0x21405f, 0x6b4420, 0x2f5c3c, 0x5a4527, 0x2e2e38, 0x6d4a28, 0x7b34a8, 0x5c3315, 0x8c8677, 0x1a5a6e, 0x3a3a7a) }
+    static var borderBrass: Color { pick(0x3f86b8, 0xc08828, 0x6fae5f, 0x9a7b3e, 0x7e818c, 0xc08a45, 0xff4fd8, 0xff8a1f, 0x141414, 0x2fd9b4, 0xffe600) }  // trim
     // The "brass"/metal: Tesla electric-blue chrome, Steampunk gold, Garden foliage green,
     // Academia antique brass, Noir bone/tarnished silver (buttons + wordmark).
-    static var brass: Color       { pick(0x2bc4ff, 0xe09808, 0x8bd450, 0xc39a4e, 0xc4c8d2, 0xd9a441, 0xff4fd8, 0xff8a1f, 0x141414) }
-    static var brassLight: Color  { pick(0x7fe0ff, 0xffc838, 0xb6f07a, 0xe3c275, 0xe2e5ec, 0xf0c46f, 0xff8ce6, 0xffab4d, 0x2e2e2e) }
-    static var brassPale: Color   { pick(0xd6f4ff, 0xffe878, 0xe2ffc0, 0xf4e6b8, 0xf2f4f8, 0xffe3ab, 0xffc4f2, 0xffd7a1, 0x4a4a4a) }
-    static var copper: Color      { pick(0x1f9fd8, 0xc86818, 0xe88fa8, 0x7d9b6a, 0x6e0d13, 0xb4552b, 0x22e0ff, 0xe02b0a, 0x00b3a4) }
-    static var copperLight: Color { pick(0x5ac8ff, 0xe88838, 0xffb0c8, 0xa3c089, 0x9c1820, 0xd97a45, 0x7defff, 0xff5a2a, 0x2ad4c6) }
-    static var rust: Color        { pick(0xff5470, 0xb82c0c, 0xd4564a, 0xa23b22, 0xc41019, 0xc0392b, 0xff2d7a, 0xe02b0a, 0xd11a3a) }
+    static var brass: Color       { pick(0x2bc4ff, 0xe09808, 0x8bd450, 0xc39a4e, 0xc4c8d2, 0xd9a441, 0xff4fd8, 0xff8a1f, 0x141414, 0x3dffc8, 0xffe600) }
+    static var brassLight: Color  { pick(0x7fe0ff, 0xffc838, 0xb6f07a, 0xe3c275, 0xe2e5ec, 0xf0c46f, 0xff8ce6, 0xffab4d, 0x2e2e2e, 0x8affe0, 0xfff27a) }
+    static var brassPale: Color   { pick(0xd6f4ff, 0xffe878, 0xe2ffc0, 0xf4e6b8, 0xf2f4f8, 0xffe3ab, 0xffc4f2, 0xffd7a1, 0x4a4a4a, 0xd4fff2, 0xfffbc2) }
+    static var copper: Color      { pick(0x1f9fd8, 0xc86818, 0xe88fa8, 0x7d9b6a, 0x6e0d13, 0xb4552b, 0x22e0ff, 0xe02b0a, 0x00b3a4, 0xb86bff, 0xff3cac) }
+    static var copperLight: Color { pick(0x5ac8ff, 0xe88838, 0xffb0c8, 0xa3c089, 0x9c1820, 0xd97a45, 0x7defff, 0xff5a2a, 0x2ad4c6, 0xd4a3ff, 0xff7cc8) }
+    static var rust: Color        { pick(0xff5470, 0xb82c0c, 0xd4564a, 0xa23b22, 0xc41019, 0xc0392b, 0xff2d7a, 0xe02b0a, 0xd11a3a, 0xff4d8d, 0xff2020) }
     // Accent / "electric" color. Tesla = electric blue (drives glow + panel). Steampunk =
     // verdigris green. Garden = floral PINK. Academia = forest green. Noir = ox-blood red.
-    static var verdigris: Color   { pick(0x2bc4ff, 0x8fd44a, 0xff8fb8, 0x4f8a52, 0xa8121b, 0x3fb0a3, 0x22e0ff, 0xffd23f, 0xff2d55) }
-    static var parchment: Color   { pick(0xe6f3ff, 0xf6ecd0, 0xf0f7e8, 0xf2e7cf, 0xd9dbe2, 0xf3e3c3, 0xf2e9ff, 0xffe8d6, 0x141414) }
-    static var parchmentMid: Color { pick(0xa6c8e2, 0xe0bc6c, 0xcfe4b8, 0xd4c29a, 0x9a9da9, 0xd6b98a, 0xc9a8ea, 0xd8a878, 0x3d3d3d) }
-    static var parchmentDim: Color { pick(0x6f93b4, 0xc09838, 0x9bbf88, 0xa08f6e, 0x666974, 0xa8865c, 0x9670c4, 0xa87a52, 0x6b6b6b) }
-    static var ink: Color         { pick(0x04101e, 0x1a0c02, 0x08130c, 0x120c06, 0x030304, 0x140c05, 0x0d0418, 0x050302, 0xf4f1e8) }
+    static var verdigris: Color   { pick(0x2bc4ff, 0x8fd44a, 0xff8fb8, 0x4f8a52, 0xa8121b, 0x3fb0a3, 0x22e0ff, 0xffd23f, 0xff2d55, 0xb86bff, 0x39ff14) }
+    static var parchment: Color   { pick(0xe6f3ff, 0xf6ecd0, 0xf0f7e8, 0xf2e7cf, 0xd9dbe2, 0xf3e3c3, 0xf2e9ff, 0xffe8d6, 0x141414, 0xdff7f4, 0xf0f0ff) }
+    static var parchmentMid: Color { pick(0xa6c8e2, 0xe0bc6c, 0xcfe4b8, 0xd4c29a, 0x9a9da9, 0xd6b98a, 0xc9a8ea, 0xd8a878, 0x3d3d3d, 0x8fc4c4, 0xa0a0d0) }
+    static var parchmentDim: Color { pick(0x6f93b4, 0xc09838, 0x9bbf88, 0xa08f6e, 0x666974, 0xa8865c, 0x9670c4, 0xa87a52, 0x6b6b6b, 0x5a8c94, 0x6a6a9a) }
+    static var ink: Color         { pick(0x04101e, 0x1a0c02, 0x08130c, 0x120c06, 0x030304, 0x140c05, 0x0d0418, 0x050302, 0xf4f1e8, 0x01060b, 0x000000) }
 
     // The halo/accent color used by the glow + panel modifiers. Tesla = electric-blue
     // accent. Steampunk = warm brass aura. Garden = soft green. Academia = green bloom.
@@ -87,11 +95,15 @@ enum Theme {
         case .neon:      return Color(hex: 0xff4fd8)   // magenta neon tube
         case .forge:     return Color(hex: 0xff8a1f)   // heat bloom
         case .ransom:    return Color(hex: 0xff2d55)   // hot-pink marker; ink itself never glows
+        case .abyss:     return Color(hex: 0x3dffc8)   // bioluminescent teal
+        case .arcade:    return Color(hex: 0x39ff14)   // phosphor green
         }
     }
 
     // Bump all text larger app-wide (matches Android's LocalDensity fontScale).
     static let fontScale: CGFloat = 1.32
+    // VT323 is a tall, thin terminal face that reads small next to the others.
+    private static let vtScale: CGFloat = fontScale * 1.18
 
     // Per-theme typography. Steampunk = ornate serif (Cinzel Decorative / Cinzel / Lora,
     // from steampunk.css). Tesla = clean geometric sans (Orbitron display, Rajdhani UI/body).
@@ -117,6 +129,8 @@ enum Theme {
         case .neon:      return .custom("Monoton-Regular", size: size * fontScale)     // hollow neon tube
         case .forge:     return .custom("AlfaSlabOne-Regular", size: size * fontScale) // heavy molten slab
         case .ransom:    return .custom("SpecialElite-Regular", size: size * fontScale) // see RansomWordmark
+        case .abyss:     return .custom("MajorMonoDisplay-Regular", size: size * fontScale) // thin mixed-case mono
+        case .arcade:    return .custom("PressStart2P-Regular", size: size * fontScale)     // 8-bit cabinet
         }
     }
     static func serif(_ size: CGFloat) -> Font {
@@ -130,6 +144,8 @@ enum Theme {
         case .neon:      return .custom("Michroma-Regular", size: size * fontScale)
         case .forge:     return .custom("ZillaSlab-SemiBold", size: size * fontScale)
         case .ransom:    return .custom("SpecialElite-Regular", size: size * fontScale)
+        case .abyss:     return .custom("Quicksand-Light", size: size * fontScale).weight(.medium)
+        case .arcade:    return .custom("VT323-Regular", size: size * vtScale)
         }
     }
     static func body(_ size: CGFloat) -> Font {
@@ -144,6 +160,8 @@ enum Theme {
         case .neon:      return .custom("Rajdhani-Medium", size: size * fontScale)
         case .forge:     return .custom("ZillaSlab-Regular", size: size * fontScale)
         case .ransom:    return .custom("SpecialElite-Regular", size: size * fontScale)
+        case .abyss:     return .custom("Quicksand-Light", size: size * fontScale)
+        case .arcade:    return .custom("VT323-Regular", size: size * vtScale)
         }
     }
     // Lora bundles Regular only; bold synthesized. Rajdhani-Medium already reads bold.
@@ -159,6 +177,9 @@ enum Theme {
         case .neon:      return .custom("Michroma-Regular", size: size * fontScale)
         case .forge:     return .custom("AlfaSlabOne-Regular", size: size * fontScale)
         case .ransom:    return .custom("SpecialElite-Regular", size: size * fontScale)
+        case .abyss:     return .custom("Quicksand-Light", size: size * fontScale).weight(.bold)
+        // VT323 has one weight; a synthesized bold smears the pixels, so it stays regular.
+        case .arcade:    return .custom("VT323-Regular", size: size * vtScale)
         }
     }
 
@@ -204,6 +225,16 @@ private struct ElectricGlow: ViewModifier {
         // bloom on a photocopy just reads as a smudge.
         if Theme.mode == .ransom {
             content.shadow(color: .black.opacity(0.4), radius: 0, x: 1, y: 1)
+        // Arcade: no blur on a pixel screen — a hard pink offset, like a sprite's drop shadow.
+        } else if Theme.mode == .arcade {
+            content.shadow(color: Theme.copper, radius: 0, x: 2, y: 2)
+        // Abyss: a teal halo that breathes slowly, like something alive in the dark.
+        } else if Theme.mode == .abyss {
+            content
+                .shadow(color: Theme.glow.opacity(on ? 0.85 : 0.45), radius: on ? tight * 1.4 : tight)
+                .shadow(color: Theme.glow.opacity(on ? 0.5 : 0.25),  radius: on ? mid * 1.4 : mid)
+                .shadow(color: Theme.glow.opacity(on ? 0.3 : 0.12),  radius: on ? wide * 1.3 : wide)
+                .onAppear { withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) { on = true } }
         // Steady halo everywhere except the two electric themes (Tesla, Neon).
         } else if Theme.mode != .tesla && Theme.mode != .neon {
             content
@@ -316,6 +347,29 @@ private struct ElectricPanelStyle: ViewModifier {
                     .stroke(Theme.parchment.opacity(0.85), lineWidth: 1.5))
                 .shadow(color: Theme.parchment.opacity(0.9), radius: 0, x: 3, y: 3)
                 .rotationEffect(.degrees(-0.5))
+        } else if Theme.mode == .abyss {
+            // Abyss: a soft membrane — deep rounded corners, a teal edge that breathes
+            // slowly like a jellyfish bell, and a violet bloom spreading out into the water.
+            let c = max(corner, 18)
+            content
+                .background(bg.opacity(0.5))
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: c))
+                .overlay(RoundedRectangle(cornerRadius: c)
+                    .stroke(Theme.brass.opacity(on ? min(1, alpha * 1.2) : alpha * 0.55), lineWidth: 1.4))
+                .shadow(color: Theme.copper.opacity(0.34), radius: glowRadius * 1.4)
+                .shadow(color: Theme.copper.opacity(0.14), radius: glowRadius * 2.6)
+                .onAppear { withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) { on = true } }
+        } else if Theme.mode == .arcade {
+            // Arcade: a cabinet bezel — square corners, thick solid yellow frame, and a
+            // hard green offset shadow with zero blur. No material; pixels aren't frosted.
+            // Black under the fill so the offset shadow can't bleed through the 12% gap.
+            content
+                .background(bg.opacity(0.88))
+                .background(Color.black)
+                .clipShape(Rectangle())
+                .overlay(Rectangle().stroke(Theme.brass, lineWidth: 3))
+                .shadow(color: Theme.verdigris, radius: 0, x: 4, y: 4)
         } else if Theme.mode == .west {
             // West: a weathered board nailed to the wall — squared corners, thick sun-baked
             // leather edge, a warm dusk bloom and a faint turquoise rim. No pulse, no current.

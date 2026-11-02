@@ -107,6 +107,8 @@ struct LandingView: View {
             Text("🌴 Neon Sunset").tag(ThemeMode.neon)
             Text("🌋 Molten Forge").tag(ThemeMode.forge)
             Text("✂️ Ransom Note").tag(ThemeMode.ransom)
+            Text("🪼 Abyss").tag(ThemeMode.abyss)
+            Text("👾 Arcade").tag(ThemeMode.arcade)
         }
         .pickerStyle(.menu)
         .font(Theme.body(11))

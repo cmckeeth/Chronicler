@@ -142,6 +142,9 @@ C=$(xcrun simctl get_app_container booted blackbird.llc.Chronicler data)
 xcrun simctl spawn booted killall cfprefsd; sleep 2
 xcrun simctl launch booted blackbird.llc.Chronicler
 ```
+If that is ignored (cfprefsd kill fails with "No such file" and the app keeps a cached value),
+pass the key as a launch argument instead: `xcrun simctl launch booted blackbird.llc.Chronicler -chronicler.theme abyss`.
+Screenshots can come out blank white for ~25s after launch; wait before capturing.
 Synthetic clicks (`osascript ... click at`) are unreliable on small targets. To inspect a screen
 that needs navigation, temporarily swap the root view in `ContentView.swift`, screenshot, revert.
 

@@ -485,6 +485,16 @@ struct ThemedBackground: View {
                 // Photocopied paper: toner grain, halftone dots, a couple of streaks, and
                 // tape strips at the corners. Light, flat, deliberately cheap-looking.
                 XeroxPaper()
+            } else if Theme.mode == .abyss {
+                // The deep sea: water fading from dim teal to black, with light shafts,
+                // marine snow, jellyfish, a lure, and — now and then — eyes.
+                LinearGradient(colors: [Color(hex: 0x041a2a), Color.black],
+                               startPoint: .top, endPoint: .bottom)
+                    .ignoresSafeArea()
+                AbyssDepths()
+            } else if Theme.mode == .arcade {
+                // Attract mode on a black cabinet screen.
+                ArcadeScreen()
             }
             ElectricBackground(intensity: intensity)
         }
@@ -904,6 +914,319 @@ struct XeroxPaper: View {
     }
 }
 
+// ── Abyss FX ─────────────────────────────────────────────────────────────────
+
+// Abyss-only: the deep water column. Faint light shafts swaying down from a surface far
+// above, marine snow sinking past, jellyfish pulsing their way upward, an anglerfish lure
+// bobbing in the lower corner — and every ~14s a pair of enormous amber eyes opens in the
+// dark, blinks once, and sinks back. Deterministic from the clock, so it survives resume.
+struct AbyssDepths: View {
+    var body: some View {
+        TimelineView(.animation) { tl in
+            let t = tl.date.timeIntervalSinceReferenceDate
+            Canvas { ctx, size in
+                let w = size.width, h = size.height
+                let teal = Color(hex: 0x3dffc8), violet = Color(hex: 0xb86bff)
+
+                // Light shafts: wide wedges fanning down from the top, each swaying on its
+                // own slow period so they never line up.
+                for k in 0..<4 {
+                    let sway = CGFloat(sin(t * 0.13 + Double(k) * 1.7)) * w * 0.06
+                    let topX = w * CGFloat(0.15 + 0.24 * Double(k)) + sway
+                    let spread = w * CGFloat(0.10 + 0.04 * Double(k % 2))
+                    var shaft = Path()
+                    shaft.move(to: CGPoint(x: topX - 14, y: 0))
+                    shaft.addLine(to: CGPoint(x: topX + 14, y: 0))
+                    shaft.addLine(to: CGPoint(x: topX + spread + sway * 2, y: h * 0.7))
+                    shaft.addLine(to: CGPoint(x: topX - spread + sway * 2, y: h * 0.7))
+                    shaft.closeSubpath()
+                    let a = 0.05 + 0.025 * sin(t * 0.4 + Double(k))
+                    ctx.fill(shaft, with: .linearGradient(
+                        Gradient(colors: [teal.opacity(a), teal.opacity(0)]),
+                        startPoint: CGPoint(x: topX, y: 0), endPoint: CGPoint(x: topX, y: h * 0.7)))
+                }
+
+                // The eyes. Drawn early so the snow and jellyfish drift in front of them.
+                let cycle = 14.0
+                let phase = t.truncatingRemainder(dividingBy: cycle)
+                if phase < 6.5 {
+                    // Fade in over 1.5s, hold, blink once at ~3s, fade out over 2s.
+                    let env: Double = phase < 1.5 ? phase / 1.5
+                        : phase < 4.5 ? 1 : max(0, 1 - (phase - 4.5) / 2)
+                    let blink = max(0, 1 - abs(phase - 3.1) / 0.16)       // 0 open → 1 shut
+                    let open = CGFloat(1 - 0.94 * min(1, blink))
+                    // Each visit surfaces somewhere a little different.
+                    let n = floor(t / cycle)
+                    let jitter = (n * 0.618).truncatingRemainder(dividingBy: 1)
+                    let cx = w * CGFloat(0.38 + 0.24 * jitter)
+                    // Below the landing panel, in open water, so they're seen rather than hidden.
+                    let cy = h * CGFloat(0.63 + 0.08 * ((n * 0.382).truncatingRemainder(dividingBy: 1)))
+                    let eyeW = w * 0.26, eyeH = eyeW * 0.42 * open
+                    let gap = w * 0.22
+                    let amber = Color(hex: 0xffb020)
+                    let a = 0.35 * env
+                    // Pupils drift slowly, as if following something.
+                    let look = CGFloat(sin(phase * 0.9)) * eyeW * 0.12
+                    for side in [-1.0, 1.0] {
+                        let ex = cx + CGFloat(side) * gap
+                        // Soft halo so they glow rather than sit flat on the water.
+                        ctx.fill(Path(ellipseIn: CGRect(x: ex - eyeW, y: cy - eyeW * 0.6,
+                                                        width: eyeW * 2, height: eyeW * 1.2)),
+                                 with: .radialGradient(
+                                    Gradient(colors: [amber.opacity(a * 0.45), amber.opacity(0)]),
+                                    center: CGPoint(x: ex, y: cy), startRadius: 0, endRadius: eyeW))
+                        // Almond: two arcs meeting at the corners.
+                        var eye = Path()
+                        eye.move(to: CGPoint(x: ex - eyeW / 2, y: cy))
+                        eye.addQuadCurve(to: CGPoint(x: ex + eyeW / 2, y: cy),
+                                         control: CGPoint(x: ex, y: cy - eyeH))
+                        eye.addQuadCurve(to: CGPoint(x: ex - eyeW / 2, y: cy),
+                                         control: CGPoint(x: ex, y: cy + eyeH))
+                        eye.closeSubpath()
+                        ctx.fill(eye, with: .radialGradient(
+                            Gradient(colors: [Color(hex: 0xffe08a).opacity(a), amber.opacity(a),
+                                              Color(hex: 0x8a4a00).opacity(a)]),
+                            center: CGPoint(x: ex + look, y: cy), startRadius: 0, endRadius: eyeW * 0.55))
+                        // Slit pupil, clipped to the lid so it closes with the blink.
+                        var lid = ctx
+                        lid.clip(to: eye)
+                        let pw = eyeW * 0.07, ph = eyeW * 0.5
+                        lid.fill(Path(ellipseIn: CGRect(x: ex + look - pw / 2, y: cy - ph / 2,
+                                                        width: pw, height: ph)),
+                                 with: .color(Color.black.opacity(0.85 * env)))
+                    }
+                }
+
+                // Marine snow: specks sinking with a sideways wobble.
+                for i in 0..<60 {
+                    let fx = Double((i * 137) % 1000) / 1000.0
+                    let speed = 6.0 + Double((i * 53) % 18)
+                    let y = (Double(i) * 61 + t * speed).truncatingRemainder(dividingBy: Double(h) + 20) - 10
+                    let x = CGFloat(fx) * w + CGFloat(sin(t * 0.5 + Double(i) * 1.3) * 9)
+                    let r = CGFloat(0.7 + Double(i % 4) * 0.45)
+                    ctx.fill(Path(ellipseIn: CGRect(x: x, y: CGFloat(y), width: r * 2, height: r * 2)),
+                             with: .color(Color(hex: 0xd4fff2).opacity(0.18 + 0.08 * Double(i % 4))))
+                }
+
+                // Jellyfish: a pulsing bell trailing wavy tentacles, rising slowly and
+                // wrapping back to the bottom once it clears the top.
+                for j in 0..<4 {
+                    let scale = CGFloat(0.7 + 0.22 * Double(j % 3))
+                    let col = j % 2 == 0 ? violet : teal
+                    let travel = Double(h) + 220
+                    let prog = (t * (7 + Double(j) * 2.5) + Double(j) * travel / 4)
+                        .truncatingRemainder(dividingBy: travel)
+                    let by = h + 90 - CGFloat(prog)
+                    let bx = w * CGFloat(0.16 + 0.23 * Double(j)) + CGFloat(sin(t * 0.21 + Double(j) * 2)) * 26
+                    let pulse = 0.5 + 0.5 * sin(t * 2 * .pi / 2.5 + Double(j) * 1.4)
+                    let bw = 38 * scale * CGFloat(1 + 0.14 * pulse)
+                    let bh = 26 * scale * CGFloat(1 - 0.12 * pulse)
+
+                    // Glow around the bell.
+                    ctx.fill(Path(ellipseIn: CGRect(x: bx - bw * 1.6, y: by - bh * 1.8,
+                                                    width: bw * 3.2, height: bh * 3.4)),
+                             with: .radialGradient(
+                                Gradient(colors: [col.opacity(0.16 + 0.08 * pulse), col.opacity(0)]),
+                                center: CGPoint(x: bx, y: by - bh * 0.3), startRadius: 0, endRadius: bw * 1.6))
+
+                    // Tentacles hang from the rim and ripple, more toward the tips.
+                    let count = 5
+                    for k in 0..<count {
+                        let rootX = bx - bw * 0.42 + bw * 0.84 * CGFloat(k) / CGFloat(count - 1)
+                        var ten = Path()
+                        ten.move(to: CGPoint(x: rootX, y: by))
+                        let len = (58 + CGFloat((k * 13) % 22)) * scale
+                        var s: CGFloat = 0
+                        while s <= 1.0 {
+                            let wave = CGFloat(sin(Double(s) * 7 - t * 2.6 + Double(k + j))) * 5 * scale * s
+                            ten.addLine(to: CGPoint(x: rootX + wave, y: by + len * s))
+                            s += 0.1
+                        }
+                        ctx.stroke(ten, with: .linearGradient(
+                            Gradient(colors: [col.opacity(0.55), col.opacity(0)]),
+                            startPoint: CGPoint(x: rootX, y: by), endPoint: CGPoint(x: rootX, y: by + len)),
+                            style: StrokeStyle(lineWidth: 1.1, lineCap: .round))
+                    }
+
+                    // Bell: a dome over a gently scalloped rim.
+                    var bell = Path()
+                    bell.move(to: CGPoint(x: bx - bw / 2, y: by))
+                    bell.addCurve(to: CGPoint(x: bx + bw / 2, y: by),
+                                  control1: CGPoint(x: bx - bw / 2, y: by - bh * 1.35),
+                                  control2: CGPoint(x: bx + bw / 2, y: by - bh * 1.35))
+                    for s in 0..<4 {
+                        let x0 = bx + bw / 2 - bw * CGFloat(s) / 4
+                        bell.addQuadCurve(to: CGPoint(x: x0 - bw / 4, y: by),
+                                          control: CGPoint(x: x0 - bw / 8, y: by + 4 * scale))
+                    }
+                    bell.closeSubpath()
+                    ctx.fill(bell, with: .radialGradient(
+                        Gradient(colors: [col.opacity(0.45), col.opacity(0.12)]),
+                        center: CGPoint(x: bx, y: by - bh * 0.6), startRadius: 0, endRadius: bw * 0.7))
+                    ctx.stroke(bell, with: .color(col.opacity(0.6)), lineWidth: 1)
+                }
+
+                // Anglerfish lure: a glowing bead on a faint curved stalk, bobbing low right.
+                let lx = w * 0.8 + CGFloat(sin(t * 0.7)) * 6
+                let ly = h * 0.8 + CGFloat(sin(t * 1.3)) * 9
+                var stalk = Path()
+                stalk.move(to: CGPoint(x: w * 0.98, y: h * 0.93))
+                stalk.addQuadCurve(to: CGPoint(x: lx, y: ly),
+                                   control: CGPoint(x: w * 0.95, y: h * 0.78))
+                ctx.stroke(stalk, with: .color(teal.opacity(0.14)), lineWidth: 1.2)
+                let flick = 0.75 + 0.25 * sin(t * 4.1) * sin(t * 1.7)
+                ctx.fill(Path(ellipseIn: CGRect(x: lx - 26, y: ly - 26, width: 52, height: 52)),
+                         with: .radialGradient(
+                            Gradient(colors: [teal.opacity(0.4 * flick), teal.opacity(0)]),
+                            center: CGPoint(x: lx, y: ly), startRadius: 0, endRadius: 26))
+                ctx.fill(Path(ellipseIn: CGRect(x: lx - 3, y: ly - 3, width: 6, height: 6)),
+                         with: .color(Color(hex: 0xd4fff2).opacity(0.95 * flick)))
+            }
+            .drawingGroup()
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+}
+
+// ── Arcade FX ────────────────────────────────────────────────────────────────
+
+// Arcade-only: an attract-mode screen. Square pixel stars scrolling at three parallax
+// speeds, a formation of invaders marching sideways in discrete steps, a cannon at the
+// bottom taking a shot every couple of seconds, a red saucer crossing the top every 20s,
+// CRT scanlines, and a blinking INSERT COIN. Everything snaps to whole steps on purpose.
+struct ArcadeScreen: View {
+    // Sprite bitmaps, two frames each. "X" = lit pixel.
+    private static let squid = [
+        ["...XX...", "..XXXX..", ".XXXXXX.", "XX.XX.XX", "XXXXXXXX", "..X..X..", ".X.XX.X.", "X.X..X.X"],
+        ["...XX...", "..XXXX..", ".XXXXXX.", "XX.XX.XX", "XXXXXXXX", ".X.XX.X.", "X......X", ".X....X."]]
+    private static let crab = [
+        ["..X.....X..", "...X...X...", "..XXXXXXX..", ".XX.XXX.XX.", "XXXXXXXXXXX", "X.XXXXXXX.X", "X.X.....X.X", "...XX.XX..."],
+        ["..X.....X..", "X..X...X..X", "X.XXXXXXX.X", "XXX.XXX.XXX", "XXXXXXXXXXX", ".XXXXXXXXX.", "..X.....X..", ".X.......X."]]
+    private static let octopus = [
+        ["....XXXX....", ".XXXXXXXXXX.", "XXXXXXXXXXXX", "XXX..XX..XXX", "XXXXXXXXXXXX", "...XX..XX...", "..XX.XX.XX..", "XX........XX"],
+        ["....XXXX....", ".XXXXXXXXXX.", "XXXXXXXXXXXX", "XXX..XX..XXX", "XXXXXXXXXXXX", "..XXX..XXX..", ".XX..XX..XX.", "..XX....XX.."]]
+    private static let cannon = [".....X.....", "....XXX....", "....XXX....", ".XXXXXXXXX.",
+                                 "XXXXXXXXXXX", "XXXXXXXXXXX", "XXXXXXXXXXX"]
+    private static let saucer = [".....XXXXXX.....", "...XXXXXXXXXX...", "..XXXXXXXXXXXX..",
+                                 ".XX.XX.XX.XX.XX.", "XXXXXXXXXXXXXXXX", "..XXX..XX..XXX..", "...X........X..."]
+
+    // Every lit pixel of a bitmap as one path, so a whole sprite is a single fill.
+    private static func sprite(_ rows: [String], at origin: CGPoint, px: CGFloat, into p: inout Path) {
+        for (r, line) in rows.enumerated() {
+            for (c, ch) in line.enumerated() where ch == "X" {
+                p.addRect(CGRect(x: origin.x + CGFloat(c) * px, y: origin.y + CGFloat(r) * px,
+                                 width: px, height: px))
+            }
+        }
+    }
+
+    var body: some View {
+        TimelineView(.animation) { tl in
+            let t = tl.date.timeIntervalSinceReferenceDate
+            Canvas { ctx, size in
+                let w = size.width, h = size.height
+                let green = Color(hex: 0x39ff14), pink = Color(hex: 0xff3cac)
+                let yellow = Color(hex: 0xffe600), red = Color(hex: 0xff2020)
+
+                // Stars: three layers, nearer = bigger, brighter, faster. Snapped to 2pt.
+                for i in 0..<80 {
+                    let layer = i % 3
+                    let speed = [14.0, 32.0, 70.0][layer]
+                    let fx = Double((i * 263) % 1000) / 1000.0
+                    let raw = (Double(i) * 97 + t * speed).truncatingRemainder(dividingBy: Double(h))
+                    let y = floor(raw / 2) * 2
+                    let s = CGFloat(1 + layer)
+                    ctx.fill(Path(CGRect(x: floor(CGFloat(fx) * w), y: CGFloat(y), width: s, height: s)),
+                             with: .color(Color.white.opacity(0.25 + 0.2 * Double(layer))))
+                }
+
+                // Invader formation: 5 across × 3 rows, one step every 0.5s, reversing at
+                // the edges. The two animation frames swap on every step.
+                let px: CGFloat = 3
+                let cell: CGFloat = 12 * px, colGap: CGFloat = 14, rowGap: CGFloat = 14
+                let formW = cell * 5 + colGap * 4
+                let stepPx: CGFloat = 8
+                let travelSteps = max(1, Int((w - formW - 32) / stepPx))
+                let step = Int(floor(t / 0.5))
+                let k = step % (travelSteps * 2)
+                let offset = CGFloat(k < travelSteps ? k : travelSteps * 2 - k) * stepPx
+                let frame = step % 2
+                let formTop = h * 0.155
+                let rows: [([[String]], Color)] = [(Self.squid, green), (Self.crab, pink), (Self.octopus, yellow)]
+                for (r, (bitmaps, color)) in rows.enumerated() {
+                    var p = Path()
+                    let bm = bitmaps[frame]
+                    let inset = (cell - CGFloat(bm[0].count) * px) / 2      // centre narrow sprites
+                    for c in 0..<5 {
+                        let origin = CGPoint(x: 16 + offset + CGFloat(c) * (cell + colGap) + inset,
+                                             y: formTop + CGFloat(r) * (8 * px + rowGap))
+                        Self.sprite(bm, at: origin, px: px, into: &p)
+                    }
+                    ctx.fill(p, with: .color(color.opacity(0.7)))
+                }
+
+                // Cannon: drifts along the bottom in 3pt steps.
+                let cannonY = h * 0.85
+                func cannonX(_ time: Double) -> CGFloat {
+                    floor((w / 2 + CGFloat(sin(time * 0.35)) * w * 0.25) / 3) * 3
+                }
+                let shipX = cannonX(t)
+                var ship = Path()
+                Self.sprite(Self.cannon, at: CGPoint(x: shipX - 5.5 * px, y: cannonY), px: px, into: &ship)
+                ctx.fill(ship, with: .color(green.opacity(0.8)))
+
+                // Laser: fired every 2s from where the cannon was, climbing in 1/20s steps.
+                let shotT = t.truncatingRemainder(dividingBy: 2)
+                if shotT < 1.0 {
+                    let fired = cannonX(t - shotT)
+                    let climb = floor(shotT * 20) / 20
+                    let top = formTop + 3 * (8 * px + rowGap)
+                    let ly = cannonY - CGFloat(climb) * (cannonY - top)
+                    ctx.fill(Path(CGRect(x: fired - 1.5, y: ly - 12, width: 3, height: 12)),
+                             with: .color(Color.white.opacity(0.85)))
+                } else if shotT < 1.15 {
+                    // A little pixel burst where the shot lands.
+                    let fired = cannonX(t - shotT)
+                    let top = formTop + 3 * (8 * px + rowGap)
+                    var burst = Path()
+                    for (dx, dy) in [(0, 0), (-2, -2), (2, -2), (-2, 2), (2, 2), (0, -3), (0, 3), (-3, 0), (3, 0)] {
+                        burst.addRect(CGRect(x: fired + CGFloat(dx) * px - 1.5, y: top + CGFloat(dy) * px - 1.5,
+                                             width: px, height: px))
+                    }
+                    ctx.fill(burst, with: .color(Color.white.opacity(0.8)))
+                }
+
+                // Saucer: crosses the very top once every 20s, taking 6s.
+                let ufoT = t.truncatingRemainder(dividingBy: 20)
+                if ufoT < 6 {
+                    let stepped = floor(ufoT * 20) / 20
+                    let ux = -60 + CGFloat(stepped / 6) * (w + 120)
+                    var ufo = Path()
+                    Self.sprite(Self.saucer, at: CGPoint(x: ux, y: h * 0.075), px: px, into: &ufo)
+                    ctx.fill(ufo, with: .color(red.opacity(0.85)))
+                }
+
+                // CRT scanlines.
+                var y: CGFloat = 0
+                var lines = Path()
+                while y < h { lines.addRect(CGRect(x: 0, y: y, width: w, height: 1)); y += 3 }
+                ctx.fill(lines, with: .color(Color.black.opacity(0.22)))
+
+                // INSERT COIN, blinking on a hard 0.6s on/off.
+                if Int(floor(t / 0.6)) % 2 == 0 {
+                    ctx.draw(Text("INSERT COIN")
+                                .font(.custom("PressStart2P-Regular", size: 10))
+                                .foregroundColor(yellow.opacity(0.5)),
+                             at: CGPoint(x: w / 2, y: h * 0.96))   // below the version line
+                }
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+}
+
 // Dark-Academia-only: rain streaking down the glass. Many thin slanted streaks falling
 // at varied speed, deterministic from the TimelineView clock (no Date()/RNG → resume-safe).
 struct RainOverlay: View {
@@ -1062,8 +1385,12 @@ extension View {
 struct ChargedRow: ViewModifier {
     @State private var on = false
     func body(content: Content) -> some View {
+        // Arcade: a hard pixel edge, no blur.
+        if Theme.mode == .arcade {
+            content
+                .overlay(Rectangle().stroke(Theme.border, lineWidth: 2))
         // Steady edged row everywhere except the electric themes (Tesla, Neon).
-        if Theme.mode != .tesla && Theme.mode != .neon {
+        } else if Theme.mode != .tesla && Theme.mode != .neon {
             content
                 .overlay(RoundedRectangle(cornerRadius: 4)
                     .stroke(Theme.glow.opacity(0.22), lineWidth: 1))

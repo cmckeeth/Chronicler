@@ -54,6 +54,11 @@ struct ChroniclerApp: App {
             // Ransom Note: photocopied typewriter (the wordmark mixes several of the
             // above per letter — see RansomWordmark).
             "SpecialElite-Regular",
+            // Abyss: thin mono wordmark (body reuses Garden's Quicksand).
+            "MajorMonoDisplay-Regular",
+            // Arcade: 8-bit wordmark + terminal UI/body.
+            "PressStart2P-Regular",
+            "VT323-Regular",
         ]
         for name in names {
             guard let url = Bundle.main.url(forResource: name, withExtension: "ttf") else { continue }
