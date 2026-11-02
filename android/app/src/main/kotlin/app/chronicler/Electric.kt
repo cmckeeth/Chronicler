@@ -34,6 +34,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.sp
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.hypot
@@ -540,6 +544,237 @@ fun RansomBackdrop(modifier: Modifier = Modifier) {
     }
 }
 
+// ABYSS-only backdrop: the deep sea. Swaying light shafts from far above, marine snow
+// drifting down, glowing jellyfish pulsing their way upward, an anglerfish lure bobbing
+// in the lower right — and every 14s a pair of huge dim eyes opens in the dark, blinks
+// once, and sinks away.
+@Composable
+fun AbyssBackdrop(modifier: Modifier = Modifier) {
+    var t by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        val start = withFrameNanos { it }
+        while (true) { val now = withFrameNanos { it }; t = (now - start) / 1_000_000_000f }
+    }
+    Canvas(modifier) {
+        val w = size.width; val h = size.height
+        val twoPi = 2f * Math.PI.toFloat()
+        drawRect(Brush.verticalGradient(listOf(Color(0xFF041A2A), Color(0xFF020A12), Color.Black)))
+
+        // Light shafts: soft wedges from the surface, swaying out of step with each other.
+        for (k in 0 until 4) {
+            val top = w * (0.12f + 0.26f * k) + sin(t * 0.21f + k * 1.9f) * w * 0.05f
+            val lean = sin(t * 0.13f + k) * w * 0.10f
+            val half = w * (0.04f + 0.02f * (k % 2))
+            val shaft = Path().apply {
+                moveTo(top - half * 0.4f, 0f); lineTo(top + half * 0.4f, 0f)
+                lineTo(top + lean + half * 2.2f, h * 0.7f); lineTo(top + lean - half * 2.2f, h * 0.7f); close()
+            }
+            drawPath(shaft, Brush.verticalGradient(
+                listOf(Color(0xFF8AFFE0).copy(alpha = 0.07f), Color.Transparent), startY = 0f, endY = h * 0.7f))
+        }
+
+        // Marine snow: slow fall with a sideways wobble.
+        for (i in 0 until 60) {
+            val fx = ((i * 73) % 1000) / 1000f
+            val speed = 9f + ((i * 31) % 22)
+            val y = (((i * 137) % 1000) / 1000f * h + t * speed) % h
+            val x = fx * w + sin(t * 0.5f + i * 1.3f) * 10f
+            drawCircle(Color(0xFFD4FFF2).copy(alpha = 0.16f + 0.22f * ((i % 5) / 4f)),
+                radius = 1f + (i % 3) * 0.7f, center = Offset(x, y))
+        }
+
+        // The eyes, behind everything alive. Every 14s (first at ~6s): fade in over 1.5s,
+        // blink once, fade out over 2s.
+        // Capped at 0.35 alpha so text on top stays readable.
+        val local = (t + 8f) % 14f
+        if (local < 6f) {
+            val a = 0.35f * when {
+                local < 1.5f -> local / 1.5f
+                local < 4f -> 1f
+                else -> 1f - (local - 4f) / 2f
+            }
+            val open = if (local in 2.6f..3.0f) abs(local - 2.8f) / 0.2f else 1f
+            val cycle = ((t + 8f) / 14f).toInt()
+            val ew = minOf(w, h) * 0.26f
+            val eh = ew * 0.5f
+            val ecx = w * 0.5f + sin(cycle * 1.7f) * w * 0.06f
+            val ecy = h * (0.68f + 0.04f * sin(cycle * 2.3f))
+            val amber = Color(0xFFFFB020)
+            for (side in listOf(-1f, 1f)) {
+                val c = Offset(ecx + side * ew * 0.8f, ecy + side * ew * 0.04f)
+                drawOval(brush = Brush.radialGradient(listOf(amber.copy(alpha = a * 0.35f), Color.Transparent),
+                    center = c, radius = ew), topLeft = Offset(c.x - ew, c.y - ew * 0.6f), size = Size(ew * 2f, ew * 1.2f))
+                if (open < 0.05f) {
+                    drawLine(amber.copy(alpha = a), Offset(c.x - ew / 2f, c.y), Offset(c.x + ew / 2f, c.y), strokeWidth = 2f)
+                    continue
+                }
+                val eye = Path().apply {
+                    moveTo(c.x - ew / 2f, c.y)
+                    quadraticBezierTo(c.x, c.y - eh * open, c.x + ew / 2f, c.y)
+                    quadraticBezierTo(c.x, c.y + eh * open, c.x - ew / 2f, c.y); close()
+                }
+                drawPath(eye, Brush.radialGradient(listOf(Color(0xFFFFE08A).copy(alpha = a),
+                    amber.copy(alpha = a), Color(0xFF8A4A00).copy(alpha = a)), center = c, radius = ew / 2f))
+                val pupil = Path().apply {
+                    moveTo(c.x, c.y - eh * 0.46f * open)
+                    quadraticBezierTo(c.x + ew * 0.07f, c.y, c.x, c.y + eh * 0.46f * open)
+                    quadraticBezierTo(c.x - ew * 0.07f, c.y, c.x, c.y - eh * 0.46f * open); close()
+                }
+                drawPath(pupil, Color(0xFF01060B).copy(alpha = (a / 0.35f) * 0.9f))
+            }
+        }
+
+        // Jellyfish: a pulsing bell over wavy tentacles, rising slowly and wrapping.
+        for (k in 0 until 4) {
+            val tint = if (k % 2 == 0) Color(0xFFB86BFF) else Color(0xFF3DFFC8)
+            val bw = (20f + 7f * k).dp.toPx() * 0.5f + 12.dp.toPx()
+            val span = h + bw * 6f
+            val rise = (t * (10f + 4f * k) + k * span / 4f) % span
+            val cy = h + bw * 2f - rise
+            val cx = w * (0.18f + 0.22f * k) + sin(t * 0.25f + k * 2.1f) * w * 0.05f
+            val pulse = 0.5f + 0.5f * sin(t / 2.5f * twoPi + k * 1.7f)
+            val bell = bw * (1f + 0.10f * pulse)
+            val bh = bw * (0.85f - 0.12f * pulse)
+            drawCircle(brush = Brush.radialGradient(listOf(tint.copy(alpha = 0.16f), Color.Transparent),
+                center = Offset(cx, cy - bh * 0.4f), radius = bell * 2.4f),
+                radius = bell * 2.4f, center = Offset(cx, cy - bh * 0.4f), blendMode = BlendMode.Plus)
+            for (j in 0 until 5) {
+                val sx = cx - bell * 0.7f + j * (bell * 1.4f / 4f)
+                val len = bw * (2.0f + 0.5f * (j % 2))
+                val tent = Path().apply {
+                    moveTo(sx, cy)
+                    for (s in 1..10) {
+                        val f = s / 10f
+                        lineTo(sx + sin(s * 0.8f + t * 2.2f + j + k) * bw * 0.16f * f, cy + len * f)
+                    }
+                }
+                drawPath(tent, tint.copy(alpha = 0.30f), style = Stroke(width = 1.3f, cap = StrokeCap.Round))
+            }
+            val dome = Path().apply {
+                moveTo(cx - bell, cy)
+                cubicTo(cx - bell, cy - bh * 1.35f, cx + bell, cy - bh * 1.35f, cx + bell, cy)
+                quadraticBezierTo(cx, cy - bh * 0.3f, cx - bell, cy); close()
+            }
+            drawPath(dome, Brush.verticalGradient(listOf(tint.copy(alpha = 0.42f), tint.copy(alpha = 0.12f)),
+                startY = cy - bh, endY = cy))
+            drawPath(dome, tint.copy(alpha = 0.65f), style = Stroke(width = 1.5f))
+        }
+
+        // Anglerfish lure: a glowing bead on a faint curved stalk, bobbing lower right.
+        val lure = Offset(w * 0.80f + sin(t * 0.7f) * 8f, h * 0.80f + sin(t * 1.3f) * 14f)
+        val stalk = Path().apply {
+            moveTo(w + 12f, h * 0.90f)
+            quadraticBezierTo(w * 0.86f, h * 0.70f, lure.x, lure.y)
+        }
+        drawPath(stalk, Color(0xFF8FC4C4).copy(alpha = 0.16f), style = Stroke(width = 2.5f, cap = StrokeCap.Round))
+        val flick = 0.8f + 0.2f * sin(t * 5.3f) * sin(t * 1.7f)
+        val lr = 30.dp.toPx() * flick
+        drawCircle(brush = Brush.radialGradient(listOf(Color(0xFF8AFFE0).copy(alpha = 0.45f), Color.Transparent),
+            center = lure, radius = lr), radius = lr, center = lure, blendMode = BlendMode.Plus)
+        drawCircle(Color(0xFFE8FFF8), radius = 3.5.dp.toPx(), center = lure)
+
+    }
+}
+
+// 11×8 space invader, two frames toggled on every march step.
+private val INVADER_A = arrayOf(
+    "..X.....X..", "...X...X...", "..XXXXXXX..", ".XX.XXX.XX.",
+    "XXXXXXXXXXX", "X.XXXXXXX.X", "X.X.....X.X", "...XX.XX...")
+private val INVADER_B = arrayOf(
+    "..X.....X..", "X..X...X..X", "X.XXXXXXX.X", "XXX.XXX.XXX",
+    "XXXXXXXXXXX", ".XXXXXXXXX.", "..X.....X..", ".X.......X.")
+private val PIXEL_SHIP = arrayOf(
+    "......X......", ".....XXX.....", ".....XXX.....", ".XXXXXXXXXXX.",
+    "XXXXXXXXXXXXX", "XXXXXXXXXXXXX", "XXXXXXXXXXXXX")
+private val PIXEL_UFO = arrayOf(
+    ".....XXXXXX.....", "...XXXXXXXXXX...", "..XXXXXXXXXXXX..", ".XX.XX.XX.XX.XX.",
+    "XXXXXXXXXXXXXXXX", "..XXX..XX..XXX..", "...X........X...")
+
+private fun DrawScope.drawSprite(rows: Array<String>, left: Float, top: Float, px: Float, color: Color) {
+    rows.forEachIndexed { r, line ->
+        line.forEachIndexed { c, ch ->
+            if (ch == 'X') drawRect(color, Offset(left + c * px, top + r * px), Size(px, px))
+        }
+    }
+}
+
+// ARCADE-only backdrop: an 8-bit cabinet. Pixel stars scroll down at three speeds, a 5×3
+// invader formation marches in half-second steps, a ship fires up at them, a UFO crosses
+// the top now and then, all under CRT scanlines and a blinking INSERT COIN. Everything
+// snaps to a pixel grid, because the hardware would have.
+@Composable
+fun ArcadeBackdrop(modifier: Modifier = Modifier) {
+    var t by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        val start = withFrameNanos { it }
+        while (true) { val now = withFrameNanos { it }; t = (now - start) / 1_000_000_000f }
+    }
+    val measurer = rememberTextMeasurer()
+    val coinFont = Theme.display
+    Canvas(modifier) {
+        val w = size.width; val h = size.height
+        val px = 2.5.dp.toPx()
+        fun snap(v: Float) = (v / px).toInt() * px
+        drawRect(Color.Black)
+
+        // Stars: three parallax layers, square, snapped to the pixel grid.
+        for (i in 0 until 80) {
+            val layer = i % 3
+            val speed = floatArrayOf(14f, 34f, 70f)[layer]
+            val s = (1f + layer).dp.toPx()
+            val x = ((i * 97) % 1000) / 1000f * w
+            val y = (((i * 61) % 1000) / 1000f * h + t * speed) % h
+            drawRect(Color.White.copy(alpha = 0.25f + 0.2f * layer), Offset(snap(x), snap(y)), Size(s, s))
+        }
+
+        // Invader formation: 5 across, 3 rows, marching in discrete steps and reversing.
+        val step = (t / 0.5f).toInt()
+        val sprite = if (step % 2 == 0) INVADER_A else INVADER_B
+        val gap = px * 5f
+        val fw = 5 * 11 * px + 4 * gap
+        val margin = 16.dp.toPx()
+        val stepPx = 4.dp.toPx()
+        val travel = max(1, ((w - fw - 2 * margin) / stepPx).toInt())
+        val k = step % (2 * travel)
+        val fx = margin + (if (k <= travel) k else 2 * travel - k) * stepPx
+        val fy = h * 0.13f
+        val rowColors = listOf(Color(0xFF39FF14), Color(0xFFFF3CAC), Color(0xFFFFE600))
+        for (r in 0 until 3) for (c in 0 until 5) {
+            drawSprite(sprite, snap(fx + c * (11 * px + gap)), snap(fy + r * (8 * px + gap)), px,
+                rowColors[r].copy(alpha = 0.6f))
+        }
+
+        // Ship bottom centre, firing a pixel laser upward every ~2s.
+        val shipTop = h - 140.dp.toPx()
+        val shipLeft = snap(w / 2f - 13 * px / 2f)
+        drawSprite(PIXEL_SHIP, shipLeft, shipTop, px, Color(0xFF39FF14).copy(alpha = 0.65f))
+        val shot = t % 2f
+        if (shot < 0.9f) {
+            val ly = shipTop - (shipTop - fy) * (shot / 0.9f)
+            drawRect(Color(0xFFF0F0FF).copy(alpha = 0.8f), Offset(shipLeft + 6 * px, snap(ly)), Size(px, px * 4f))
+        }
+
+        // UFO across the top every ~20s.
+        val ufo = t % 20f
+        if (ufo < 7f) {
+            val ux = -16 * px + (w + 32 * px) * (ufo / 7f)
+            drawSprite(PIXEL_UFO, snap(ux), snap(h * 0.05f), px, Color(0xFFFF2020).copy(alpha = 0.75f))
+        }
+
+        // CRT scanlines.
+        var y = 0f
+        while (y < h) { drawRect(Color.Black.copy(alpha = 0.22f), Offset(0f, y), Size(w, 1f)); y += 3f }
+
+        // INSERT COIN, blinking, small and faint.
+        if (t % 1.4f < 0.8f) {
+            val layout = measurer.measure("INSERT COIN",
+                TextStyle(fontFamily = coinFont, fontSize = 8.sp, color = Color(0xFFFFE600)))
+            drawText(layout, alpha = 0.45f, topLeft = Offset((w - layout.size.width) / 2f,
+                h - 96.dp.toPx()))
+        }
+    }
+}
+
 private fun DrawScope.drawField(t: Float, intensity: Float) {
     val w = size.width; val h = size.height
 
@@ -684,6 +919,21 @@ fun Modifier.charged(): Modifier = composed {
         // Paper: a thin ink rule, no glow at all.
         val shape = RoundedCornerShape(1.dp)
         this.border(1.dp, Theme.parchment.copy(alpha = 0.35f), shape)
+    } else if (Theme.themeMode == ThemeMode.ABYSS) {
+        // A slow teal breath with round 18.dp corners — alive, but calmer than electricity.
+        val shape = RoundedCornerShape(18.dp)
+        val tr = rememberInfiniteTransition(label = "abyss")
+        val p by tr.animateFloat(
+            initialValue = 0.2f, targetValue = 0.55f,
+            animationSpec = infiniteRepeatable(tween(3000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+            label = "a")
+        this
+            .shadow(4.dp, shape, spotColor = Theme.copper, ambientColor = Theme.copper)
+            .border(1.dp, Theme.brass.copy(alpha = p), shape)
+    } else if (Theme.themeMode == ThemeMode.ARCADE) {
+        // A steady 2.dp pixel edge, square corners, no glow.
+        val shape = RoundedCornerShape(0.dp)
+        this.border(2.dp, Theme.border, shape)
     } else if (Theme.themeMode == ThemeMode.WEST) {
         // No electricity: a steady sun-baked leather edge with squared 3.dp corners.
         val shape = RoundedCornerShape(3.dp)

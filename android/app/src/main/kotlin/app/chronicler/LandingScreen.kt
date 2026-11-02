@@ -91,7 +91,9 @@ fun LandingScreen(auth: AuthStore, nav: NavController) {
                 if (Theme.themeMode == ThemeMode.RANSOM) {
                     RansomWordmark("Chronicler", 26.sp)
                 } else {
-                    Text("Chronicler", color = Theme.brass, fontSize = 40.sp, fontWeight = FontWeight.Bold,
+                    // Press Start 2P is a full em wide per letter, so ARCADE sets it smaller.
+                    Text("Chronicler", color = Theme.brass,
+                        fontSize = if (Theme.themeMode == ThemeMode.ARCADE) 17.sp else 40.sp, fontWeight = FontWeight.Bold,
                         fontFamily = Theme.display, maxLines = 1, softWrap = false,
                         style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
                 }
@@ -343,6 +345,8 @@ private fun ThemeMode.label(): String = when (this) {
     ThemeMode.NEON -> "🌴 Neon Sunset"
     ThemeMode.FORGE -> "🌋 Molten Forge"
     ThemeMode.RANSOM -> "✂️ Ransom Note"
+    ThemeMode.ABYSS -> "🪼 Abyss"
+    ThemeMode.ARCADE -> "👾 Arcade"
 }
 
 // Theme selector as a compact DROPDOWN: a themed outlined field shows the current theme;

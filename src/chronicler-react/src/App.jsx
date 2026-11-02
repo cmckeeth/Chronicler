@@ -295,6 +295,143 @@ function ForgeFX() {
   );
 }
 
+// Abyss-only backdrop: light shafts swaying down from the surface, marine snow sinking,
+// pulsing jellyfish drifting up, an anglerfish lure bobbing low right, and every 14s a
+// pair of huge dim eyes that open out of the dark, blink once, and sink away.
+function AbyssFX() {
+  const shafts = [12, 34, 58, 81].map((left, i) => ({ left, dur: 11 + i * 3, delay: -i * 4 }));
+  const snow = Array.from({ length: 60 }, (_, i) => ({
+    left: (i * 61) % 100,
+    dur: 14 + ((i * 53) % 120) / 10,
+    delay: -((i * 37) % 260) / 10,
+    wobble: 3 + (i % 4),
+    size: 1 + (i % 3) * 0.8,
+  }));
+  // Violet and teal, each on its own drift and pulse so they never move in step.
+  const jellies = [
+    { left: 14, size: 70, color: '#b86bff', dur: 46, delay: -8 },
+    { left: 72, size: 54, color: '#3dffc8', dur: 58, delay: -30 },
+    { left: 44, size: 40, color: '#d4a3ff', dur: 64, delay: -48 },
+    { left: 88, size: 34, color: '#8affe0', dur: 52, delay: -18 },
+  ];
+  return (
+    <div className="abyss-fx" aria-hidden="true">
+      {shafts.map((s, i) => (
+        <span key={i} className="abyss-shaft"
+          style={{ left: `${s.left}%`, animationDuration: `${s.dur}s`, animationDelay: `${s.delay}s` }} />
+      ))}
+      {snow.map((s, i) => (
+        <span key={i} className="abyss-snow"
+          style={{ left: `${s.left}%`, width: s.size, height: s.size,
+                   animationDuration: `${s.dur}s, ${s.wobble}s`,
+                   animationDelay: `${s.delay}s, ${-i % 5}s` }} />
+      ))}
+      {jellies.map((j, i) => (
+        <div key={i} className="abyss-jelly"
+          style={{ left: `${j.left}%`, width: j.size, color: j.color,
+                   animationDuration: `${j.dur}s, ${9 + i * 2}s`, animationDelay: `${j.delay}s, ${-i * 3}s` }}>
+          <svg viewBox="0 0 40 70" style={{ animationDelay: `${-i * 0.7}s` }}>
+            <g className="abyss-tentacles" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
+              <path d="M10 22 q-4 10 0 20 t0 22" />
+              <path d="M16 23 q4 10 0 20 t0 18" />
+              <path d="M20 23 q-4 12 0 24 t0 20" />
+              <path d="M24 23 q4 10 0 20 t0 18" />
+              <path d="M30 22 q4 10 0 20 t0 22" />
+            </g>
+            <path className="abyss-bell" d="M3 22 Q3 2 20 2 Q37 2 37 22 Q28 18 20 22 Q12 18 3 22 Z"
+              fill="currentColor" fillOpacity=".35" stroke="currentColor" strokeWidth="1" />
+          </svg>
+        </div>
+      ))}
+      <svg className="abyss-lure" viewBox="0 0 80 90">
+        <path d="M78 90 Q70 30 24 18" fill="none" stroke="#3dffc8" strokeOpacity=".22" strokeWidth="1.5" />
+        <circle cx="22" cy="18" r="4" fill="#d4fff2" />
+        <circle cx="22" cy="18" r="12" fill="#3dffc8" fillOpacity=".18" />
+      </svg>
+      <div className="abyss-eyes">
+        <span className="abyss-eye" />
+        <span className="abyss-eye" />
+      </div>
+    </div>
+  );
+}
+
+// Arcade-only backdrop. Sprites are 1-bit bitmaps: one string per row, X = lit pixel.
+const SPRITES = {
+  squid: [
+    ['...XX...', '..XXXX..', '.XXXXXX.', 'XX.XX.XX', 'XXXXXXXX', '..X..X..', '.X.XX.X.', 'X.X..X.X'],
+    ['...XX...', '..XXXX..', '.XXXXXX.', 'XX.XX.XX', 'XXXXXXXX', '.X.XX.X.', 'X......X', '.X....X.'],
+  ],
+  crab: [
+    ['..X.....X..', '...X...X...', '..XXXXXXX..', '.XX.XXX.XX.', 'XXXXXXXXXXX', 'X.XXXXXXX.X', 'X.X.....X.X', '...XX.XX...'],
+    ['..X.....X..', 'X..X...X..X', 'X.XXXXXXX.X', 'XXX.XXX.XXX', 'XXXXXXXXXXX', '.XXXXXXXXX.', '..X.....X..', '.X.......X.'],
+  ],
+  octopus: [
+    ['....XXXX....', '.XXXXXXXXXX.', 'XXXXXXXXXXXX', 'XXX..XX..XXX', 'XXXXXXXXXXXX', '...XX..XX...', '..XX.XX.XX..', 'XX........XX'],
+    ['....XXXX....', '.XXXXXXXXXX.', 'XXXXXXXXXXXX', 'XXX..XX..XXX', 'XXXXXXXXXXXX', '..XXX..XXX..', '.XX..XX..XX.', '..XX....XX..'],
+  ],
+  ship: [['......X......', '.....XXX.....', '.....XXX.....', '.XXXXXXXXXXX.', 'XXXXXXXXXXXXX', 'XXXXXXXXXXXXX', 'XXXXXXXXXXXXX', 'XXXXXXXXXXXXX']],
+  ufo: [['.....XXXXXX.....', '...XXXXXXXXXX...', '..XXXXXXXXXXXX..', '.XX.XX.XX.XX.XX.', 'XXXXXXXXXXXXXXXX', '..XXX..XX..XXX..', '...X........X...']],
+};
+// One SVG path per frame: a 1×1 square for every lit pixel.
+const bitmapPath = rows => rows.flatMap((row, y) =>
+  [...row].map((c, x) => (c === 'X' ? `M${x} ${y}h1v1h-1z` : ''))).join('');
+
+function PixelSprite({ name, scale = 3, className = '' }) {
+  const frames = SPRITES[name];
+  const w = frames[0][0].length, h = frames[0].length;
+  return (
+    <svg className={`pixel-sprite ${className}`} viewBox={`0 0 ${w} ${h}`}
+      width={w * scale} height={h * scale} shapeRendering="crispEdges">
+      {frames.map((f, i) => (
+        <path key={i} d={bitmapPath(f)} fill="currentColor" className={frames.length > 1 ? `frame-${i}` : ''} />
+      ))}
+    </svg>
+  );
+}
+
+// Arcade backdrop: a three-speed pixel starfield, an invader formation stepping side to
+// side, a player ship firing upward, a UFO crossing now and then, CRT scanlines over
+// everything, and a blinking INSERT COIN.
+function ArcadeFX() {
+  const stars = Array.from({ length: 80 }, (_, i) => ({
+    left: (i * 37) % 100,
+    top: (i * 53) % 100,
+    layer: i % 3,
+    size: 1 + (i % 3),
+  }));
+  const rows = [['squid', 'arcade-green'], ['crab', 'arcade-pink'], ['octopus', 'arcade-yellow']];
+  return (
+    <>
+      <div className="arcade-fx" aria-hidden="true">
+        {[0, 1, 2].map(layer => (
+          <div key={layer} className={`arcade-stars arcade-stars-${layer}`}>
+            {/* Two stacked copies so the scroll can loop without a seam. */}
+            {[0, 100].map(offset => stars.filter(s => s.layer === layer).map((s, i) => (
+              <span key={`${offset}-${i}`} className="arcade-star"
+                style={{ left: `${s.left}%`, top: `${s.top + offset - 100}%`, width: s.size, height: s.size }} />
+            )))}
+          </div>
+        ))}
+        <div className="arcade-ufo"><PixelSprite name="ufo" scale={3} /></div>
+        <div className="arcade-formation">
+          {rows.map(([name, color], r) => (
+            <div key={r} className={`arcade-row ${color}`}>
+              {Array.from({ length: 5 }, (_, c) => <PixelSprite key={c} name={name} scale={3} />)}
+            </div>
+          ))}
+        </div>
+        <div className="arcade-player">
+          <span className="arcade-laser" />
+          <PixelSprite name="ship" scale={3} />
+        </div>
+        <div className="arcade-coin">INSERT COIN</div>
+      </div>
+      <div className="arcade-scan" aria-hidden="true" />
+    </>
+  );
+}
+
 function CornerControls() {
   const [theme, setTheme] = useState(() => localStorage.getItem('chronicler_theme') || 'tesla');
   useEffect(() => {
@@ -322,6 +459,8 @@ function CornerControls() {
         <option value="neon">🌴 Neon Sunset</option>
         <option value="forge">🌋 Molten Forge</option>
         <option value="ransom">✂️ Ransom Note</option>
+        <option value="abyss">🪼 Abyss</option>
+        <option value="arcade">👾 Arcade</option>
       </select>
     </div>
   );
@@ -339,6 +478,8 @@ export default function App() {
       <WestFX />
       <NeonFX />
       <ForgeFX />
+      <AbyssFX />
+      <ArcadeFX />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Protected><Library /></Protected>} />

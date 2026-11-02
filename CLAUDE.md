@@ -12,8 +12,8 @@ C# backend stays authoritative, frontends are independent per platform.
 > font, a fix, a behavior tweak — MUST be implemented in **all three**, not just the one being worked
 > on. Do not consider a task done until web + iOS + Android all have it. If you can only do some now,
 > say so explicitly and track the rest. Themes especially: web, iOS, and Android must offer the same
-> set (currently **nine**: Tesla / Steampunk / Garden / Dark Academia / Blackletter Noir /
-> Wild West / Neon Sunset / Molten Forge / Ransom Note) and look/behave equivalently per platform.
+> set (currently **eleven**: Tesla / Steampunk / Garden / Dark Academia / Blackletter Noir /
+> Wild West / Neon Sunset / Molten Forge / Ransom Note / Abyss / Arcade) and look/behave equivalently per platform.
 
 - **Backend** — `src/Chronicler.Api` (.NET REST, JWT auth). Stays C#. Source of truth.
 - **iOS** — **native Swift/SwiftUI** app at repo-root `Chronicler/`. Consumes the API over HTTP. Runs on the **Simulator** for development and ships to **TestFlight** via `./deploy-ios.sh` (see `docs/ios-distribution.md`).
@@ -100,10 +100,11 @@ and the Android SDK (`ANDROID_HOME`, default `/home/corbin/Android/Sdk`).
 
 ---
 
-## Themes (nine, must stay in sync across all three frontends)
+## Themes (eleven, must stay in sync across all three frontends)
 
 Tesla · Steampunk · Garden · Dark Academia (`academia`) · Blackletter Noir (`noir`) ·
-Wild West (`west`) · Neon Sunset (`neon`) · Molten Forge (`forge`) · Ransom Note (`ransom`).
+Wild West (`west`) · Neon Sunset (`neon`) · Molten Forge (`forge`) · Ransom Note (`ransom`) ·
+Abyss (`abyss`) · Arcade (`arcade`).
 
 **Ransom Note is the only LIGHT theme** — `parchment` is ink, `ink` is paper. It exists partly
 as a canary: it catches anything that assumes a dark ground. Two such bugs already surfaced —
@@ -114,12 +115,12 @@ Ransom gets a hard ink offset instead). **Check Ransom whenever you touch shared
 Adding a theme touches, per frontend:
 - **Web**: `styles.css` `:root[data-theme="x"]` token block + FX CSS + font `@import`;
   `App.jsx` `<option>` + an FX component rendered in `App()`; `main.jsx` `_validThemes`.
-- **iOS** (`Chronicler/Chronicler/`): `Theme.swift` enum + `pick()` (now **nine** positional
+- **iOS** (`Chronicler/Chronicler/`): `Theme.swift` enum + `pick()` (now **eleven** positional
   args) + font funcs + `glow` + `ElectricPanelStyle` branch; `ChroniclerApp.swift`
   `registerFonts()` for any new TTF; `LandingView.swift` picker `.tag`; `Electric.swift`
   `ThemedBackground` branch + FX structs; **`CoverImage.swift` `coverTreatment()`** — easy to
   miss, no compiler error, silently falls through to the Tesla branch.
-- **Android**: `Theme.kt` enum + `byTheme()` (nine args) + fonts + `glowVerdigris` +
+- **Android**: `Theme.kt` enum + `byTheme()` (eleven args) + fonts + `glowVerdigris` +
   `electricPanel`; `Electric.kt` `charged()` + a backdrop composable; `MainActivity.kt` backdrop
   wiring; `Util.kt` `coverColorFilter()` (exhaustive `when` — the compiler enforces this one);
   `LandingScreen.kt` `label()`. The dropdown iterates `ThemeMode.entries`, so no list to update.

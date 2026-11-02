@@ -134,6 +134,25 @@ fun coverColorFilter(): ColorFilter {
             )))
             ColorFilter.colorMatrix(m)
         }
+        ThemeMode.ABYSS -> {
+            // Seen through deep water: darkened, colour drained, a teal cast.
+            val m = ColorMatrix().also { saturate(it, 0.7f) }
+            m.timesAssign(contrast(1.06f))
+            val b = 0.8f
+            m.timesAssign(ColorMatrix(floatArrayOf(
+                0.70f * b, 0f, 0f, 0f, 0f,
+                0f, 1.00f * b, 0f, 0f, 0f,
+                0f, 0f, 0.96f * b, 0f, 0f,
+                0f, 0f, 0f, 1f, 0f,
+            )))
+            ColorFilter.colorMatrix(m)
+        }
+        ThemeMode.ARCADE -> {
+            // Cabinet CRT: hard contrast, colours pushed to full saturation.
+            val m = ColorMatrix().also { saturate(it, 1.7f) }
+            m.timesAssign(contrast(1.3f))
+            ColorFilter.colorMatrix(m)
+        }
         ThemeMode.WEST -> {
             // sun-baked: warm amber wash, slightly desaturated, dimmed like old paper
             // (~ sepia-ish saturate(.72) brightness(.92) contrast(1.06)).

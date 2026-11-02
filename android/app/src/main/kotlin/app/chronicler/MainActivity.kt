@@ -50,7 +50,9 @@ fun App(auth: AuthStore) {
         val base = LocalDensity.current
         CompositionLocalProvider(
             // Bump all text larger app-wide.
-            LocalDensity provides Density(base.density, base.fontScale * 1.32f),
+            // ARCADE's VT323 body face reads small, so it gets a further 1.18x on top.
+            LocalDensity provides Density(base.density,
+                base.fontScale * 1.32f * (if (Theme.themeMode == ThemeMode.ARCADE) 1.18f else 1f)),
             LocalTextStyle provides TextStyle(fontFamily = Theme.body, color = Theme.parchment)
         ) {
         Surface(modifier = Modifier.fillMaxSize(), color = Theme.bg) {
@@ -85,6 +87,12 @@ fun App(auth: AuthStore) {
             } else if (Theme.themeMode == ThemeMode.RANSOM) {
                 // Photocopied paper: halftone, toner streaks, tape at the corners.
                 RansomBackdrop(modifier = Modifier.fillMaxSize())
+            } else if (Theme.themeMode == ThemeMode.ABYSS) {
+                // The deep: light shafts, marine snow, jellyfish, a lure — and the eyes.
+                AbyssBackdrop(modifier = Modifier.fillMaxSize())
+            } else if (Theme.themeMode == ThemeMode.ARCADE) {
+                // 8-bit cabinet: pixel stars, marching invaders, a ship, a UFO, scanlines.
+                ArcadeBackdrop(modifier = Modifier.fillMaxSize())
             }
             // Inset content below the status bar / camera cutout and above the nav bar.
             Box(Modifier.fillMaxSize().systemBarsPadding()) {

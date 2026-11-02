@@ -34,7 +34,9 @@ fun LoginScreen(auth: AuthStore, onOfflineLibrary: () -> Unit = {}) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            Text("Chronicler", color = Theme.brass, fontSize = 34.sp, fontWeight = FontWeight.Bold,
+            // Press Start 2P is a full em wide per letter, so ARCADE sets it smaller.
+            Text("Chronicler", color = Theme.brass,
+                fontSize = if (Theme.themeMode == ThemeMode.ARCADE) 15.sp else 34.sp, fontWeight = FontWeight.Bold,
                 fontFamily = Theme.display,
                 style = androidx.compose.ui.text.TextStyle(shadow = Theme.glowVerdigris))
             Text("Your audiobook library", color = Theme.parchmentDim, fontSize = 14.sp,

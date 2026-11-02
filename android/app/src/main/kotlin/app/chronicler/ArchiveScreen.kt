@@ -169,8 +169,10 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()) {
-            UpdateBanner(auth.api, compact = true)
-            Spacer(Modifier.weight(1f))
+            // The banner takes what is left after the Refresh pill, so a long "update
+            // available" line wraps itself rather than squeezing Refresh onto three lines.
+            UpdateBanner(auth.api, modifier = Modifier.weight(1f), compact = true)
+            Spacer(Modifier.width(6.dp))
             Surface(color = Theme.brass, shape = RoundedCornerShape(50),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Theme.verdigris),
                 modifier = Modifier
