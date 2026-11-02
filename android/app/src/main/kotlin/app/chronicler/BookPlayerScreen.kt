@@ -88,7 +88,8 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
     fun loadChapter(ch: Chapter, start: Double) {
         current = ch
         // Play the local file when downloaded; otherwise stream.
-        audio.load(Downloads.sourceUri(context, ch.id, api.audioUrl(ch.id)), ch.title, start, ch.mimeType)
+        val stream = api.audioUrl(ch.id)
+        audio.load(Downloads.sourceUri(context, ch.id, stream), ch.title, start, ch.mimeType, streamUrl = stream)
     }
 
     fun downloadChapter(ch: Chapter) {
@@ -126,16 +127,16 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
                     val dur = audio.duration
                     val idx = chapters.indexOfFirst { it.id == cur.id }
                     val finished = dur > 0 && pos / dur >= 0.95        // 95% = finished
-                    val listened = finished || (idx >= 0 && progresses[idx].isListened)
+                    val listened = finished || progresses.getOrNull(idx)?.isListened == true
+                    // Send real duration so the server marks it finished. The signal can drop
+                    // after the book opened online (driving), so a failed save counts as offline.
+                    val saved = !offline && api.saveChapterProgress(cur.id, pos, dur)
                     // Always record locally so an offline session resumes where it left off;
-                    // when offline the entry is marked dirty and pushed on the next online load.
-                    if (Downloads.isDownloaded(context, cur.id)) {
-                        Downloads.setLocalProgress(context, cur.id, pos, dur, listened, dirty = offline)
+                    // anything the server didn't get is marked dirty and pushed on the next online load.
+                    if (!saved || Downloads.isDownloaded(context, cur.id)) {
+                        Downloads.setLocalProgress(context, cur.id, pos, dur, listened, dirty = !saved)
                     }
-                    if (!offline) {
-                        api.saveChapterProgress(cur.id, pos, dur)      // send real duration so server marks finished
-                    }
-                    if (idx >= 0) {
+                    if (idx in progresses.indices) {
                         progresses = progresses.toMutableList().also {
                             it[idx] = it[idx].copy(positionSeconds = pos,
                                 isListened = it[idx].isListened || finished)
@@ -181,7 +182,8 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
         } else {
             // Push anything recorded while the server was unreachable, then read it back.
             Downloads.dirtyProgress(context).forEach { (chapterId, stored) ->
-                api.saveChapterProgress(chapterId, stored.positionSeconds, stored.durationSeconds)
+                // Keep it dirty if the push fails, so it's retried next time instead of lost.
+                if (!api.saveChapterProgress(chapterId, stored.positionSeconds, stored.durationSeconds)) return@forEach
                 if (stored.isListened) api.completeChapter(chapterId)
                 Downloads.clearDirty(context, chapterId)
             }
@@ -302,7 +304,7 @@ fun BookPlayerScreen(auth: AuthStore, nav: NavController, bookId: Int) {
                                 Modifier.electricPanel(Theme.surface2, corner = 4.dp, alpha = 0.8f, elevation = 8.dp)
                             else Modifier.charged())   // every chapter row stays a little charged
                             .combinedClickable(
-                                onClick = { loadChapter(ch, progresses[idx].positionSeconds) },
+                                onClick = { loadChapter(ch, pr.positionSeconds) },   // progresses may still be loading
                                 onLongClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     menuChapterId = ch.id

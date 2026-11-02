@@ -91,3 +91,5 @@ Chronicler/fastlane/test_output
 Chronicler/*.ipa
 Chronicler/*.app.dSYM.zip
 AuthKey_*.p8
+
+CONTEXT.MD

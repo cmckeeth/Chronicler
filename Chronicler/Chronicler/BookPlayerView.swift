@@ -533,14 +533,15 @@ struct BookPlayerView: View {
         let finished = duration > 0 && position / duration >= 0.95                      // 95% = finished
         let listened = finished || (idx.map { progresses[$0].isListened } ?? false)
 
-        // Always record locally so an offline session resumes where it left off; when
-        // offline the entry is marked dirty and pushed on the next load that reaches the API.
-        if Downloads.isDownloaded(chapterId: cur.id) {
+        // Send real duration so the server marks it finished. The signal can drop after the
+        // book opened online (driving), so a failed save counts as offline.
+        var saved = false
+        if !offline { saved = await api.saveChapterProgress(cur.id, position: position, duration: duration) }
+        // Always record locally so an offline session resumes where it left off; anything the
+        // server didn't get is marked dirty and pushed on the next load that reaches the API.
+        if !saved || Downloads.isDownloaded(chapterId: cur.id) {
             Downloads.setLocalProgress(chapterId: cur.id, position: position, duration: duration,
-                                       isListened: listened, dirty: offline)
-        }
-        if !offline {
-            await api.saveChapterProgress(cur.id, position: position, duration: duration)  // send real duration so server marks finished
+                                       isListened: listened, dirty: !saved)
         }
         if let idx {
             progresses[idx].positionSeconds = position
@@ -552,8 +553,9 @@ struct BookPlayerView: View {
     // that already reached the API, so the server is known to be up.
     private func flushOfflineProgress() async {
         for (chapterId, stored) in Downloads.dirtyProgress() {
-            await api.saveChapterProgress(chapterId, position: stored.positionSeconds,
-                                          duration: stored.durationSeconds)
+            // Keep it dirty if the push fails, so it's retried next time instead of lost.
+            guard await api.saveChapterProgress(chapterId, position: stored.positionSeconds,
+                                                duration: stored.durationSeconds) else { return }
             if stored.isListened { await api.completeChapter(chapterId) }
             Downloads.clearDirty(chapterId: chapterId)
         }

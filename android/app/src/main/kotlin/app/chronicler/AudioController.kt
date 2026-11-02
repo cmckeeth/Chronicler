@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.media3.cast.CastPlayer
 import androidx.media3.cast.SessionAvailabilityListener
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -41,6 +42,10 @@ class AudioController(context: Context) {
     private var pollJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.Main)
     private var lastSaveMs = 0L
+    // What's loaded, kept so a cast transfer can rebuild it: a Cast device can't read a
+    // file:// on this phone, so it always gets the streaming URL.
+    private var streamUrl: String? = null
+    private var mimeType = "audio/mpeg"
 
     // Volume boost on local playback via LoudnessEnhancer (gain beyond 100%).
     private var enhancer: LoudnessEnhancer? = null
@@ -85,6 +90,12 @@ class AudioController(context: Context) {
         }
         override fun onPlaybackStateChanged(state: Int) {
             if (state == Player.STATE_ENDED) { isPlaying = false; onEnded?.invoke() }
+        }
+        // Playback failures (a cast device that can't fetch or decode the audio, a dropped
+        // stream) are otherwise silent: the player just stops. Put them in the server log.
+        override fun onPlayerError(error: PlaybackException) {
+            CrashReporter.report("PLAYER ERROR casting=$casting local=$isLocal mime=$mimeType " +
+                "code=${error.errorCodeName} msg=${error.message} cause=${error.cause}")
         }
     }
 
@@ -149,27 +160,36 @@ class AudioController(context: Context) {
         player = target
         casting = player === cast
         if (item != null) {
-            player.setMediaItem(item, pos)
+            // Going to the cast device: swap a downloaded file for the stream. Coming back:
+            // the phone can use either, so keep whatever was playing.
+            val uri = if (casting) streamUrl else item.localConfiguration?.uri?.toString()
+            isLocal = uri?.startsWith("file:") == true
+            player.setMediaItem(mediaItem(uri ?: return), pos)
             player.playbackParameters = player.playbackParameters.withSpeed(speed.toFloat())
             player.prepare()
             if (wasPlaying) player.play()
         }
     }
 
-    fun load(url: String, title: String, startPosition: Double, mimeType: String = "audio/mpeg") {
+    /** [url] is what the phone plays (a downloaded file or the stream); [streamUrl] is what a cast device gets. */
+    fun load(url: String, title: String, startPosition: Double, mimeType: String = "audio/mpeg",
+             streamUrl: String = url) {
         this.title = title
-        isLocal = url.startsWith("file:")
+        this.streamUrl = streamUrl
+        this.mimeType = mimeType
+        val playUrl = if (casting) streamUrl else url
+        isLocal = playUrl.startsWith("file:")
         currentPosition = startPosition
         duration = 0.0
-        // CastPlayer requires an explicit mimeType or it crashes when the media item
-        // transfers to a Cast session — the stream URL has no extension to infer from.
-        player.setMediaItem(
-            MediaItem.Builder().setUri(url).setMimeType(mimeType).build()
-        )
+        player.setMediaItem(mediaItem(playUrl))
         player.prepare()
         if (startPosition > 1) player.seekTo((startPosition * 1000).toLong())
         updateSession()
     }
+
+    // CastPlayer requires an explicit mimeType or it crashes when the media item
+    // transfers to a Cast session — the stream URL has no extension to infer from.
+    private fun mediaItem(uri: String) = MediaItem.Builder().setUri(uri).setMimeType(mimeType).build()
 
     private fun startPolling() {
         pollJob?.cancel()

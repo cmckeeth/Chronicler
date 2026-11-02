@@ -618,7 +618,24 @@ app.MapPut("/api/chapters/{chapterId:int}/progress", [Authorize] async (
     if (req.DurationSeconds > 0 && req.PositionSeconds / req.DurationSeconds >= 0.95)
         p.IsListened = true;
 
-    await db.SaveChangesAsync();
+    try
+    {
+        await db.SaveChangesAsync();
+    }
+    catch (DbUpdateException)
+    {
+        // Two saves for a chapter with no row yet (e.g. a pause and the 10s timer, or a
+        // reconnect flushing offline progress) both tried to insert. The other one won,
+        // so update its row instead of failing.
+        db.ChangeTracker.Clear();
+        var existing = await db.ChapterProgresses
+            .FirstAsync(cp => cp.UserId == uid && cp.ChapterId == chapterId);
+        existing.PositionSeconds = req.PositionSeconds;
+        existing.UpdatedAt = DateTime.UtcNow;
+        if (req.DurationSeconds > 0 && req.PositionSeconds / req.DurationSeconds >= 0.95)
+            existing.IsListened = true;
+        await db.SaveChangesAsync();
+    }
     return Results.Ok();
 });
 

@@ -8,7 +8,13 @@ final class APIClient: @unchecked Sendable {
 
     var token: String?
 
-    private let session = URLSession(configuration: .default)
+    // 15s instead of the default 60s: on a weak signal (driving) a stalled call should give
+    // up quickly so the player falls back to downloads instead of hanging.
+    private let session: URLSession = {
+        let c = URLSessionConfiguration.default
+        c.timeoutIntervalForRequest = 15
+        return URLSession(configuration: c)
+    }()
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()   // camelCase keys match property names directly
         return d
@@ -96,9 +102,12 @@ final class APIClient: @unchecked Sendable {
         (try? await send(request("/api/chapters/\(chapterId)/progress"), as: ChapterProgress.self))
             ?? ChapterProgress(positionSeconds: 0, isListened: false)
     }
-    func saveChapterProgress(_ chapterId: Int, position: Double, duration: Double) async {
-        _ = try? await send(request("/api/chapters/\(chapterId)/progress", method: "PUT",
-            body: ["positionSeconds": position, "durationSeconds": duration]))
+    /// False when the server didn't get it (no signal, timeout, error), so the caller can keep it for later.
+    @discardableResult
+    func saveChapterProgress(_ chapterId: Int, position: Double, duration: Double) async -> Bool {
+        let code = (try? await send(request("/api/chapters/\(chapterId)/progress", method: "PUT",
+            body: ["positionSeconds": position, "durationSeconds": duration]))) ?? -1
+        return (200..<300).contains(code)
     }
     func resetChapter(_ chapterId: Int) async {
         _ = try? await send(request("/api/chapters/\(chapterId)/reset", method: "POST"))

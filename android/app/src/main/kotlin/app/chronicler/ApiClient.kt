@@ -100,10 +100,10 @@ class ApiClient {
             ?: return ChapterProgress()
         return runCatching { json.decodeFromString<ChapterProgress>(resp) }.getOrDefault(ChapterProgress())
     }
-    suspend fun saveChapterProgress(chapterId: Int, position: Double, duration: Double) {
+    /** False when the server didn't get it (no signal, timeout, error), so the caller can keep it for later. */
+    suspend fun saveChapterProgress(chapterId: Int, position: Double, duration: Double): Boolean =
         body(builder("/api/chapters/$chapterId/progress")
-            .put(jsonBody(mapOf("positionSeconds" to position, "durationSeconds" to duration))).build())
-    }
+            .put(jsonBody(mapOf("positionSeconds" to position, "durationSeconds" to duration))).build()) != null
     suspend fun resetChapter(chapterId: Int) {
         body(builder("/api/chapters/$chapterId/reset").post(ByteArray(0).toRequestBody()).build())
     }

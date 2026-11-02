@@ -20,6 +20,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -32,6 +35,10 @@ import kotlinx.coroutines.launch
 //
 // Auth: /books, /chapters, /progress need the JWT (read from the prefs AuthStore writes).
 // /cover and /chapters/{id}/audio are public, so Auto loads artwork + streams audio by URL.
+//
+// Offline (no signal in the car): the library falls back to downloaded books, chapters play
+// from disk, and progress is kept in the same progress.json the phone uses, marked dirty
+// so the next online load pushes it.
 @UnstableApi
 class AutoPlaybackService : MediaLibraryService() {
 
@@ -93,7 +100,33 @@ class AutoPlaybackService : MediaLibraryService() {
         lastSaveMs = now
         val pos = player.currentPosition / 1000.0
         val dur = (player.duration.takeIf { it > 0 } ?: 0L) / 1000.0
-        scope.launch { api.saveChapterProgress(chapterId, pos, dur) }
+        scope.launch {
+            val saved = api.saveChapterProgress(chapterId, pos, dur)
+            if (!saved || Downloads.isDownloaded(this@AutoPlaybackService, chapterId)) {
+                val listened = (dur > 0 && pos / dur >= 0.95) ||
+                    Downloads.localProgress(this@AutoPlaybackService, chapterId)?.isListened == true
+                Downloads.setLocalProgress(this@AutoPlaybackService, chapterId, pos, dur, listened, dirty = !saved)
+            }
+        }
+    }
+
+    // Pushes progress recorded while offline (here or on the phone). Kept dirty if it fails.
+    private suspend fun flushOfflineProgress() {
+        Downloads.dirtyProgress(this).forEach { (chapterId, stored) ->
+            if (!api.saveChapterProgress(chapterId, stored.positionSeconds, stored.durationSeconds)) return
+            if (stored.isListened) api.completeChapter(chapterId)
+            Downloads.clearDirty(this, chapterId)
+        }
+    }
+
+    // Chapters from the server, or from the download manifest when it can't be reached
+    // (then only the ones on disk, since the rest can't play). `offline` says which.
+    private suspend fun chaptersFor(bookId: Int): Pair<List<Chapter>, Boolean> {
+        val online = api.getChapters(bookId)
+        if (online.isNotEmpty()) return online to false
+        val local = Downloads.entry(this, bookId)?.chapters.orEmpty()
+            .filter { Downloads.isDownloaded(this, it.id) }
+        return local to true
     }
 
     // ── Library tree + playback resolution ──
@@ -161,11 +194,19 @@ class AutoPlaybackService : MediaLibraryService() {
             val future = SettableFuture.create<MediaSession.MediaItemsWithStartPosition>()
             scope.launch {
                 val book = loadBooks().firstOrNull { it.id == bookId }
-                val chapters = api.getChapters(bookId)
+                val (chapters, offline) = chaptersFor(bookId)
                 if (chapters.isEmpty()) {
-                    future.set(MediaSession.MediaItemsWithStartPosition(mediaItems, 0, 0L)); return@launch
+                    // Nothing playable (offline and not downloaded). Never hand the player the
+                    // bare book item: it has no audio URI and the player throws on it.
+                    future.set(MediaSession.MediaItemsWithStartPosition(emptyList(), C.INDEX_UNSET, C.TIME_UNSET))
+                    return@launch
                 }
-                val progresses = chapters.map { api.getChapterProgress(it.id) }
+                val progresses = if (offline) chapters.map { ch ->
+                    Downloads.localProgress(this@AutoPlaybackService, ch.id)
+                        .let { ChapterProgress(it?.positionSeconds ?: 0.0, it?.isListened ?: false) }
+                } else coroutineScope {
+                    chapters.map { async { api.getChapterProgress(it.id) } }.awaitAll()
+                }
                 var idx = progresses.indexOfFirst { !it.isListened }
                 if (idx < 0) idx = 0
                 val startPos = ((progresses.getOrNull(idx)?.positionSeconds ?: 0.0) * 1000).toLong()
@@ -190,11 +231,12 @@ class AutoPlaybackService : MediaLibraryService() {
                     when {
                         bid != null -> {
                             val book = loadBooks().firstOrNull { it.id == bid }
-                            out += api.getChapters(bid).map { chapterItem(it, book) }
+                            out += chaptersFor(bid).first.map { chapterItem(it, book) }
                         }
-                        cid != null && mi.localConfiguration == null ->
-                            out += mi.buildUpon().setUri(api.audioUrl(cid)).build()
-                        else -> out += mi
+                        cid != null && mi.localConfiguration == null -> out += mi.buildUpon()
+                            .setUri(Downloads.sourceUri(this@AutoPlaybackService, cid, api.audioUrl(cid))).build()
+                        mi.localConfiguration != null -> out += mi
+                        // Anything else has no audio to play; leave it out rather than crash the player.
                     }
                 }
                 future.set(out)
@@ -227,17 +269,25 @@ class AutoPlaybackService : MediaLibraryService() {
             .build()
         return MediaItem.Builder()
             .setMediaId("chapter:${ch.id}")
-            .setUri(api.audioUrl(ch.id))
+            .setUri(Downloads.sourceUri(this, ch.id, api.audioUrl(ch.id)))   // local file when downloaded
+            .setMimeType(ch.mimeType)
             .setMediaMetadata(meta)
             .build()
     }
 
     private suspend fun loadBooks(): List<Book> {
         if (books.isEmpty()) {
-            books = api.getBooks().sortedWith(
+            val online = api.getBooks()
+            if (online.isEmpty()) {
+                // Server unreachable: list what's downloaded. Not cached, so the full
+                // library comes back as soon as there's signal again.
+                return Downloads.downloadedBooks(this).map { it.book }
+            }
+            books = online.sortedWith(
                 compareByDescending<Book> { it.isFavorite }
                     .thenByDescending { it.isInProgress }
                     .thenBy { it.title.lowercase() })
+            flushOfflineProgress()
         }
         return books
     }
