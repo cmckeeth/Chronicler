@@ -122,6 +122,11 @@ class ApiClient {
             ?: return false
         return runCatching { json.decodeFromString<FavoriteResult>(resp).isFavorite }.getOrDefault(false)
     }
+    suspend fun toggleCollectionFavorite(collectionId: Int): Boolean {
+        val resp = body(builder("/api/collections/$collectionId/favorite").post(ByteArray(0).toRequestBody()).build())
+            ?: return false
+        return runCatching { json.decodeFromString<FavoriteResult>(resp).isFavorite }.getOrDefault(false)
+    }
     suspend fun getBookMeta(bookId: Int): BookMeta? {
         val resp = body(builder("/api/books/$bookId/meta").build()) ?: return null
         return runCatching { json.decodeFromString<BookMeta>(resp) }.getOrNull()

@@ -7,16 +7,15 @@ import ScanPreview from '../components/ScanPreview';
 
 // The Archive's search, tab and filter. Kept at module level so they survive opening a
 // book and coming back (the page unmounts in between). Reset on a full page reload.
-const kept = { search: '', tab: 'books', favOnly: false };
+const kept = { search: '', tab: 'favorites' };
 
 export default function Library() {
   const nav = useNavigate();
   const [books, setBooks] = useState([]);
   const [collections, setCollections] = useState([]);
   const [search, setSearch] = useState(kept.search);
-  const [tab, setTab] = useState(kept.tab);         // 'books' | 'collections'
-  const [favOnly, setFavOnly] = useState(kept.favOnly); // only meaningful under Books
-  useEffect(() => { Object.assign(kept, { search, tab, favOnly }); }, [search, tab, favOnly]);
+  const [tab, setTab] = useState(kept.tab);         // 'favorites' | 'books' | 'collections'
+  useEffect(() => { Object.assign(kept, { search, tab }); }, [search, tab]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [scanning, setScanning] = useState(false);
@@ -61,17 +60,18 @@ export default function Library() {
       // Search shows every matching book, flat (collection books included).
     } else if (tab === 'collections') {
       q = [];                                   // Collections tab shows collections, no books
-    } else if (favOnly) {
-      q = q.filter(b => b.isFavorite);          // Books + Favorites on → favorited only
+    } else if (tab === 'favorites') {
+      q = q.filter(b => b.isFavorite);          // starred books, wherever they live
     }
-    // tab 'books', favOnly off → every book, flat (incl. those inside collections)
+    // tab 'books' → every book, flat (incl. those inside collections)
     return [...q].sort((a, b) => a.title.localeCompare(b.title));
-  }, [books, tab, favOnly, searching]);
+  }, [books, tab, searching]);
 
-  // Collections show only on the Collections tab (and never while searching).
+  // Collections: all on the Collections tab, starred ones on Favorites, never while searching.
   const shownCollections = useMemo(() => {
-    if (searching || tab !== 'collections') return [];
-    return [...collections].sort((a, b) => a.name.localeCompare(b.name));
+    if (searching || tab === 'books') return [];
+    const cs = tab === 'favorites' ? collections.filter(c => c.isFavorite) : collections;
+    return [...cs].sort((a, b) => a.name.localeCompare(b.name));
   }, [collections, tab, searching]);
 
   async function scan() { setScanning(true); await booksApi.scan(); await loadBooks(search); setScanning(false); }
@@ -80,6 +80,12 @@ export default function Library() {
     setBooks(prev => prev.map(b => b.id === bookId ? { ...b, isFavorite: !b.isFavorite } : b));
     try { await booksApi.favorite(bookId); }
     catch { setBooks(prev => prev.map(b => b.id === bookId ? { ...b, isFavorite: !b.isFavorite } : b)); }
+  }, []);
+
+  const toggleCollectionFav = useCallback(async (id) => {
+    setCollections(prev => prev.map(c => c.id === id ? { ...c, isFavorite: !c.isFavorite } : c));
+    try { await collectionsApi.favorite(id); }
+    catch { setCollections(prev => prev.map(c => c.id === id ? { ...c, isFavorite: !c.isFavorite } : c)); }
   }, []);
 
   return (
@@ -96,14 +102,10 @@ export default function Library() {
         </div>
         <div className="library-controls">
           <div className="sort-group">
+            <button className={`chip${tab==='favorites'?' chip-active':''}`} onClick={() => setTab('favorites')}>★ Favorites</button>
             <button className={`chip${tab==='books'?' chip-active':''}`} onClick={() => setTab('books')}>Books</button>
             <button className={`chip${tab==='collections'?' chip-active':''}`} onClick={() => setTab('collections')}>Collections</button>
           </div>
-          {tab === 'books' && (
-            <div className="sort-group">
-              <button className={`chip${favOnly?' chip-active':''}`} onClick={() => setFavOnly(v => !v)}>★ Favorites</button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -120,11 +122,13 @@ export default function Library() {
         </div>
       ) : filtered.length === 0 && shownCollections.length === 0 ? (
         <div className="empty-state">
-          <p>{books.length === 0 && collections.length === 0 ? 'The archive lies empty, traveller.' : 'No volumes match this filter.'}</p>
+          <p>{books.length === 0 && collections.length === 0 ? 'The archive lies empty, traveller.'
+            : !searching && tab === 'favorites' ? 'No favorites yet. Tap the ★ on a book or collection to star it.'
+            : 'No volumes match this filter.'}</p>
         </div>
       ) : (
-        <div className={`book-grid${tab==='books' && favOnly && !searching ? ' fav-grid' : ''}`}>
-          {shownCollections.map(c => <CollectionCard key={`c-${c.id}`} collection={c} />)}
+        <div className={`book-grid${tab==='favorites' && !searching ? ' fav-grid' : ''}`}>
+          {shownCollections.map(c => <CollectionCard key={`c-${c.id}`} collection={c} onToggleFav={toggleCollectionFav} />)}
           {filtered.map(book => <BookCard key={book.id} book={book} onToggleFav={toggleFav} />)}
         </div>
       )}

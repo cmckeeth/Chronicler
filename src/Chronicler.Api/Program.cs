@@ -193,21 +193,43 @@ app.MapGet("/api/books", [Authorize] async (string? q, bool? root, ClaimsPrincip
 
 // ── Collections ───────────────────────────────────────────────────────────────
 
-app.MapGet("/api/collections", [Authorize] async (AppDbContext db) =>
+app.MapGet("/api/collections", [Authorize] async (ClaimsPrincipal principal, AppDbContext db) =>
 {
+    var userId = UserId(principal);
     var cols = await db.Collections
         .OrderBy(c => c.Name)
-        .Select(c => new CollectionDto(c.Id, c.Name, c.CoverData != null, c.Books.Count(), c.AddedAt))
+        .Select(c => new CollectionDto(c.Id, c.Name, c.CoverData != null, c.Books.Count(), c.AddedAt,
+            db.UserCollectionFavorites.Any(f => f.UserId == userId && f.CollectionId == c.Id)))
         .ToListAsync();
     return Results.Ok(cols);
 });
 
-app.MapGet("/api/collections/{id:int}", [Authorize] async (int id, AppDbContext db) =>
+app.MapGet("/api/collections/{id:int}", [Authorize] async (int id, ClaimsPrincipal principal, AppDbContext db) =>
 {
     var c = await db.Collections.FindAsync(id);
     return c is null
         ? Results.NotFound()
-        : Results.Ok(new CollectionDto(c.Id, c.Name, c.CoverData != null, await db.Books.CountAsync(b => b.CollectionId == id), c.AddedAt));
+        : Results.Ok(new CollectionDto(c.Id, c.Name, c.CoverData != null, await db.Books.CountAsync(b => b.CollectionId == id), c.AddedAt,
+            await db.UserCollectionFavorites.FindAsync(UserId(principal), id) is not null));
+});
+
+app.MapPost("/api/collections/{id:int}/favorite", [Authorize] async (int id, ClaimsPrincipal principal, AppDbContext db) =>
+{
+    var uid = UserId(principal);
+    var existing = await db.UserCollectionFavorites.FindAsync(uid, id);
+    bool isFavorite;
+    if (existing is not null)
+    {
+        db.UserCollectionFavorites.Remove(existing);
+        isFavorite = false;
+    }
+    else
+    {
+        db.UserCollectionFavorites.Add(new Chronicler.Api.Models.UserCollectionFavorite { UserId = uid, CollectionId = id });
+        isFavorite = true;
+    }
+    await db.SaveChangesAsync();
+    return Results.Ok(new { isFavorite });
 });
 
 app.MapGet("/api/collections/{id:int}/books", [Authorize] async (int id, ClaimsPrincipal principal, AppDbContext db) =>
@@ -980,7 +1002,7 @@ record DiagMessage(string Message);
 record BookDto(int Id, string Title, string Author, string? Narrator, double DurationSeconds,
     bool HasCover, DateTime AddedAt, int ChapterCount = 0, int ListenedCount = 0, int? Year = null, bool IsFavorite = false,
     int? CollectionId = null, string? Description = null, int? SortOrder = null);
-record CollectionDto(int Id, string Name, bool HasCover, int BookCount, DateTime AddedAt);
+record CollectionDto(int Id, string Name, bool HasCover, int BookCount, DateTime AddedAt, bool IsFavorite = false);
 record ChapterDto(int Id, int BookId, string Title, int TrackNumber, string MimeType = "audio/mpeg");
 record BookMetaRequest(string? Title, string? Author, string? Narrator, string? Description, int? Year);
 record ChapterProgressRequest(double PositionSeconds, double DurationSeconds);

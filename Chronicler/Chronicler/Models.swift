@@ -27,6 +27,7 @@ struct Collection: Codable, Identifiable, Hashable {
     let hasCover: Bool
     let bookCount: Int
     let addedAt: String          // ISO-8601; sorts lexically
+    var isFavorite: Bool = false
 }
 
 struct Chapter: Codable, Identifiable, Hashable {

@@ -1644,7 +1644,8 @@ select {
     cursor: pointer;
     z-index: 2;
 }
-.book-card:hover .fav-btn { opacity: 1; }
+.book-card:hover .fav-btn,
+.collection-card:hover .fav-btn { opacity: 1; }
 .fav-btn.fav-active {
     opacity: 1;
     color: var(--brass);

@@ -28,8 +28,7 @@ import kotlinx.coroutines.launch
 // screen itself is rebuilt every time you come back to it from a book.
 object ArchiveFilters {
     var search by mutableStateOf("")
-    var tab by mutableStateOf("books")
-    var favOnly by mutableStateOf(false)
+    var tab by mutableStateOf("favorites")   // favorites | books | collections
     var showFilters by mutableStateOf(false)
 }
 
@@ -41,14 +40,13 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
     // Filters live in ArchiveFilters, not here, so they survive opening a book and coming back.
     var search by ArchiveFilters::search
     var tab by ArchiveFilters::tab
-    var favOnly by ArchiveFilters::favOnly
     var loading by remember { mutableStateOf(true) }
     var refreshing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var showFilters by ArchiveFilters::showFilters   // collapsed by default — covers first
     // True when something other than the defaults is in force, so the collapsed Filters
     // chip can advertise that it's hiding a filter.
-    val filtersActive = favOnly || tab != "books"
+    val filtersActive = tab != "favorites"
     val scope = rememberCoroutineScope()
 
     suspend fun fetch() {
@@ -73,12 +71,14 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
     LaunchedEffect(Unit) { load() }
 
     val searching = search.isNotBlank()
-    val filtered = remember(allBooks, search, tab, favOnly) {
-        // Books tab shows every book flat (standalone + inside collections); Collections tab
-        // shows no books. While searching, always query every book flat.
+    val filtered = remember(allBooks, search, tab) {
+        // Books tab shows every book flat (standalone + inside collections); Favorites shows
+        // starred books (wherever they live); Collections tab shows no books. While
+        // searching, always query every book flat.
         var q = when {
             searching -> allBooks
             tab == "books" -> allBooks
+            tab == "favorites" -> allBooks.filter { it.isFavorite }
             else -> emptyList()
         }
         if (searching) {
@@ -88,7 +88,6 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
                     (it.narrator?.lowercase()?.contains(s) ?: false)
             }
         }
-        if (favOnly && tab == "books") q = q.filter { it.isFavorite }
         q.sortedBy { it.title.lowercase() }
     }
 
@@ -122,15 +121,14 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                chipRow("", listOf("Books" to "books", "Collections" to "collections"),
-                    tab) { tab = it }
+                chipRow("", listOf("★ Favorites" to "favorites", "Books" to "books",
+                    "Collections" to "collections"), tab) { tab = it }
                 // Downloads is a separate screen rather than a tab, so it never reads as
                 // selected — it's the way to reach what's on this device while online.
                 navChip("📥 Downloads") { nav.navigate("offline") }
             }
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                if (tab == "books") favChip(favOnly) { favOnly = !favOnly }
                 Spacer(Modifier.weight(1f))
                 chipRow("Grid", listOf("1" to "1", "2" to "2", "3" to "3"),
                     auth.gridColumns.toString()) { auth.setGridSize(it.toInt()) }
@@ -138,8 +136,13 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
         }
         Spacer(Modifier.height(10.dp))
 
-        // Collections appear only on the Collections tab (never while searching).
-        val shownCollections = if (searching || tab == "books") emptyList() else collections
+        // Collections appear on the Collections tab, and starred ones on Favorites (never
+        // while searching).
+        val shownCollections = when {
+            searching || tab == "books" -> emptyList()
+            tab == "favorites" -> collections.filter { it.isFavorite }
+            else -> collections
+        }
         when {
             loading -> center("Consulting the archive...", Theme.parchmentDim)
             error != null -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
@@ -156,6 +159,7 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
             filtered.isEmpty() && shownCollections.isEmpty() -> center(
                 if (searching) "No volumes match this filter."
                 else if (allBooks.isEmpty() && collections.isEmpty()) "The archive lies empty, traveller."
+                else if (tab == "favorites") "No favorites yet. Long-press a book or collection to star it."
                 else "No volumes match this filter.",
                 Theme.parchmentDim)
             else -> LazyVerticalGrid(columns = GridCells.Fixed(auth.gridColumns),
@@ -165,7 +169,8 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
                 contentPadding = PaddingValues(vertical = 4.dp)) {
                 items(shownCollections, key = { "collection-${it.id}" }) { collection ->
                     CollectionCard(collection, auth.api,
-                        onOpen = { nav.navigate("collection/${collection.id}") })
+                        onOpen = { nav.navigate("collection/${collection.id}") },
+                        onToggleFavorite = { scope.launch { auth.api.toggleCollectionFavorite(collection.id); load() } })
                 }
                 items(filtered, key = { it.id }) { book ->
                     BookCard(book, auth.api, wide = auth.gridColumns == 1,
@@ -260,19 +265,6 @@ private fun navChip(title: String, onClick: () -> Unit) {
 }
 
 // Single on/off favorites toggle chip (Books tab only).
-@Composable
-private fun favChip(active: Boolean, onToggle: () -> Unit) {
-    Surface(color = if (active) Theme.brass else Theme.surface2,
-        shape = RoundedCornerShape(50),
-        border = if (active) androidx.compose.foundation.BorderStroke(1.dp, Theme.verdigris) else null,
-        modifier = Modifier
-            .then(if (active) Modifier.shadow(8.dp, RoundedCornerShape(50),
-                spotColor = Theme.verdigris, ambientColor = Theme.verdigris) else Modifier)
-            .clickable { onToggle() }) {
-        Text("★ Favorites", color = if (active) Theme.ink else Theme.parchmentMid, fontSize = 12.sp,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
-    }
-}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -348,12 +340,16 @@ internal fun BookCard(book: Book, api: ApiClient, wide: Boolean = false,
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun CollectionCard(collection: Collection, api: ApiClient, onOpen: () -> Unit) {
+private fun CollectionCard(collection: Collection, api: ApiClient, onOpen: () -> Unit,
+                           onToggleFavorite: () -> Unit) {
     Column(
         Modifier
-            .clickable(onClick = onOpen)
-            .electricPanel(Theme.surface, corner = 4.dp, alpha = 0.7f, elevation = 12.dp)
+            .combinedClickable(onClick = onOpen, onLongClick = onToggleFavorite)
+            .electricPanel(Theme.surface, corner = 4.dp,
+                alpha = if (collection.isFavorite) 0.9f else 0.7f,
+                elevation = if (collection.isFavorite) 18.dp else 12.dp)
             .padding(10.dp)
     ) {
         // Stacked "folder" look: two offset slips peek out behind the cover.
@@ -384,6 +380,10 @@ private fun CollectionCard(collection: Collection, api: ApiClient, onOpen: () ->
                 modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp)) {
                 Text("${collection.bookCount} books", color = Theme.ink, fontSize = 11.sp,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+            }
+            if (collection.isFavorite) {
+                Text("★", color = Theme.brassPale, fontSize = 18.sp,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(6.dp))
             }
         }
         Spacer(Modifier.height(10.dp))

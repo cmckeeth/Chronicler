@@ -10,6 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<Chapter> Chapters => Set<Chapter>();
     public DbSet<ChapterProgress> ChapterProgresses => Set<ChapterProgress>();
     public DbSet<UserBookFavorite> UserBookFavorites => Set<UserBookFavorite>();
+    public DbSet<UserCollectionFavorite> UserCollectionFavorites => Set<UserCollectionFavorite>();
     public DbSet<Collection> Collections => Set<Collection>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -38,6 +39,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
 
         builder.Entity<UserBookFavorite>()
             .HasKey(f => new { f.UserId, f.BookId });
+
+        builder.Entity<UserCollectionFavorite>()
+            .HasKey(f => new { f.UserId, f.CollectionId });
 
         builder.Entity<Collection>()
             .HasIndex(c => c.FolderPath).IsUnique();

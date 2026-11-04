@@ -105,6 +105,10 @@ export const collectionsApi = {
     const res = await apiFetch('/api/collections');
     return res.json();
   },
+  async favorite(id) {
+    const res = await apiFetch(`/api/collections/${id}/favorite`, { method: 'POST' });
+    return res.json(); // { isFavorite }
+  },
   async get(id) {
     const res = await apiFetch(`/api/collections/${id}`);
     return res.json();

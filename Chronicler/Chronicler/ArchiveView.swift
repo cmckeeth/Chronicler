@@ -4,8 +4,7 @@ import SwiftUI
 // ArchiveView is rebuilt every time you come back to it.
 enum ArchiveFilters {
     static var search = ""
-    static var tab = "books"
-    static var favOnly = false
+    static var tab = "favorites"     // favorites | books | collections
     static var showFilters = false
 }
 
@@ -17,8 +16,7 @@ struct ArchiveView: View {
     // Seeded from ArchiveFilters and written back on change, so they survive leaving the
     // Archive (back to Landing, a theme switch) and coming back.
     @State private var search = ArchiveFilters.search
-    @State private var tab = ArchiveFilters.tab            // books | collections
-    @State private var favOnly = ArchiveFilters.favOnly    // book-level favorite filter (Books tab only)
+    @State private var tab = ArchiveFilters.tab            // favorites | books | collections
     @State private var loading = true
     @State private var refreshing = false
     @State private var error: String?
@@ -26,7 +24,7 @@ struct ArchiveView: View {
 
     // True when something other than the defaults is in force, so the collapsed
     // Filters chip can advertise that it's hiding a filter.
-    private var filtersActive: Bool { favOnly || tab != "books" }
+    private var filtersActive: Bool { tab != "favorites" }
 
     // Grid density: user-chosen 1/2/3 columns, persisted across launches.
     @AppStorage("gridColumns") private var gridColumns = 3
@@ -38,13 +36,21 @@ struct ArchiveView: View {
         !search.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
-    // Collections show only on the Collections tab while browsing (never while searching).
-    private var showCollections: Bool {
-        !isSearching && tab == "collections" && !collections.isEmpty
+    // Collection cards: all of them on the Collections tab, starred ones on Favorites,
+    // none on Books or while searching.
+    private var shownCollections: [Collection] {
+        if isSearching { return [] }
+        switch tab {
+        case "collections": return collections
+        case "favorites": return collections.filter { $0.isFavorite }
+        default: return []
+        }
     }
+    private var showCollections: Bool { !shownCollections.isEmpty }
 
     var filtered: [Book] {
         // Search is always flat over all books. When browsing:
+        //   Favorites tab   -> starred books, wherever they live
         //   Books tab       -> every book flat (standalone AND inside collections)
         //   Collections tab -> no books, only collection cards
         var q: [Book]
@@ -56,9 +62,12 @@ struct ArchiveView: View {
                 ($0.narrator?.lowercased().contains(s) ?? false)
             }
         } else {
-            q = tab == "collections" ? [] : books
+            switch tab {
+            case "favorites": q = books.filter { $0.isFavorite }
+            case "books": q = books
+            default: q = []
+            }
         }
-        if favOnly { q = q.filter { $0.isFavorite } }
         q.sort { $0.title.lowercased() < $1.title.lowercased() }
         return q
     }
@@ -87,10 +96,10 @@ struct ArchiveView: View {
 
                 if showFilters {
                     VStack(spacing: 8) {
-                        chipGroup("", [("Books","books"),("Collections","collections")],
+                        chipGroup("", [("★ Favorites","favorites"),("Books","books"),
+                                       ("Collections","collections")],
                                   selection: $tab)
                         HStack(spacing: 10) {
-                            if tab == "books" { favChip }
                             Spacer()
                             layoutChips
                         }
@@ -126,7 +135,6 @@ struct ArchiveView: View {
         .task { await load() }
         .onChange(of: search) { ArchiveFilters.search = $1 }
         .onChange(of: tab) { ArchiveFilters.tab = $1 }
-        .onChange(of: favOnly) { ArchiveFilters.favOnly = $1 }
         .onChange(of: showFilters) { ArchiveFilters.showFilters = $1 }
         // Reload when crossing the search/browse boundary (root+collections vs flat books).
         .onChange(of: isSearching) { Task { await load() } }
@@ -153,15 +161,17 @@ struct ArchiveView: View {
         } else if filtered.isEmpty && !showCollections {
             Spacer(); Text(books.isEmpty && collections.isEmpty
                             ? "The archive lies empty, traveller."
-                            : "No volumes match this filter.")
-                .font(Theme.serif(15)).foregroundColor(Theme.parchmentDim); Spacer()
+                            : !isSearching && tab == "favorites"
+                                ? "No favorites yet. Long-press a book or collection to star it."
+                                : "No volumes match this filter.")
+                .font(Theme.serif(15)).foregroundColor(Theme.parchmentDim)
+                .multilineTextAlignment(.center); Spacer()
         } else {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 14) {
-                    if showCollections {
-                        ForEach(collections) { collection in
-                            CollectionCardView(collection: collection, api: auth.api)
-                        }
+                    ForEach(shownCollections) { collection in
+                        CollectionCardView(collection: collection, api: auth.api,
+                                           onFavoriteChanged: { await load() })
                     }
                     ForEach(filtered) { book in
                         BookCardView(book: book, api: auth.api, wide: gridColumns == 1,
@@ -194,21 +204,6 @@ struct ArchiveView: View {
             .shadow(color: Theme.verdigris.opacity(0.5), radius: 6)
         }
         .disabled(refreshing)
-    }
-
-    // Single on/off favorites toggle (no "All" chip), shown only on the Books tab.
-    private var favChip: some View {
-        HStack(spacing: 6) {
-            Button { favOnly.toggle() } label: {
-                Text("★ Favorites").font(Theme.body(12))
-                    .foregroundColor(favOnly ? Theme.ink : Theme.parchmentMid)
-                    .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background(favOnly ? Theme.brass : Theme.surface2)
-                    .overlay(Capsule().stroke(favOnly ? Theme.verdigris : .clear, lineWidth: 1))
-                    .clipShape(Capsule())
-                    .shadow(color: favOnly ? Theme.verdigris.opacity(0.5) : .clear, radius: 8)
-            }
-        }
     }
 
     // Grid density picker: 1 / 2 / 3 columns, persisted via @AppStorage.
@@ -418,6 +413,15 @@ struct BookCardView: View {
 struct CollectionCardView: View {
     let collection: Collection
     let api: APIClient
+    let onFavoriteChanged: () async -> Void
+
+    @State private var isFavorite: Bool
+    @State private var showMenu = false
+
+    init(collection: Collection, api: APIClient, onFavoriteChanged: @escaping () async -> Void) {
+        self.collection = collection; self.api = api; self.onFavoriteChanged = onFavoriteChanged
+        _isFavorite = State(initialValue: collection.isFavorite)
+    }
 
     var body: some View {
         NavigationLink(value: Route.collection(collection)) {
@@ -442,6 +446,13 @@ struct CollectionCardView: View {
                             .clipped()
                             .overlay(Rectangle().stroke(Theme.border, lineWidth: 1))
                     }
+                    // The book-count badge holds the top corner, so the star sits below it.
+                    .overlay(alignment: .bottomTrailing) {
+                        if isFavorite {
+                            Text("★").font(.system(size: 18)).foregroundColor(Theme.brassPale)
+                                .padding(4)
+                        }
+                    }
                     Text("\(collection.bookCount) book\(collection.bookCount == 1 ? "" : "s")")
                         .font(Theme.body(11)).foregroundColor(Theme.ink)
                         .padding(.horizontal, 7).padding(.vertical, 3)
@@ -456,8 +467,24 @@ struct CollectionCardView: View {
                     .lineLimit(1)
             }
             .padding(10)
-            .electricPanel(bg: Theme.surface, corner: 4, alpha: 0.6, glowRadius: 12)
+            .electricPanel(bg: Theme.surface, corner: 4,
+                           alpha: isFavorite ? 0.9 : 0.6,
+                           glowRadius: isFavorite ? 18 : 12)
         }
         .buttonStyle(.plain)
+        .onLongPressGesture(minimumDuration: 0.6) { showMenu = true }
+        .confirmationDialog(collection.name, isPresented: $showMenu, titleVisibility: .visible) {
+            Button(isFavorite ? "★ Remove from Favorites" : "☆ Add to Favorites") {
+                toggleFavorite()
+            }
+        }
+    }
+
+    private func toggleFavorite() {
+        isFavorite.toggle()
+        Task {
+            _ = await api.toggleCollectionFavorite(collection.id)
+            await onFavoriteChanged()
+        }
     }
 }

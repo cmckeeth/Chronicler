@@ -275,6 +275,19 @@ namespace Chronicler.Api.Migrations
                     b.ToTable("UserBookFavorites");
                 });
 
+            modelBuilder.Entity("Chronicler.Api.Models.UserCollectionFavorite", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CollectionId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("UserId", "CollectionId");
+
+                    b.ToTable("UserCollectionFavorites");
+                });
+
             modelBuilder.Entity("Chronicler.Api.Models.UserProgress", b =>
                 {
                     b.Property<int>("Id")

@@ -127,6 +127,10 @@ final class APIClient: @unchecked Sendable {
         (try? await send(request("/api/books/\(bookId)/favorite", method: "POST"),
                          as: FavoriteResult.self).isFavorite) ?? false
     }
+    func toggleCollectionFavorite(_ collectionId: Int) async -> Bool {
+        (try? await send(request("/api/collections/\(collectionId)/favorite", method: "POST"),
+                         as: FavoriteResult.self).isFavorite) ?? false
+    }
     func getBookMeta(_ bookId: Int) async -> BookMeta? {
         try? await send(request("/api/books/\(bookId)/meta"), as: BookMeta.self)
     }

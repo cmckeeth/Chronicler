@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { collectionsApi } from '../api';
 import CollectionCoverEditor from './CollectionCoverEditor';
 
-export default function CollectionCard({ collection }) {
+export default function CollectionCard({ collection, onToggleFav }) {
   const nav = useNavigate();
   const count = collection.bookCount ?? 0;
   const [showCover, setShowCover] = useState(false);
@@ -29,6 +29,11 @@ export default function CollectionCard({ collection }) {
           }
           <span className="collection-ribbon">Collection</span>
           <span className="collection-count" title={`${count} books`}>{count} books</span>
+          <button
+            className={`fav-btn${collection.isFavorite ? ' fav-active' : ''}`}
+            title={collection.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            onClick={e => { e.stopPropagation(); onToggleFav?.(collection.id); }}
+          >★</button>
         </div>
       </div>
       <div className="book-meta">

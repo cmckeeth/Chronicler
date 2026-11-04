@@ -30,6 +30,7 @@ data class Collection(
     val hasCover: Boolean,
     val bookCount: Int,
     val addedAt: String? = null,
+    val isFavorite: Boolean = false,
 )
 
 @Serializable
