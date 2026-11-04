@@ -10,6 +10,12 @@
 - [ ] Book duration auto-detection on library scan (read audio file metadata)
 - [ ] Chapter support for M4B files
 
+## Authentication and sessions
+- [ ] Remember logins and passwords securely using platform credential storage
+- [ ] Evaluate enabling single sign-on (SSO)
+- [ ] Force logout after app updates and prompt the user to sign in again
+- [ ] Handle expired or invalid logins by prompting for sign-in instead of showing an empty archive
+
 ## Build
 - [ ] Generate a release keystore and configure signing so APK can be built in Release mode
 - [ ] Swift 6 readiness: `CoverCache` calls `Downloads.entry/saveCover/coverData` across an actor
