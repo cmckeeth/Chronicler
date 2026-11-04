@@ -51,8 +51,9 @@ export default function Login() {
         </div>
 
         <form className="auth-form" onSubmit={submit}>
-          <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="form-input" required />
-          <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="form-input" required />
+          {/* autocomplete lets the browser's password manager fill these and offer to save. */}
+          <input type="email" name="email" autoComplete="username" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="form-input" required />
+          <input type="password" name="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="form-input" required />
           {error && <p className="auth-error">{error}</p>}
           <button type="submit" className="btn-primary" disabled={loading}>
             {loading ? '⚙ Working...' : mode === 'login' ? 'Sign In' : 'Create Account'}

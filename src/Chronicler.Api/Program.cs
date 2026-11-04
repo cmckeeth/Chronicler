@@ -106,6 +106,13 @@ app.UseAuthorization();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 
+// Tells iOS that this site and the iOS app share logins, so the Passwords app offers to save
+// and fill Chronicler's sign-in. Apple fetches it from https://chronicler.mckeeth.app.
+app.MapGet("/.well-known/apple-app-site-association", () => Results.Json(new
+{
+    webcredentials = new { apps = new[] { "ZSTUXP8336.blackbird.llc.Chronicler" } }
+}));
+
 app.MapPost("/api/diag", (DiagMessage msg, ILogger<Program> logger) =>
 {
     logger.LogInformation("[DIAG] {Message}", msg.Message);

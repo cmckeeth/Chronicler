@@ -32,10 +32,14 @@ struct LoginView: View {
                 .background(Theme.surface2)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
 
+                // Content types let the Passwords app fill these in and offer to save after
+                // sign-in (paired with the webcredentials entitlement + the server's AASA file).
                 field("Email", text: $email, secure: false)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
+                    .textContentType(.username)
                 field("Password", text: $password, secure: true)
+                    .textContentType(mode == "login" ? .password : .newPassword)
 
                 if let error {
                     Text(error).font(Theme.body(13)).foregroundColor(Theme.rust)

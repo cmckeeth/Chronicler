@@ -13,6 +13,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.credentials.CreatePasswordRequest
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.GetPasswordOption
+import androidx.credentials.PasswordCredential
+import androidx.credentials.exceptions.CreateCredentialException
+import androidx.credentials.exceptions.GetCredentialException
 import kotlinx.coroutines.launch
 
 @Composable
@@ -25,6 +32,38 @@ fun LoginScreen(auth: AuthStore, onOfflineLibrary: () -> Unit = {}) {
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val credentials = remember { CredentialManager.create(context) }
+
+    // offerSave: false when the login came from the password manager, so we don't ask to
+    // save what it just gave us. The save prompt runs before setToken because setToken
+    // navigates away and would cancel this coroutine mid-prompt.
+    suspend fun signIn(e: String, p: String, offerSave: Boolean) {
+        error = null; busy = true
+        val token = if (mode == "login") auth.api.login(e, p) else auth.api.register(e, p)
+        busy = false
+        if (token == null) {
+            error = if (mode == "login") "Invalid email or password." else "Registration failed."
+            return
+        }
+        if (offerSave) {
+            // Declining, or no password manager on the phone, is fine. Just carry on.
+            try { credentials.createCredential(context, CreatePasswordRequest(e, p)) }
+            catch (_: CreateCredentialException) {}
+        }
+        auth.setToken(token, e)
+    }
+
+    // Offer a saved Chronicler login as soon as the screen opens; picking one signs in.
+    LaunchedEffect(Unit) {
+        try {
+            val saved = credentials.getCredential(context,
+                GetCredentialRequest(listOf(GetPasswordOption()))).credential
+            if (saved is PasswordCredential) {
+                email = saved.id; password = saved.password
+                signIn(saved.id, saved.password, offerSave = false)
+            }
+        } catch (_: GetCredentialException) {}   // none saved, or the user dismissed it
+    }
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
@@ -53,17 +92,7 @@ fun LoginScreen(auth: AuthStore, onOfflineLibrary: () -> Unit = {}) {
             error?.let { Text(it, color = Theme.rust, fontSize = 13.sp) }
 
             Button(
-                onClick = {
-                    error = null; busy = true
-                    scope.launch {
-                        val token = if (mode == "login") auth.api.login(email, password)
-                                    else auth.api.register(email, password)
-                        busy = false
-                        if (token == null) {
-                            error = if (mode == "login") "Invalid email or password." else "Registration failed."
-                        } else auth.setToken(token, email)
-                    }
-                },
+                onClick = { scope.launch { signIn(email, password, offerSave = true) } },
                 enabled = !busy,
                 colors = ButtonDefaults.buttonColors(containerColor = Theme.brass, contentColor = Theme.ink),
                 shape = RoundedCornerShape(4.dp),
