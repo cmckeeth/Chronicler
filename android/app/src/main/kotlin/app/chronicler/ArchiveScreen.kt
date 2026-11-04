@@ -24,18 +24,28 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 
+// The Archive's search, tab and filters. Kept for as long as the app is open, because the
+// screen itself is rebuilt every time you come back to it from a book.
+object ArchiveFilters {
+    var search by mutableStateOf("")
+    var tab by mutableStateOf("books")
+    var favOnly by mutableStateOf(false)
+    var showFilters by mutableStateOf(false)
+}
+
 @Composable
 fun ArchiveScreen(auth: AuthStore, nav: NavController) {
     // All books, flat (including those inside collections); each chip derives its view client-side.
     var allBooks by remember { mutableStateOf<List<Book>>(emptyList()) }
     var collections by remember { mutableStateOf<List<Collection>>(emptyList()) }
-    var search by remember { mutableStateOf("") }
-    var tab by remember { mutableStateOf("books") }
-    var favOnly by remember { mutableStateOf(false) }
+    // Filters live in ArchiveFilters, not here, so they survive opening a book and coming back.
+    var search by ArchiveFilters::search
+    var tab by ArchiveFilters::tab
+    var favOnly by ArchiveFilters::favOnly
     var loading by remember { mutableStateOf(true) }
     var refreshing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    var showFilters by remember { mutableStateOf(false) }   // collapsed by default — covers first
+    var showFilters by ArchiveFilters::showFilters   // collapsed by default — covers first
     // True when something other than the defaults is in force, so the collapsed Filters
     // chip can advertise that it's hiding a filter.
     val filtersActive = favOnly || tab != "books"

@@ -5,13 +5,18 @@ import BookCard from '../components/BookCard';
 import CollectionCard from '../components/CollectionCard';
 import ScanPreview from '../components/ScanPreview';
 
+// The Archive's search, tab and filter. Kept at module level so they survive opening a
+// book and coming back (the page unmounts in between). Reset on a full page reload.
+const kept = { search: '', tab: 'books', favOnly: false };
+
 export default function Library() {
   const nav = useNavigate();
   const [books, setBooks] = useState([]);
   const [collections, setCollections] = useState([]);
-  const [search, setSearch] = useState('');
-  const [tab, setTab] = useState('books');      // 'books' | 'collections'
-  const [favOnly, setFavOnly] = useState(false); // only meaningful under Books
+  const [search, setSearch] = useState(kept.search);
+  const [tab, setTab] = useState(kept.tab);         // 'books' | 'collections'
+  const [favOnly, setFavOnly] = useState(kept.favOnly); // only meaningful under Books
+  useEffect(() => { Object.assign(kept, { search, tab, favOnly }); }, [search, tab, favOnly]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [scanning, setScanning] = useState(false);

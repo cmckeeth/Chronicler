@@ -1,17 +1,28 @@
 import SwiftUI
 
+// The Archive's search, tab and filters. Kept for as long as the app is open, because
+// ArchiveView is rebuilt every time you come back to it.
+enum ArchiveFilters {
+    static var search = ""
+    static var tab = "books"
+    static var favOnly = false
+    static var showFilters = false
+}
+
 struct ArchiveView: View {
     @EnvironmentObject var auth: AuthStore
 
     @State private var books: [Book] = []
     @State private var collections: [Collection] = []
-    @State private var search = ""
-    @State private var tab = "books"            // books | collections
-    @State private var favOnly = false          // book-level favorite filter (Books tab only)
+    // Seeded from ArchiveFilters and written back on change, so they survive leaving the
+    // Archive (back to Landing, a theme switch) and coming back.
+    @State private var search = ArchiveFilters.search
+    @State private var tab = ArchiveFilters.tab            // books | collections
+    @State private var favOnly = ArchiveFilters.favOnly    // book-level favorite filter (Books tab only)
     @State private var loading = true
     @State private var refreshing = false
     @State private var error: String?
-    @State private var showFilters = false      // collapsed by default — covers first
+    @State private var showFilters = ArchiveFilters.showFilters   // collapsed by default — covers first
 
     // True when something other than the defaults is in force, so the collapsed
     // Filters chip can advertise that it's hiding a filter.
@@ -113,6 +124,10 @@ struct ArchiveView: View {
             }
         }
         .task { await load() }
+        .onChange(of: search) { ArchiveFilters.search = $1 }
+        .onChange(of: tab) { ArchiveFilters.tab = $1 }
+        .onChange(of: favOnly) { ArchiveFilters.favOnly = $1 }
+        .onChange(of: showFilters) { ArchiveFilters.showFilters = $1 }
         // Reload when crossing the search/browse boundary (root+collections vs flat books).
         .onChange(of: isSearching) { Task { await load() } }
     }
