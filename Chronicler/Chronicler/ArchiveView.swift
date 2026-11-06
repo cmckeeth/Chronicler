@@ -323,7 +323,6 @@ struct BookCardView: View {
     let onFavoriteChanged: () async -> Void
 
     @State private var isFavorite: Bool
-    @State private var showMenu = false
 
     init(book: Book, api: APIClient, wide: Bool = false, onFavoriteChanged: @escaping () async -> Void) {
         self.book = book; self.api = api; self.wide = wide; self.onFavoriteChanged = onFavoriteChanged
@@ -339,10 +338,12 @@ struct BookCardView: View {
                                glowRadius: isFavorite ? 18 : 10)
         }
         .buttonStyle(.plain)
-        .onLongPressGesture(minimumDuration: 0.6) { showMenu = true }
-        .confirmationDialog(book.title, isPresented: $showMenu, titleVisibility: .visible) {
-            Button(isFavorite ? "★ Remove from Favorites" : "☆ Add to Favorites") {
-                toggleFavorite()
+        // The system press-and-hold menu. A plain onLongPressGesture on a NavigationLink
+        // never fired on device (the link takes the touch), so favoriting was unreachable.
+        .contextMenu {
+            Button { toggleFavorite() } label: {
+                Label(isFavorite ? "Remove from Favorites" : "Add to Favorites",
+                      systemImage: isFavorite ? "star.slash" : "star")
             }
         }
     }
@@ -437,7 +438,6 @@ struct CollectionCardView: View {
     let onFavoriteChanged: () async -> Void
 
     @State private var isFavorite: Bool
-    @State private var showMenu = false
 
     init(collection: Collection, api: APIClient, onFavoriteChanged: @escaping () async -> Void) {
         self.collection = collection; self.api = api; self.onFavoriteChanged = onFavoriteChanged
@@ -493,10 +493,12 @@ struct CollectionCardView: View {
                            glowRadius: isFavorite ? 18 : 12)
         }
         .buttonStyle(.plain)
-        .onLongPressGesture(minimumDuration: 0.6) { showMenu = true }
-        .confirmationDialog(collection.name, isPresented: $showMenu, titleVisibility: .visible) {
-            Button(isFavorite ? "★ Remove from Favorites" : "☆ Add to Favorites") {
-                toggleFavorite()
+        // The system press-and-hold menu. A plain onLongPressGesture on a NavigationLink
+        // never fired on device (the link takes the touch), so favoriting was unreachable.
+        .contextMenu {
+            Button { toggleFavorite() } label: {
+                Label(isFavorite ? "Remove from Favorites" : "Add to Favorites",
+                      systemImage: isFavorite ? "star.slash" : "star")
             }
         }
     }
