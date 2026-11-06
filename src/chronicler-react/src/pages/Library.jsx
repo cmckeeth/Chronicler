@@ -13,6 +13,7 @@ export default function Library() {
   const nav = useNavigate();
   const [books, setBooks] = useState([]);
   const [collections, setCollections] = useState([]);
+  const [recent, setRecent] = useState(null);       // last book listened to, shown first
   const [search, setSearch] = useState(kept.search);
   const [tab, setTab] = useState(kept.tab);         // 'favorites' | 'books' | 'collections'
   useEffect(() => { Object.assign(kept, { search, tab }); }, [search, tab]);
@@ -33,12 +34,14 @@ export default function Library() {
       } else {
         // Browsing: fetch ALL books + collections; the filter chips derive what
         // shows (root-only, all books, collection books, etc.) client-side.
-        const [bs, cs] = await Promise.all([
+        const [bs, cs, rb] = await Promise.all([
           booksApi.list(null),
           collectionsApi.list(),
+          booksApi.recent().catch(() => null),
         ]);
         setBooks(bs);
         setCollections(cs);
+        setRecent(rb);
       }
     }
     catch (e) { if (e.message !== 'Unauthorized') setError(e.message); }
@@ -77,9 +80,13 @@ export default function Library() {
   async function scan() { setScanning(true); await booksApi.scan(); await loadBooks(search); setScanning(false); }
 
   const toggleFav = useCallback(async (bookId) => {
-    setBooks(prev => prev.map(b => b.id === bookId ? { ...b, isFavorite: !b.isFavorite } : b));
+    const flip = () => {
+      setBooks(prev => prev.map(b => b.id === bookId ? { ...b, isFavorite: !b.isFavorite } : b));
+      setRecent(r => r?.id === bookId ? { ...r, isFavorite: !r.isFavorite } : r);
+    };
+    flip();
     try { await booksApi.favorite(bookId); }
-    catch { setBooks(prev => prev.map(b => b.id === bookId ? { ...b, isFavorite: !b.isFavorite } : b)); }
+    catch { flip(); }
   }, []);
 
   const toggleCollectionFav = useCallback(async (id) => {
@@ -108,6 +115,14 @@ export default function Library() {
           </div>
         </div>
       </div>
+
+      {/* Recently listened: the last book played, first thing in the Archive */}
+      {!loading && !error && !searching && recent && (
+        <div className="recent-listened">
+          <h2 className="recent-heading">Recently Listened</h2>
+          <BookCard book={recent} onToggleFav={toggleFav} wide />
+        </div>
+      )}
 
       {/* Book grid */}
       {loading ? (

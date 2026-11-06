@@ -59,6 +59,11 @@ class ApiClient {
         val resp = body(builder("/api/books/$id").build()) ?: return null
         return runCatching { json.decodeFromString<Book>(resp) }.getOrNull()
     }
+    // The last book this user listened to; null if they haven't started one (204) or on error.
+    suspend fun recentBook(): Book? {
+        val resp = body(builder("/api/books/recent").build()) ?: return null
+        return runCatching { json.decodeFromString<Book>(resp) }.getOrNull()
+    }
     suspend fun coverBytes(bookId: Int): ByteArray? = withContext(Dispatchers.IO) {
         runCatching {
             http.newCall(builder("/api/books/$bookId/cover").build()).execute().use { r ->

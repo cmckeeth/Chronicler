@@ -13,6 +13,7 @@ struct ArchiveView: View {
 
     @State private var books: [Book] = []
     @State private var collections: [Collection] = []
+    @State private var recent: Book?          // last book listened to, shown first
     // Seeded from ArchiveFilters and written back on change, so they survive leaving the
     // Archive (back to Landing, a theme switch) and coming back.
     @State private var search = ArchiveFilters.search
@@ -159,6 +160,7 @@ struct ArchiveView: View {
             }
             Spacer()
         } else if filtered.isEmpty && !showCollections {
+            recentSection
             Spacer(); Text(books.isEmpty && collections.isEmpty
                             ? "The archive lies empty, traveller."
                             : !isSearching && tab == "favorites"
@@ -168,6 +170,7 @@ struct ArchiveView: View {
                 .multilineTextAlignment(.center); Spacer()
         } else {
             ScrollView {
+                recentSection
                 LazyVGrid(columns: columns, spacing: 14) {
                     ForEach(shownCollections) { collection in
                         CollectionCardView(collection: collection, api: auth.api,
@@ -180,6 +183,20 @@ struct ArchiveView: View {
                 }
                 .padding(.vertical, 8)
             }
+        }
+    }
+
+    // Recently Listened: the last book played, first thing in the Archive. Hidden while searching.
+    @ViewBuilder private var recentSection: some View {
+        if let recent, !isSearching {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("RECENTLY LISTENED")
+                    .font(Theme.serif(11)).foregroundColor(Theme.brass).tracking(1.5)
+                BookCardView(book: recent, api: auth.api, wide: true,
+                             onFavoriteChanged: { await load() })
+                    .id("recent-\(recent.id)-\(recent.isFavorite)")
+            }
+            .padding(.top, 8)
         }
     }
 
@@ -269,8 +286,10 @@ struct ArchiveView: View {
             } else {
                 async let b = auth.api.getBooks()
                 async let c = auth.api.collections()
+                async let r = auth.api.recentBook()
                 books = try await b
                 collections = (try? await c) ?? []
+                recent = await r
             }
         } catch { self.error = "unreachable" }
         loading = false
@@ -286,8 +305,10 @@ struct ArchiveView: View {
             } else {
                 async let b = auth.api.getBooks()
                 async let c = auth.api.collections()
+                async let r = auth.api.recentBook()
                 books = try await b
                 collections = (try? await c) ?? []
+                recent = await r
             }
             error = nil
         } catch { self.error = "unreachable" }

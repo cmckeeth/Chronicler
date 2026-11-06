@@ -191,6 +191,32 @@ app.MapGet("/api/books", [Authorize] async (string? q, bool? root, ClaimsPrincip
     return Results.Ok(books);
 });
 
+// The book whose chapter progress this user saved most recently, for the Archive's
+// "Recently Listened" spot. 204 when they haven't listened to anything yet.
+app.MapGet("/api/books/recent", [Authorize] async (ClaimsPrincipal principal, AppDbContext db) =>
+{
+    var userId = UserId(principal);
+    var bookId = await db.ChapterProgresses
+        .Where(p => p.UserId == userId)
+        .OrderByDescending(p => p.UpdatedAt)
+        .Select(p => (int?)p.Chapter.BookId)
+        .FirstOrDefaultAsync();
+    if (bookId is null) return Results.NoContent();
+
+    var book = await db.Books
+        .Where(b => b.Id == bookId)
+        .Select(b => new BookDto(
+            b.Id, b.Title, b.Author, b.Narrator, b.DurationSeconds,
+            b.CoverData != null, b.AddedAt,
+            b.Chapters.Count(),
+            b.Chapters.Count(c => c.Progresses.Any(p => p.UserId == userId && p.IsListened)),
+            b.Year,
+            db.UserBookFavorites.Any(f => f.UserId == userId && f.BookId == b.Id),
+            b.CollectionId, b.Description, b.SortOrder))
+        .FirstOrDefaultAsync();
+    return book is null ? Results.NoContent() : Results.Ok(book);
+});
+
 // ── Collections ───────────────────────────────────────────────────────────────
 
 app.MapGet("/api/collections", [Authorize] async (ClaimsPrincipal principal, AppDbContext db) =>

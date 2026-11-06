@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,6 +38,7 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
     // All books, flat (including those inside collections); each chip derives its view client-side.
     var allBooks by remember { mutableStateOf<List<Book>>(emptyList()) }
     var collections by remember { mutableStateOf<List<Collection>>(emptyList()) }
+    var recent by remember { mutableStateOf<Book?>(null) }   // last book listened to, shown first
     // Filters live in ArchiveFilters, not here, so they survive opening a book and coming back.
     var search by ArchiveFilters::search
     var tab by ArchiveFilters::tab
@@ -53,6 +55,7 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
         runCatching {
             allBooks = auth.api.getBooks()
             collections = auth.api.collections()
+            recent = auth.api.recentBook()
         }.onSuccess { error = null }.onFailure { error = "unreachable" }
     }
 
@@ -156,17 +159,27 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
                     }
                 }
             }
-            filtered.isEmpty() && shownCollections.isEmpty() -> center(
+            filtered.isEmpty() && shownCollections.isEmpty() -> {
+                recent?.takeIf { !searching }?.let { book ->
+                    RecentlyListened(book, auth, nav) { scope.launch { auth.api.toggleFavorite(book.id); load() } }
+                }
+                center(
                 if (searching) "No volumes match this filter."
                 else if (allBooks.isEmpty() && collections.isEmpty()) "The archive lies empty, traveller."
                 else if (tab == "favorites") "No favorites yet. Long-press a book or collection to star it."
                 else "No volumes match this filter.",
                 Theme.parchmentDim)
+            }
             else -> LazyVerticalGrid(columns = GridCells.Fixed(auth.gridColumns),
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
                 contentPadding = PaddingValues(vertical = 4.dp)) {
+                recent?.takeIf { !searching }?.let { book ->
+                    item(key = "recent", span = { GridItemSpan(maxLineSpan) }) {
+                        RecentlyListened(book, auth, nav) { scope.launch { auth.api.toggleFavorite(book.id); load() } }
+                    }
+                }
                 items(shownCollections, key = { "collection-${it.id}" }) { collection ->
                     CollectionCard(collection, auth.api,
                         onOpen = { nav.navigate("collection/${collection.id}") },
@@ -210,6 +223,19 @@ fun ArchiveScreen(auth: AuthStore, nav: NavController) {
                 }
             }
         }
+    }
+}
+
+// Recently Listened: the last book played, first thing in the Archive.
+@Composable
+private fun RecentlyListened(book: Book, auth: AuthStore, nav: NavController, onToggleFavorite: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        Text("RECENTLY LISTENED", color = Theme.brass, fontSize = 11.sp, fontFamily = Theme.serif,
+            letterSpacing = 1.5.sp)
+        Spacer(Modifier.height(6.dp))
+        BookCard(book, auth.api, wide = true,
+            onOpen = { nav.navigate("book/${book.id}") },
+            onToggleFavorite = onToggleFavorite)
     }
 }
 

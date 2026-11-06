@@ -65,6 +65,12 @@ final class APIClient: @unchecked Sendable {
     func getBook(_ id: Int) async throws -> Book {
         try await send(request("/api/books/\(id)"), as: Book.self)
     }
+    // The last book this user listened to; nil if they haven't started one (204) or on error.
+    func recentBook() async -> Book? {
+        guard let (data, resp) = try? await session.data(for: request("/api/books/recent")),
+              (resp as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        return try? decoder.decode(Book.self, from: data)
+    }
     func coverURL(_ bookId: Int) -> URL {
         URL(string: "/api/books/\(bookId)/cover", relativeTo: APIClient.baseURL)!
     }

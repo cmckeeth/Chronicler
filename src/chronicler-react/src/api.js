@@ -56,6 +56,11 @@ export const booksApi = {
     const res = await apiFetch(`/api/books/${id}`);
     return res.json();
   },
+  // The last book this user listened to, or null if they haven't started one.
+  async recent() {
+    const res = await apiFetch('/api/books/recent');
+    return res.status === 200 ? res.json() : null;
+  },
   coverUrl: (id) => `/api/books/${id}/cover`,
   async favorite(id) {
     const res = await apiFetch(`/api/books/${id}/favorite`, { method: 'POST' });

@@ -1487,6 +1487,14 @@ select {
     grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
 }
 
+/* Recently Listened: the last book played, above the grid. */
+.recent-listened { margin-bottom: 1.1rem; max-width: 640px; }
+.recent-heading {
+    font-family: var(--font-serif); font-size: .7rem; font-weight: 700;
+    color: var(--brass); text-transform: uppercase; letter-spacing: 1.5px;
+    margin: 0 0 .45rem;
+}
+
 /* ── Reorder mode ─────────────────────────────────────────────────────────── */
 .btn-reorder {
     margin-left: auto;
