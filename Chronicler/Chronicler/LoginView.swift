@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices
 
 struct LoginView: View {
     @EnvironmentObject var auth: AuthStore
@@ -10,6 +11,7 @@ struct LoginView: View {
     @State private var busy = false
     @State private var showOffline = false
     @State private var hasDownloads = false
+    @State private var keeper = PasswordKeeper()
 
     var body: some View {
         ZStack {
@@ -69,6 +71,7 @@ struct LoginView: View {
             .padding(28)
         }
         .onAppear { hasDownloads = Downloads.hasAny() }
+        .task { await offerSavedLogin() }
         .fullScreenCover(isPresented: $showOffline) {
             OfflineLibrarySheet(onClose: { showOffline = false })
                 .environmentObject(auth)
@@ -97,17 +100,29 @@ struct LoginView: View {
     }
 
     private func submit() {
+        Task { await signIn(email: email, password: password, offerSave: true) }
+    }
+
+    // offerSave: false when the login came from the Passwords app, so we don't ask to save
+    // what it just gave us.
+    private func signIn(email: String, password: String, offerSave: Bool) async {
         error = nil; busy = true
-        Task {
-            let token = mode == "login"
-                ? await auth.api.login(email: email, password: password)
-                : await auth.api.register(email: email, password: password)
-            busy = false
-            guard let token else {
-                error = mode == "login" ? "Invalid email or password." : "Registration failed."
-                return
-            }
-            auth.setToken(token, email: email)
+        let token = mode == "login"
+            ? await auth.api.login(email: email, password: password)
+            : await auth.api.register(email: email, password: password)
+        busy = false
+        guard let token else {
+            error = mode == "login" ? "Invalid email or password." : "Registration failed."
+            return
         }
+        if offerSave { PasswordKeeper.save(email: email, password: password) }
+        auth.setToken(token, email: email)
+    }
+
+    // Offer a saved Chronicler login as soon as the screen opens; picking one signs in.
+    private func offerSavedLogin() async {
+        guard let saved = await keeper.savedLogin() else { return }
+        email = saved.user; password = saved.password
+        await signIn(email: saved.user, password: saved.password, offerSave: false)
     }
 }
