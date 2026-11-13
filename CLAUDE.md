@@ -93,6 +93,9 @@ ADB="$ANDROID_HOME/platform-tools/adb"
 `docker compose up`. The API serves it at `/api/update/version` + `/api/update/apk`; the app
 self-updates (REQUEST_INSTALL_PACKAGES + FileProvider in the manifest). Server needs JDK 17+
 and the Android SDK (`ANDROID_HOME`, default `/home/corbin/Android/Sdk`).
+APKs are signed with Corbin's Mac debug key (fingerprint `52:82:F8:67...`), not the server's.
+The server needs a copy at `~/.android/chronicler-signing.keystore`, or `deploy.sh` skips the
+APK. Full story under "Signing key" in README.md.
 
 ### Not yet ported (vs the Blazor app)
 - Bundled Cinzel/Lora fonts (uses system defaults).

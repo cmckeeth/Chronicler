@@ -16,8 +16,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # Fingerprint of the key Chronicler is signed with. Set once the key is chosen.
-  EXPECTED_CERT_SHA256: NOT_SET_YET
+  # Fingerprint of the key Chronicler is signed with: Corbin's Mac debug key (52:82:F8:67...).
+  # See "Signing key" in README.md for why it changed in November 2026.
+  EXPECTED_CERT_SHA256: 5282f867f0a1e1325d4d58eb8d3ad1d613c635defd424047880e6a36e15b6fe3
 
 jobs:
   release:

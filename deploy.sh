@@ -37,24 +37,34 @@ sed -i "s|versionCode = .*|versionCode = $NEW_CODE|" "$GRADLE_BUILD"
 # VERSION + commit count on every build, so the server's working copy drifting
 # from the repo no longer matters.
 
-# ── Build Android APK (debug-signed, mirrors prior pipeline) ─────────────────
+# ── Build Android APK ────────────────────────────────────────────────────────
+# Signed with Corbin's Mac debug key, the same key the GitHub release pipeline uses
+# (see "Signing key" in README.md). The server needs its own copy of that key at
+# CHRONICLER_KEYSTORE. Without it the APK step is skipped: an APK signed with the
+# server's old key would show phones an update they cannot install.
 
-echo "Building Android APK with Gradle..."
-( cd "$ANDROID_DIR" && ./gradlew assembleDebug --no-daemon )
+export CHRONICLER_KEYSTORE="${CHRONICLER_KEYSTORE:-$HOME/.android/chronicler-signing.keystore}"
+if [[ -f "$CHRONICLER_KEYSTORE" ]]; then
+    echo "Building Android APK with Gradle..."
+    ( cd "$ANDROID_DIR" && ./gradlew assembleDebug --no-daemon )
 
-APK_PATH="$ANDROID_DIR/app/build/outputs/apk/debug/app-debug.apk"
-if [[ ! -f "$APK_PATH" ]]; then
-    echo "Error: APK not found after build"
-    exit 1
+    APK_PATH="$ANDROID_DIR/app/build/outputs/apk/debug/app-debug.apk"
+    if [[ ! -f "$APK_PATH" ]]; then
+        echo "Error: APK not found after build"
+        exit 1
+    fi
+
+    # ── Copy APK to updates dir ───────────────────────────────────────────────
+
+    mkdir -p "$API_UPDATES_DIR"
+    rm -f "$API_UPDATES_DIR"/Chronicler-v*.apk
+    cp "$APK_PATH" "$API_UPDATES_DIR/Chronicler-v$NEW_VER.apk"
+    cp "$APK_PATH" "$API_UPDATES_DIR/Chronicler.apk"
+    echo "APK saved: $API_UPDATES_DIR/Chronicler-v$NEW_VER.apk"
+else
+    echo "WARNING: signing key not found at $CHRONICLER_KEYSTORE. Skipping the Android APK."
+    echo "         Copy ~/.android/debug.keystore from Corbin's Mac there to turn it back on."
 fi
-
-# ── Copy APK to updates dir ───────────────────────────────────────────────────
-
-mkdir -p "$API_UPDATES_DIR"
-rm -f "$API_UPDATES_DIR"/Chronicler-v*.apk
-cp "$APK_PATH" "$API_UPDATES_DIR/Chronicler-v$NEW_VER.apk"
-cp "$APK_PATH" "$API_UPDATES_DIR/Chronicler.apk"
-echo "APK saved: $API_UPDATES_DIR/Chronicler-v$NEW_VER.apk"
 
 # ── Deploy via docker compose ─────────────────────────────────────────────────
 

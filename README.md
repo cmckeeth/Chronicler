@@ -87,6 +87,31 @@ curl http://192.168.1.71:5162/deploy/status        # poll until "idle"
 3. Enable **Install from unknown sources** if prompted
 4. Install and open Chronicler
 
+### Signing key
+
+Android only installs an update if it is signed with the same key as the copy already on
+the phone.
+
+**The key changed in November 2026.** Chronicler used to be signed with the server's own
+debug key (fingerprint `9B:6E:E6:88...`). It is now signed with Corbin's Mac debug key
+(`~/.android/debug.keystore`, fingerprint
+`52:82:F8:67:F0:A1:E1:32:5D:4D:58:EB:8D:3A:D1:D6:13:C6:35:DE:FD:42:40:47:88:0E:6A:36:E1:5B:6F:E3`).
+It changed so GitHub can build and sign releases from any machine. The server's key never
+left the server, so GitHub could not use it.
+
+What this means:
+
+- **Each phone must uninstall Chronicler once** and install the new build. The old build
+  cannot update to the new one, and the in-app update banner cannot get around that.
+  Uninstalling clears the app's saved login, so sign in again afterwards.
+- **GitHub** keeps the key as the `ANDROID_DEBUG_KEYSTORE_BASE64` secret.
+  `~/blackbird-apps/set-signing-secrets.sh` sets it. The release pipeline refuses to
+  publish a build signed with any other key.
+- **The server** needs a copy of the key at `~/.android/chronicler-signing.keystore`
+  (or wherever `CHRONICLER_KEYSTORE` points). Copy the Mac's `~/.android/debug.keystore`
+  there. Until it exists, `deploy.sh` still deploys the API and web, but skips the APK.
+- **Back the key up.** If it is lost, every phone has to uninstall again.
+
 ### Update the app
 
 The app checks for updates every 60 seconds. When a new APK is available, a banner appears — tap it to download and install.
