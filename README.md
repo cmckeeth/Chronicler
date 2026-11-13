@@ -147,3 +147,8 @@ Android-only path — `deploy.sh` rebuilds the web container too.
 | `CHRONICLER_DB_PATH` | `/data/chronicler.db` | SQLite database path |
 | `CHRONICLER_API_URL` | `http://localhost:5160` | API base URL |
 | `APP_VERSION` | derived | Set by `deploy.sh` (VERSION + commit count); passed to the web image as a build arg |
+
+## Getting the latest build
+
+Builds are published as GitHub Releases. Blackbird Apps on blackbird-mini picks them up and
+serves them at http://192.168.1.71:5170 (app id `chronicler`).
