@@ -17,6 +17,14 @@ android {
         versionName = "3.2.0"
     }
 
+    // The GitHub release pipeline sets CHRONICLER_KEYSTORE to its copy of the signing key.
+    // Without it (the Mac, the server's deploy.sh) the usual ~/.android/debug.keystore is used.
+    signingConfigs {
+        getByName("debug") {
+            System.getenv("CHRONICLER_KEYSTORE")?.let { storeFile = file(it) }
+        }
+    }
+
     buildTypes {
         getByName("debug") {
             isDebuggable = true

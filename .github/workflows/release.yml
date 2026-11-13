@@ -1,0 +1,78 @@
+name: Release
+
+# Every push to main builds the Android APK and publishes it as a GitHub Release.
+# Blackbird Apps (blackbird-mini:5170) picks up new releases within a few minutes.
+# This is separate from deploy.yml, which redeploys the Chronicler server itself.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:   # "Run workflow" button, for re-running by hand
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  # Fingerprint of the key Chronicler is signed with. Set once the key is chosen.
+  EXPECTED_CERT_SHA256: NOT_SET_YET
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the commit count is part of the version
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Same numbering as deploy.sh: VERSION + commit count, and a versionCode that only goes up.
+      - name: Set version
+        id: version
+        run: |
+          base=$(tr -d '[:space:]' < VERSION)
+          count=$(git rev-list --count HEAD)
+          major=${base%%.*}; minor=${base#*.}
+          code=$((major * 1000000 + minor * 10000 + count))
+          sed -i "s|versionName = \".*\"|versionName = \"$base.$count\"|; s|versionCode = .*|versionCode = $code|" android/app/build.gradle.kts
+          echo "version=$base.$count" >> "$GITHUB_OUTPUT"
+
+      # The app is signed with a debug key. Using the same key every time is what lets a new
+      # build install over the copy already on a phone.
+      - name: Restore signing key
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$KEYSTORE" || { echo "ANDROID_DEBUG_KEYSTORE_BASE64 secret is missing"; exit 1; }
+          echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/debug.keystore"
+          echo "CHRONICLER_KEYSTORE=$RUNNER_TEMP/debug.keystore" >> "$GITHUB_ENV"
+
+      - name: Build
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      # Refuse to publish a build signed with any other key: it would not install over the
+      # copy on the phone. This is the certificate's public fingerprint, not a secret.
+      - name: Check signing key
+        run: |
+          apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          actual=$("$apksigner" verify --print-certs android/app/build/outputs/apk/debug/app-debug.apk | grep -m1 'SHA-256' | awk '{print $NF}')
+          echo "Signed with $actual"
+          test "$actual" = "${{ env.EXPECTED_CERT_SHA256 }}"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk "Chronicler-v$VERSION.apk"
+          gh release create "v$VERSION" "Chronicler-v$VERSION.apk" \
+            --title "Chronicler v$VERSION" --notes "$(git log -1 --format=%s)"
