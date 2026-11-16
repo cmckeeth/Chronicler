@@ -157,3 +157,71 @@ Dark Academia, Blackletter Noir, Wild West, Neon Sunset, Molten Forge, Ransom No
 - Docker Compose manages: `chronicler-api` + `chronicler-web` containers
 - Logs: `./logs/` directory, also accessible via `GET /api/logs`
 - Diagnostic messages: `POST /api/diag` (used by the native apps for debug logging)
+
+## 2026-11-02 — Offline / car fixes (uncommitted)
+- Server: progress save no longer returns 500 when two saves for a new chapter race (seen in logs 03:14:48 UTC, chapter 1533). It now updates the row the other request made.
+- Android Auto: lists downloaded books when offline, plays chapters from disk, keeps progress in progress.json (dirty when the server didn't get it), and never hands the player an item with no audio (likely crash).
+- Android phone: tapping a chapter before positions load no longer crashes. A failed progress save now counts as offline and is kept for later; the offline push keeps entries that fail.
+- iOS: same failed-save handling as Android; API calls give up after 15s instead of 60s.
+- Not done: no device crash logs were available (no phone connected, no SSH to server, /api/logs only serves today). Web has no offline mode.
+- Android casting: a downloaded chapter was handed to the Nest as a file:// on the phone, which it can't read, so nothing played. AudioController now always gives the cast device the stream URL. Player errors now go to /api/diag ("ANDROID vX: PLAYER ERROR ...") so the next cast failure shows up in /api/logs. Unverified on a real speaker.
+- Tested 2026-11-02 on the emulator against a local server (test library, test user): server race, phone offline save + resync, early chapter tap, Android Auto offline library/playback/resync all pass. Old Auto code did NOT crash on an undownloaded book offline, so the Auto crash cause is still unknown. iOS and casting untested.
+- Found, not fixed: (1) a failed position read (slow signal, >10s) is treated as "never started", so the player opens at 0:00 and the next save can overwrite the real spot. (2) Migrations AddBookIsFavorite + PerUserFavorites have no [Migration]/[DbContext] attributes, so a brand-new database never gets UserBookFavorites and /api/books 500s. Prod is fine; fixing it needs care so prod doesn't re-run them.
+
+## 2026-11-02: Abyss + Arcade themes
+- Added two themes to all three apps (now eleven). Web+Android in c5e8dc6 (deployed 3.3.335), iOS in b59d080 (TestFlight build 336).
+- Abyss: deep sea, jellyfish, marine snow, lure, giant amber eyes every 14s. Arcade: 8-bit invaders, starfield, INSERT COIN, square yellow panels.
+- Untested by eye: archive/player screens on iOS and web in the new themes.
+
+## 2026-11-04: "The archive lies empty" on some devices (investigated, not fixed)
+- /api/logs shows the failing devices get 401 (not logged in) on /api/books and /api/collections (18:07, 18:10, 19:17, 19:35 UTC). Working devices get 200.
+- Android `ApiClient.kt` turns any non-200 into an empty list, so a rejected login shows "The archive lies empty, traveller." instead of the login screen. Landing "Connected" only checks /api/update/version, which needs no login.
+- JWT key unchanged since the first commit, so a restart isn't it. Likely cause: tokens expire after 90 days (`Program.cs` CreateToken) and no app notices. iOS shows "pneumatic tubes have failed: unreachable" on 401; web logs out properly.
+
+## 2026-11-04: Save logins in the phone's password manager (uncommitted)
+- TODO "Remember logins and passwords securely". Corbin chose password-manager only: the app never stores the password itself.
+- iOS: email/password fields tagged username/password (newPassword when registering). New `Chronicler/Chronicler.entitlements` with `webcredentials:chronicler.mckeeth.app`, wired into both build configs.
+- API: serves `/.well-known/apple-app-site-association` (team ZSTUXP8336 + bundle id), so iOS trusts the link between site and app. The public domain goes to the API, not nginx.
+- Android: Credential Manager (`androidx.credentials` 1.3.0). The login screen offers a saved login when it opens (picking one signs in), and offers to save after a typed sign-in.
+- Web: `autocomplete` username / current-password / new-password on the form.
+- Verified: all four build; local API returns the AASA JSON; the iOS sim build carries the entitlement. NOT verified on a real phone. The first TestFlight build may need the Associated Domains capability turned on for the App ID (automatic signing should do it).
+- Deployed 2026-11-04: commit 67e4c51 pushed; server deploy 3.3.338 (API + web + Android); AASA live at https://chronicler.mckeeth.app/.well-known/apple-app-site-association. TestFlight upload started from the same commit.
+
+## 2026-11-04: Archive forgets tab / filters / search on back (commit 9d5b471, not pushed)
+- Cause: state lived in the screen, which is rebuilt after opening a book (Android `remember`, web unmount) or leaving to Landing / theme switch (iOS).
+- Fix: `ArchiveFilters` holder (Kotlin object, Swift enum with statics, module-level object in Library.jsx) lasting for the app session. Not kept across a full restart or page reload.
+- Builds on all three; not clicked through on a device. Scroll position is still not kept.
+- Shipped 9d5b471: server deploy 3.3.339 (web + Android); TestFlight build 339 uploading.
+
+## 2026-11-04: Favorites tab (commit after 9d5b471, not pushed)
+- Collections can be starred: `UserCollectionFavorites` table (migration 20261104210127, generated by dotnet-ef, only creates the table), `POST /api/collections/{id}/favorite`, `isFavorite` on collection list + detail.
+- Archive tabs are now ★ Favorites / Books / Collections on all three apps. Favorites = starred collections + starred books together, and is the default tab. The old Books-tab favorites chip is gone.
+- Starring a collection: long-press on iOS/Android (same as books), the ★ button on web.
+- Tested: local API toggle + list on a fresh DB; all four build. Not clicked through on a device.
+- Shipped 728ff10: server deploy 3.3.340 (API + web + Android); TestFlight build 340 uploading.
+
+## 2026-11-05: Recently Listened in the Archive (commit f74fe57, pushed, deployed as 3.3.342)
+
+- API: `GET /api/books/recent` returns the book whose chapter progress this user saved last
+  (newest `ChapterProgress.UpdatedAt`), or 204 if none. Tested against a throwaway server.
+- Web, iOS, Android: a "Recently Listened" heading plus one wide book card at the top of the
+  Archive, on every tab, hidden while searching. All three build.
+- Found, not fixed: `Migrations/20260522210000_PerUserFavorites.cs` has no Designer file, so EF
+  never runs it and a brand-new database has no `UserBookFavorites` table. Production is fine.
+- Committed only the feature's lines. Left uncommitted: the iOS `baseURL` pointing at (since reverted to the public URL)
+  `127.0.0.1:5199`, the iOS long-press `contextMenu` fix, and the password-manager login work.
+- iOS was shipped from a clean worktree of HEAD so the local `baseURL` could not leak into TestFlight.
+- Later the same day: pushed 8e75f46 (iOS press-and-hold favorites via contextMenu) and 038072e
+  (iOS PasswordKeeper: save + offer login through the Passwords app). Not yet on TestFlight.
+  Removed the uncommitted Info.plist `NSAllowsLocalNetworking` setting (only served the old local test server).
+
+## 2026-11-06: Startup sounds for the 8 themes that had none (f737a6d, shipped as 3.3.345)
+
+Before: only tesla (generic `startup.mp3`), steampunk, garden had sounds; the other 8 themes fell
+back to the Tesla sound. Added `startup_<theme>.mp3` to `Chronicler/Chronicler/` and
+`android/app/src/main/res/raw/`. No code change: both apps already look up `startup_<theme>`.
+Web has no sounds, by Corbin's choice. All CC0 from Freesound except neon (made with sox):
+academia 840192 page turn · noir 237391 match strike · west 213925 pistol ricochet ·
+forge 270589 anvil hit · ransom 397609 scissors cutting paper · abyss 808185 sonar ping ·
+arcade 647977 8-bit coin/power-up · neon = synthesized A-minor saw chord swell.
+Levelled to about -18 LUFS (noir -26: one sharp strike plus a quiet tail).
