@@ -42,10 +42,8 @@ updates/*.apk
 
 ## ── Vendored frontend libs ───────────────────────────────────────────────────
 # Restored automatically by dotnet restore / build
-src/Chronicler.Web/wwwroot/lib/
-src/Chronicler.Maui/wwwroot/css/bootstrap/
 
-## ── MAUI / Android / iOS ─────────────────────────────────────────────────────
+## ── Android / iOS ─────────────────────────────────────────────────────
 *.apk
 *.aab
 *.ipa

@@ -26,6 +26,10 @@ final class AuthStore: ObservableObject {
             email = UserDefaults.standard.string(forKey: emailKey)
             isAuthenticated = true
         }
+        api.onUnauthorized = { [weak self] rejectedToken in
+            guard let self, self.api.token == rejectedToken else { return }
+            self.clear()
+        }
     }
 
     func setAutoplay(_ v: Bool) {

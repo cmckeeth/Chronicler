@@ -2,11 +2,14 @@ import Foundation
 
 enum APIError: Error { case http(Int), decode, network }
 
-// Swift port of Chronicler.Shared/Services/ApiClient.cs against the same .NET REST API.
+// Native Swift client for the Chronicler REST API.
 final class APIClient: @unchecked Sendable {
     static let baseURL = URL(string: "https://chronicler.mckeeth.app")!
 
     var token: String?
+    // Report the credential used by the failed request, so a late response cannot
+    // sign out a newer session. AuthStore handles the change on the main actor.
+    var onUnauthorized: (@MainActor @Sendable (String) -> Void)?
 
     // 15s instead of the default 60s: on a weak signal (driving) a stalled call should give
     // up quickly so the player falls back to downloads instead of hanging.
@@ -32,8 +35,18 @@ final class APIClient: @unchecked Sendable {
         return req
     }
 
+    private func perform(_ req: URLRequest) async throws -> (Data, URLResponse) {
+        let (data, response) = try await session.data(for: req)
+        if (response as? HTTPURLResponse)?.statusCode == 401,
+           let authorization = req.value(forHTTPHeaderField: "Authorization"),
+           authorization.hasPrefix("Bearer ") {
+            await onUnauthorized?(String(authorization.dropFirst(7)))
+        }
+        return (data, response)
+    }
+
     private func send<T: Decodable>(_ req: URLRequest, as: T.Type) async throws -> T {
-        let (data, resp) = try await session.data(for: req)
+        let (data, resp) = try await perform(req)
         guard let code = (resp as? HTTPURLResponse)?.statusCode, (200..<300).contains(code)
         else { throw APIError.http((resp as? HTTPURLResponse)?.statusCode ?? -1) }
         do { return try decoder.decode(T.self, from: data) }
@@ -42,7 +55,7 @@ final class APIClient: @unchecked Sendable {
 
     @discardableResult
     private func send(_ req: URLRequest) async throws -> Int {
-        let (_, resp) = try await session.data(for: req)
+        let (_, resp) = try await perform(req)
         return (resp as? HTTPURLResponse)?.statusCode ?? -1
     }
 
@@ -67,7 +80,7 @@ final class APIClient: @unchecked Sendable {
     }
     // The last book this user listened to; nil if they haven't started one (204) or on error.
     func recentBook() async -> Book? {
-        guard let (data, resp) = try? await session.data(for: request("/api/books/recent")),
+        guard let (data, resp) = try? await perform(request("/api/books/recent")),
               (resp as? HTTPURLResponse)?.statusCode == 200 else { return nil }
         return try? decoder.decode(Book.self, from: data)
     }
@@ -75,7 +88,7 @@ final class APIClient: @unchecked Sendable {
         URL(string: "/api/books/\(bookId)/cover", relativeTo: APIClient.baseURL)!
     }
     func coverData(_ bookId: Int) async -> Data? {
-        let (data, resp) = (try? await session.data(for: request("/api/books/\(bookId)/cover"))) ?? (nil, nil)
+        let (data, resp) = (try? await perform(request("/api/books/\(bookId)/cover"))) ?? (nil, nil)
         guard let data, let code = (resp as? HTTPURLResponse)?.statusCode,
               (200..<300).contains(code), data.count >= 100 else { return nil }
         return data
@@ -95,7 +108,7 @@ final class APIClient: @unchecked Sendable {
         URL(string: "/api/collections/\(id)/cover", relativeTo: APIClient.baseURL)!
     }
     func collectionCoverData(_ id: Int) async -> Data? {
-        let (data, resp) = (try? await session.data(for: request("/api/collections/\(id)/cover"))) ?? (nil, nil)
+        let (data, resp) = (try? await perform(request("/api/collections/\(id)/cover"))) ?? (nil, nil)
         guard let data, let code = (resp as? HTTPURLResponse)?.statusCode,
               (200..<300).contains(code), data.count >= 100 else { return nil }
         return data

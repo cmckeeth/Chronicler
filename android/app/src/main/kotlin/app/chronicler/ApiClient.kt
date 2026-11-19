@@ -9,11 +9,12 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
-// Kotlin port of Chronicler.Shared/Services/ApiClient.cs against the same .NET REST API.
+// Native Kotlin client for the Chronicler REST API.
 class ApiClient {
     companion object { const val BASE_URL = "https://chronicler.mckeeth.app" }
 
     @Volatile var token: String? = null
+    var onUnauthorized: ((String) -> Unit)? = null
 
     private val http = OkHttpClient()
     private val json = Json { ignoreUnknownKeys = true }
@@ -24,9 +25,19 @@ class ApiClient {
         return b
     }
 
+    private suspend fun execute(req: Request): okhttp3.Response {
+        val response = withContext(Dispatchers.IO) { http.newCall(req).execute() }
+        val authorization = req.header("Authorization")
+        if (response.code == 401 && authorization?.startsWith("Bearer ") == true) {
+            val rejectedToken = authorization.removePrefix("Bearer ")
+            withContext(Dispatchers.Main.immediate) { onUnauthorized?.invoke(rejectedToken) }
+        }
+        return response
+    }
+
     private suspend fun body(req: Request): String? = withContext(Dispatchers.IO) {
         runCatching {
-            http.newCall(req).execute().use { r -> if (r.isSuccessful) r.body?.string() else null }
+            execute(req).use { r -> if (r.isSuccessful) r.body?.string() else null }
         }.getOrNull()
     }
 
@@ -66,7 +77,7 @@ class ApiClient {
     }
     suspend fun coverBytes(bookId: Int): ByteArray? = withContext(Dispatchers.IO) {
         runCatching {
-            http.newCall(builder("/api/books/$bookId/cover").build()).execute().use { r ->
+            execute(builder("/api/books/$bookId/cover").build()).use { r ->
                 val bytes = if (r.isSuccessful) r.body?.bytes() else null
                 if (bytes != null && bytes.size >= 100) bytes else null
             }
@@ -87,7 +98,7 @@ class ApiClient {
     }
     suspend fun collectionCoverBytes(id: Int): ByteArray? = withContext(Dispatchers.IO) {
         runCatching {
-            http.newCall(builder("/api/collections/$id/cover").build()).execute().use { r ->
+            execute(builder("/api/collections/$id/cover").build()).use { r ->
                 val bytes = if (r.isSuccessful) r.body?.bytes() else null
                 if (bytes != null && bytes.size >= 100) bytes else null
             }

@@ -3,7 +3,6 @@
 **/bin
 **/*.apk
 **/*.aab
-src/Chronicler.Maui
 Library
 updates
 .github

@@ -423,7 +423,7 @@ extension Color {
     }
 }
 
-// Shared time formatter matching FormatTime in the Blazor components.
+// Shared native time formatter.
 func formatTime(_ seconds: Double) -> String {
     guard seconds.isFinite, seconds >= 0 else { return "0:00" }
     let total = Int(seconds)

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { booksApi } from '../api';
+import { booksApi, apiFetch } from '../api';
 
 const extFor = (type) => ({ 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' }[type] || 'jpg');
 
@@ -60,9 +60,8 @@ export default function MetaEditor({ book, onClose, onSaved }) {
       if (coverFile) {
         const formData = new FormData();
         formData.append('cover', coverFile, coverFile.name);
-        const res = await fetch(`/api/books/${book.id}/cover/upload`, {
+        const res = await apiFetch(`/api/books/${book.id}/cover/upload`, {
           method: 'PUT',
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('chronicler_token')}` },
           body: formData,
         });
         if (!res.ok) {

@@ -2,6 +2,7 @@
 
 Personal audiobook library — ASP.NET Core API with three native frontends:
 Swift/SwiftUI (iOS), Kotlin/Compose (Android), React/Vite (web).
+The former Blazor, MAUI, and shared UI projects have been removed.
 
 Drop audio files in `Library/`, scan, play. Progress, bookmarks, and position sync across devices.
 

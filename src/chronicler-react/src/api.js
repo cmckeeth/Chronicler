@@ -5,14 +5,16 @@ export function setToken(t) { localStorage.setItem('chronicler_token', t); }
 export function clearToken() { localStorage.removeItem('chronicler_token'); }
 export function isLoggedIn() { return !!getToken(); }
 
-async function apiFetch(path, options = {}) {
+export async function apiFetch(path, options = {}) {
   const token = getToken();
-  const headers = { 'Content-Type': 'application/json', ...options.headers };
+  const headers = { ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), ...options.headers };
   if (token) headers['Authorization'] = `Bearer ${token}`;
   const res = await fetch(path, { ...options, headers });
   if (res.status === 401) {
-    clearToken();
-    window.location.href = '/login';
+    if (token && getToken() === token) {
+      clearToken();
+      window.location.href = '/login';
+    }
     throw new Error('Unauthorized');
   }
   return res;
@@ -132,9 +134,8 @@ export const collectionsApi = {
   async uploadCover(id, file) {
     const formData = new FormData();
     formData.append('cover', file, file.name);
-    const res = await fetch(`/api/collections/${id}/cover/upload`, {
+    const res = await apiFetch(`/api/collections/${id}/cover/upload`, {
       method: 'PUT',
-      headers: { 'Authorization': `Bearer ${getToken()}` },
       body: formData,
     });
     if (!res.ok) return { ok: false, status: res.status, body: await res.text().catch(() => '') };

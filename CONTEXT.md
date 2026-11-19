@@ -6,11 +6,10 @@ Personal audiobook library app. Built by Corbin McKeeth with Claude Code.
 
 | Layer | Tech |
 |-------|------|
-| API | ASP.NET Core minimal API (.NET 10), SQLite via EF Core, ASP.NET Identity, JWT auth |
+| API | ASP.NET Core minimal API (.NET 9), SQLite via EF Core, ASP.NET Identity, JWT auth |
 | iOS | Native Swift/SwiftUI (`Chronicler/Chronicler.xcodeproj`) |
 | Android | Native Kotlin/Compose (`android/`) |
 | Web | React + Vite (`src/chronicler-react/`) |
-| Legacy | .NET MAUI Blazor Hybrid (`src/Chronicler.Maui`) — retired, kept as fallback |
 | Hosting | Docker Compose on home server (192.168.1.71) |
 
 ## Projects
@@ -20,8 +19,6 @@ Chronicler/                — native iOS app (Swift/SwiftUI) + fastlane
 android/                   — native Android app (Kotlin/Compose)
 src/
   Chronicler.Api/          — ASP.NET Core API + EF Core + migrations
-  Chronicler.Shared/       — ApiClient (the API contract) + legacy Blazor components
-  Chronicler.Maui/         — retired MAUI shell
   chronicler-react/        — React web app (Vite, served by nginx in Docker)
 VERSION                    — major.minor; patch comes from the git commit count
 deploy.sh / deploy-ios.sh  — Android+web+API, and iOS→TestFlight
@@ -139,8 +136,8 @@ Dark Academia, Blackletter Noir, Wild West, Neon Sunset, Molten Forge, Ransom No
 
 ## Key Design Decisions
 
-- **Native over MAUI**: the MAUI/Blazor hybrid was replaced by three native frontends over one
-  shared REST API. The C# backend stays authoritative; the shared-UI idea did not survive
+- **Independent clients**: native Swift/SwiftUI and Kotlin/Compose apps plus the retained React
+  website consume one REST API. Legacy shared UI projects have been removed.
 - **Parity is enforced by convention, not code**: every user-facing change ships to web, iOS and
   Android or it isn't done
 - **No bookmark feature**: was built, then removed by user request

@@ -426,7 +426,7 @@ fun RansomWordmark(text: String, size: androidx.compose.ui.unit.TextUnit) {
     }
 }
 
-// Status bar + self-update prompt, ported from the Blazor UpdateBanner.
+// Status bar and native Android self-update prompt.
 // Shared by the landing and archive pages.
 @Composable
 fun UpdateBanner(api: ApiClient, modifier: Modifier = Modifier,

@@ -52,6 +52,9 @@ class AuthStore(context: Context) {
     }
 
     init {
+        api.onUnauthorized = { rejectedToken ->
+            if (api.token == rejectedToken) clear()
+        }
         prefs.getString("token", null)?.let {
             api.token = it
             email = prefs.getString("email", null)

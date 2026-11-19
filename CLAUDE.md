@@ -2,10 +2,10 @@
 
 ASP.NET C# API/data layer + multiple frontends consuming it over HTTP REST.
 
-## Architecture direction (in progress)
+## Architecture
 
-Moving off the single MAUI/Blazor-hybrid frontend toward **separation of concerns**: the
-C# backend stays authoritative, frontends are independent per platform.
+The native iPhone and Android apps and the retained React website consume one C# REST API.
+The legacy shared UI clients have been removed; do not reintroduce them.
 
 > **⚠️ FEATURE PARITY IS MANDATORY.** There are THREE active frontends — **web** (`src/chronicler-react`),
 > **iOS** (`Chronicler/`), **Android** (`android/`). Any user-facing change — a feature, a theme, a
@@ -17,15 +17,14 @@ C# backend stays authoritative, frontends are independent per platform.
 
 - **Backend** — `src/Chronicler.Api` (.NET REST, JWT auth). Stays C#. Source of truth.
 - **iOS** — **native Swift/SwiftUI** app at repo-root `Chronicler/`. Consumes the API over HTTP. Runs on the **Simulator** for development and ships to **TestFlight** via `./deploy-ios.sh` (see `docs/ios-distribution.md`).
-- **Android** — **native Kotlin/Compose** app at `android/`. Consumes the API over HTTP. Built to an APK and shipped through the existing endpoint pipeline (`deploy.sh` → `updates/` → `/api/update/apk`, in-app self-update). Same deploy *mechanism* as before, native Kotlin app instead of MAUI.
-- **Web** — **native React/Vite** app at `src/chronicler-react` (active, deployed). Consumes the API over HTTP. Built + served as the `chronicler-web` container in `docker-compose.yml` (nginx on :5161, proxies `/api`); ships on every server deploy. Shows a version badge + theme switcher bottom-right. (Old `src/Chronicler.Web` Blazor is abandoned.)
-- **Legacy** — `src/Chronicler.Maui` (Blazor-in-WebView hybrid) retired now that natives exist; kept as fallback.
+- **Android** — **native Kotlin/Compose** app at `android/`. Consumes the API over HTTP. Built to an APK and shipped through the existing endpoint pipeline (`deploy.sh` → `updates/` → `/api/update/apk`, in-app self-update). Uses the native Kotlin build pipeline.
+- **Web** — **native React/Vite** app at `src/chronicler-react` (active, deployed). Consumes the API over HTTP. Built + served as the `chronicler-web` container in `docker-compose.yml` (nginx on :5161, proxies `/api`); ships on every server deploy. Shows a version badge + theme switcher bottom-right.
 
-API contract lives in `src/Chronicler.Shared/Services/ApiClient.cs` (endpoints, DTOs, JWT). Base URL `https://chronicler.mckeeth.app`.
+API endpoints and DTOs live in `src/Chronicler.Api/Program.cs`; each client has its own API adapter. Base URL `https://chronicler.mckeeth.app`.
 
 ## iOS Swift app (`Chronicler/Chronicler.xcodeproj`)
 
-Native SwiftUI port of the Blazor UI — same behavior, same steampunk look. Xcode 16 project
+Native SwiftUI app — same behavior, same steampunk look. Xcode 16 project
 (objectVersion 77, **synchronized folders**: drop `.swift` files into `Chronicler/Chronicler/`
 and they auto-compile, no pbxproj edits). Target iOS 26.5, bundle `blackbird.llc.Chronicler`.
 
@@ -50,7 +49,7 @@ xcrun simctl io booted screenshot /tmp/shot.png   # verify
 SourceKit may flag cross-file "cannot find type" / macOS-unavailable errors in the editor —
 ignore them; the `iphonesimulator` build is the source of truth.
 
-### Not yet ported (vs the Blazor app)
+### Remaining native work
 - Background-audio capability (needs `UIBackgroundModes: audio` in Info.plist; foreground + Now Playing work).
 - Bundled Cinzel/Lora fonts (uses the CSS-declared Palatino/Georgia serif fallbacks).
 - UpdateBanner (APK self-update — Android-only concern).
@@ -88,7 +87,7 @@ ADB="$ANDROID_HOME/platform-tools/adb"
 ```
 
 ### Deploy (server, via webhook → `deploy.sh`)
-`deploy.sh` now builds the **Kotlin APK** (was MAUI): bumps `versionName`/`versionCode` in
+`deploy.sh` now builds the **Kotlin APK**: bumps `versionName`/`versionCode` in
 `android/app/build.gradle.kts`, runs `./gradlew assembleDebug`, copies to `updates/`, then
 `docker compose up`. The API serves it at `/api/update/version` + `/api/update/apk`; the app
 self-updates (REQUEST_INSTALL_PACKAGES + FileProvider in the manifest). Server needs JDK 17+
@@ -97,7 +96,7 @@ APKs are signed with Corbin's Mac debug key (fingerprint `52:82:F8:67...`), not 
 The server needs a copy at `~/.android/chronicler-signing.keystore`, or `deploy.sh` skips the
 APK. Full story under "Signing key" in README.md.
 
-### Not yet ported (vs the Blazor app)
+### Remaining native work
 - Bundled Cinzel/Lora fonts (uses system defaults).
 
 
@@ -198,55 +197,6 @@ server and never committed, web from `package.json`). The cost of the old way wa
 testers all reporting "3.2.6" told us nothing, because builds 315/325/327 were all `3.2.6`.
 
 ---
-
-## Legacy MAUI app (`net10.0-android;net10.0-ios`) — retired, kept as fallback
-
-## Deploy MAUI app to a connected iPhone
-
-### Prereqs
-- **net10 SDK at `/usr/local/share/dotnet`** (NOT the homebrew `dotnet` on PATH, which is 9.x and will fail with `NETSDK1045: does not support targeting .NET 10.0`). Always run with:
-  ```bash
-  export PATH="/usr/local/share/dotnet:$PATH" DOTNET_ROOT="/usr/local/share/dotnet"
-  ```
-- **android workload** must be installed, or restore fails with `NETSDK1147: ... workloads must be installed: android` (because `TargetFrameworks` lists `net10.0-android`). Install once:
-  ```bash
-  sudo /usr/local/share/dotnet/dotnet workload install android
-  ```
-  Alternative without sudo: temporarily edit `src/Chronicler.Maui/Chronicler.Maui.csproj` line `<TargetFrameworks Condition="...osx...">` to `net10.0-ios` only, build, then revert. Do NOT use `-p:TargetFrameworks=net10.0-ios` — it propagates to `Chronicler.Shared` (which is `net10.0`) and breaks its restore.
-
-### Find the device udid
-```bash
-xcrun devicectl list devices          # column "Identifier" / "connected"
-xcrun xctrace list devices            # shows udid like 00008120-001C3D20216BC01E
-```
-
-### Build, install, launch
-```bash
-cd src/Chronicler.Maui
-export PATH="/usr/local/share/dotnet:$PATH" DOTNET_ROOT="/usr/local/share/dotnet"
-
-# 1. Build for device (ios-arm64, Release)
-/usr/local/share/dotnet/dotnet build -f net10.0-ios -c Release -p:RuntimeIdentifier=ios-arm64
-
-# 2. Install
-xcrun devicectl device install app --device <UDID> \
-  bin/Release/net10.0-ios/ios-arm64/Chronicler.Maui.app
-
-# 3. Launch
-xcrun devicectl device process launch --device <UDID> blackbird.llc.Chronicler
-```
-
-`dotnet build -t:Run -p:_DeviceName=<UDID>` also works but only after a separate build step (the Run target won't build first), and it routes launch through `mlaunch`.
-
-### Trust the developer profile (REQUIRED first time / after expiry)
-A fresh install with a dev cert shows the icon as **"Chronicler is no longer available"** and launch fails with:
-```
-profile has not been explicitly trusted by the user (FBSOpenApplicationServiceErrorDomain error 1)
-```
-Fix on the iPhone: **Settings → General → VPN & Device Management → Apple Development: <account> → Trust**. Then tap the app icon. The free/dev provisioning profile expires (~7 days), so this repeats periodically — rerun the build/install steps when it lapses.
-
-- Bundle id: `blackbird.llc.Chronicler`
-- Signing: `Apple Development: corbin.mckeeth@gmail.com`
 
 ## Deploying
 
